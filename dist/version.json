@@ -3,20 +3,20 @@
   "version": "2.9.11",
   "channel": "stable",
   "releasedAt": "2026-11-22",
-  "notes": "新手期翻案隔离；R2 直链更新与可选大模型下载",
-  "base": "https://dl.example.com/planquest",
+  "notes": "新手期翻案隔离；GitHub Releases 多源冗余更新与可选大模型下载",
+  "base": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11",
   "installer": {
     "admin": false,
     "action": "unpack-only",
     "file": "releases\\PlanQuest-2.9.11-setup.exe",
-    "url": "https://dl.example.com/planquest/2.9.11/releases\\PlanQuest-2.9.11-setup.exe",
+    "url": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-2.9.11-setup.exe",
     "size": 168655138,
     "sha256": "edea17a775b5064d35a17848bb76e19efd482af610fbc7f7220b498ea2ba6117",
     "built": true
   },
   "portable": {
     "file": "PlanQuest-win64-portable.zip",
-    "url": "https://dl.example.com/planquest/2.9.11/PlanQuest-win64-portable.zip",
+    "url": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-win64-portable.zip",
     "size": 203480288,
     "sha256": "03596d0ec7c0e89ccfa5aa690505842a76871d3cd6448f6cd31459e98a3fc465"
   },
