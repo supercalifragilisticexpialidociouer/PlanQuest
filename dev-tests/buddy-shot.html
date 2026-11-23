@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8" /><title>buddy shot</title>
+<style>body{margin:0;background:#0e1020;height:100vh}#app{width:100%;height:100vh}</style>
+</head>
+<body>
+<div id="app" data-theme="dark"></div>
+<script src="../web/vendor/three.min.js"></script>
+<script src="../web/buddy3d.js"></script>
+<script src="../web/buddy.js"></script>
+<script>PQBuddy.start({ getState: () => ({ profile: { points: 120, streak: 4, bestStreak: 9 }, todayPlans: [{ name: '背单词', status: 'done' }, { name: '跑步 3km', status: 'todo' }] }), nav: () => {} });</script>
+</body>
+</html>

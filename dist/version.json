@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "version": "2.9.11",
+  "channel": "stable",
+  "releasedAt": "2026-11-22",
+  "notes": "新手期翻案隔离；R2 直链更新与可选大模型下载",
+  "base": "https://dl.example.com/planquest",
+  "installer": {
+    "admin": false,
+    "action": "unpack-only",
+    "file": "releases\\PlanQuest-2.9.11-setup.exe",
+    "url": "https://dl.example.com/planquest/2.9.11/releases\\PlanQuest-2.9.11-setup.exe",
+    "size": 168655138,
+    "sha256": "edea17a775b5064d35a17848bb76e19efd482af610fbc7f7220b498ea2ba6117",
+    "built": true
+  },
+  "portable": {
+    "file": "PlanQuest-win64-portable.zip",
+    "url": "https://dl.example.com/planquest/2.9.11/PlanQuest-win64-portable.zip",
+    "size": 203480288,
+    "sha256": "03596d0ec7c0e89ccfa5aa690505842a76871d3cd6448f6cd31459e98a3fc465"
+  },
+  "data": {
+    "path": "%APPDATA%\\PlanQuest\\data.json",
+    "migration": "none",
+    "note": "换任何绿色版目录都自动沿用；安装器不碰这个目录。"
+  },
+  "components": [
+    {
+      "id": "ollama",
+      "name": "Ollama 绿色版 + Qwen2.5 3B",
+      "official": "https://github.com/ollama/ollama/releases/download/v0.40.17/ollama-windows-amd64.zip",
+      "file": "ollama-windows-amd64.zip",
+      "size": 1618522644,
+      "sha256": null,
+      "checksumUrl": "https://github.com/ollama/ollama/releases/download/v0.40.17/sha256sum.txt",
+      "dest": "%LOCALAPPDATA%\\PlanQuest\\components\\ollama",
+      "admin": false,
+      "green": true,
+      "modelPull": "ollama pull qwen2.5:3b",
+      "modelSize": 1930000000,
+      "note": "官网 Windows 绿色 zip，解压即用；模型另由 ollama pull 拉取。无独显时 CPU 推理要等几十秒。"
+    },
+    {
+      "id": "melotts",
+      "name": "MeloTTS（本地中文语音合成）",
+      "official": "https://github.com/myshell-ai/MeloTTS/archive/refs/heads/main.zip",
+      "file": "MeloTTS-main.zip",
+      "size": null,
+      "sha256": null,
+      "dest": "%LOCALAPPDATA%\\PlanQuest\\components\\melotts",
+      "admin": false,
+      "green": false,
+      "runnable": false,
+      "requires": "Python <= 3.10 + torch<2.0",
+      "note": "官网只有源码，没有 Windows 运行包；本机 Python 3.13 装不上 torch 1.x，勾了也只会得到源码。"
+    }
+  ],
+  "policy": {
+    "defaultSelected": [],
+    "downloadFrom": "official",
+    "offlineWithoutComponents": true,
+    "autoStart": "app-only",
+    "autoStartScope": "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+  }
+}

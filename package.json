@@ -1,0 +1,18 @@
+{
+  "name": "planquest",
+  "version": "2.9.11",
+  "description": "PlanQuest - 计划打卡奖励助手（开机自启 · 定时提醒 · 打卡奖励）",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "wya",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.0"
+  },
+  "dependencies": {
+    "onnxruntime-web": "^1.31.1",
+    "vosk-browser": "^0.0.8"
+  }
+}

@@ -1,0 +1,64 @@
+# PlanQuest · 军团 PK 自动校验与配对
+#
+# 放置位置：私有布告栏仓库的 .github/workflows/pk-match.yml
+# 同目录需要有：.github/scripts/pk-actions.js、pk-validate.js、pk-sign.js
+#
+# 它做四件事：
+#   1. 每小时跑一次，校验 legions/*.json 的签名与数值合法性（异常值回退 + 记告警）；
+#   2. 按近 7 天出操率相邻配对，写 results/<周一>/pairing.json；
+#   3. 把每次运行的修复/剔除明细追加到 logs/<日期>.json；
+#   4. 每小时把 legions/ 快照到 snapshots/<小时>/，保留 48 小时，被改坏了能回滚。
+name: pk-match
+
+on:
+  schedule:
+    - cron: '5 * * * *' # 每小时第 5 分钟（UTC），避开整点的高峰
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pk-match
+  cancel-in-progress: false
+
+jobs:
+  match:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 校验 + 配对
+        run: node .github/scripts/pk-actions.js
+        env:
+          LEGIONS_DIR: legions
+          RESULTS_DIR: results
+          LOGS_DIR: logs
+
+      - name: 快照（保留 48 小时）
+        run: |
+          set -e
+          STAMP=$(date -u +%Y-%m-%dT%H)
+          mkdir -p "snapshots/$STAMP"
+          if [ -d legions ]; then cp -r legions "snapshots/$STAMP/"; fi
+          # 清掉 48 小时之前的快照，避免仓库无限变大
+          find snapshots -mindepth 1 -maxdepth 1 -type d | sort | head -n -48 | xargs -r rm -rf
+
+      - name: 提交结果
+        run: |
+          set -e
+          git config user.name "planquest-bot"
+          git config user.email "bot@planquest.local"
+          git add results logs snapshots legions/.last 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "没有变化，跳过提交"
+          else
+            git commit -m "pk: match $(date -u +%Y-%m-%dT%H:%M) [skip ci]"
+            git push
+          fi

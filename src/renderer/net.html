@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self' file:; script-src 'self' file: 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' file: blob:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; media-src 'self' file: blob: data:; connect-src 'self' file: blob: https:;"
+    />
+    <title>PlanQuest · 异地联机</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="net-page" data-theme="dark">
+    <div class="net-page-wrap">
+      <header class="net-page-head">
+        <div>
+          <h1>🌐 异地联机</h1>
+          <p class="net-page-sub">不经服务器 · 连接码自己转发 · 聊天 / 语音 / 画面点对点直传</p>
+        </div>
+        <div class="net-page-tools">
+          <button class="mbtn" id="page-full" title="全屏 / 退出全屏">□</button>
+        </div>
+      </header>
+      <div id="net-body"></div>
+    </div>
+    <div id="modal-root"></div>
+    <div id="toast-root"></div>
+
+    <script src="vendor/ort/ort.wasm.min.js"></script>
+    <script src="vendor/ort/wasm-b64.js"></script>
+    <script src="vendor/pq-ai/model-b64.js"></script>
+    <script src="ai-watch.js"></script>
+    <script src="ai-chat.js"></script>
+    <script src="ai-train.js"></script>
+    <script src="voice-asr.js"></script>
+    <script src="net-room.js"></script>
+    <script src="net-win.js"></script>
+  </body>
+</html>
