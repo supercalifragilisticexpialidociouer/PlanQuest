@@ -6,8 +6,13 @@
 <body>
 <div id="app" data-theme="dark"></div>
 <script src="../web/vendor/three.min.js"></script>
+<script src="../web/aci-skin.js"></script>
 <script src="../web/buddy3d.js"></script>
 <script src="../web/buddy.js"></script>
-<script>PQBuddy.start({ getState: () => ({ profile: { points: 120, streak: 4, bestStreak: 9 }, todayPlans: [{ name: '背单词', status: 'done' }, { name: '跑步 3km', status: 'todo' }] }), nav: () => {} });</script>
+<script>
+  /* 预置一个已选好的皮肤，避免首启选皮肤面板挡住效果截图 */
+  localStorage.setItem('pq-skin-v1', JSON.stringify({ skin: 'cactus', name: '阿刺' }));
+  PQBuddy.start({ getState: () => ({ profile: { points: 120, streak: 4, bestStreak: 9 }, todayPlans: [{ name: '背单词', status: 'done' }, { name: '跑步 3km', status: 'todo' }] }), nav: () => {} });
+</script>
 </body>
 </html>

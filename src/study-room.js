@@ -463,6 +463,7 @@ function snapshotPayload() {
       avatar: m.avatar,
       cred: m.cred || null,
       state: m.state || {},
+      ...(m.ai ? { ai: true } : {}),
     })),
   };
 }
@@ -482,7 +483,7 @@ function startHeartbeat() {
     const now = Date.now();
     let changed = false;
     for (const [id, m] of members) {
-      if (id !== 'host' && now - m.lastSeen > MEMBER_TIMEOUT_MS) {
+      if (id !== 'host' && id !== 'aci' && now - m.lastSeen > MEMBER_TIMEOUT_MS) {
         members.delete(id);
         changed = true;
         if (m.socket && !m.socket.destroyed) {
@@ -783,6 +784,46 @@ function stopTimers() {
   }
 }
 
+/* 把「阿刺」作为虚拟战友拉进/移出房间（自习房 & 娱乐房共用，同一成员体系）。
+ * 虚拟成员 socket=null，只发言不收包；发言走 handleChat 的 🤖 旁路。
+ * 只有房主本机有权拉入（房主是房间的权威）。 */
+function setCompanion(joined, info) {
+  if (mode !== 'host') return { ok: false, message: '只有房主能把阿刺拉进房间' };
+  const i = info || {};
+  if (joined) {
+    if (members.has('aci')) {
+      broadcastSnapshot();
+      return { ok: true, message: '阿刺已经在房间里了' };
+    }
+    members.set('aci', {
+      id: 'aci',
+      name: i.name || '阿刺',
+      avatar: i.avatar || '🌵',
+      cred: null,
+      state: {},
+      lastSeen: Date.now(),
+      socket: null,
+      ai: true,
+    });
+    /* 进场时自动说一句（走 🤖 旁路，不判违规词、不算刷屏） */
+    const me = members.get('host');
+    const hello = roomType === 'fun'
+      ? '🤖 阿刺蹦进娱乐房：放松归放松，计划别忘了打卡。'
+      : '🤖 阿刺搬着小板凳进来自习了。你学你的，我盯着呢。';
+    if (me) handleChat(me, hello, null);
+    broadcastSnapshot();
+    return { ok: true, message: '阿刺进房了（🤖 战友）' };
+  }
+  if (!members.has('aci')) return { ok: true, message: '阿刺不在房间里' };
+  members.delete('aci');
+  broadcastSnapshot();
+  return { ok: true, message: '阿刺离开房间了' };
+}
+
+function companionJoined() {
+  return members.has('aci');
+}
+
 function roomStatus() {
   return {
     inRoom: mode !== 'none',
@@ -814,4 +855,6 @@ module.exports = {
   setEmitter,
   setLivekitIssuer,
   roomStatus,
+  setCompanion,
+  companionJoined,
 };

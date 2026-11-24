@@ -193,7 +193,43 @@
       + '.pqb-supply{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px dashed var(--pqb-line)}'
       + '.pqb-supply:last-child{border-bottom:0}'
       + '.pqb-tag{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--pqb-chip);color:var(--pqb-teal)}'
-      + '.pqb-muted{color:var(--pqb-dim);font-size:11px}';
+      + '.pqb-muted{color:var(--pqb-dim);font-size:11px}'
+      /* ---- 首次见面：选皮肤（挡住整个面板，选完才放行） ---- */
+      + '#pqb-skinpick{position:absolute;inset:0;z-index:6;background:var(--pqb-panel);display:none;flex-direction:column;padding:12px;overflow-y:auto}'
+      + '#pqb-skinpick.show{display:flex;animation:pqbIn .2s ease both}'
+      + '#pqb-skinpick h3{margin:2px 0 3px;font-size:14px;color:var(--pqb-text)}'
+      + '.pqb-skin-sub{font-size:11px;color:var(--pqb-dim);line-height:1.5;margin-bottom:9px}'
+      + '.pqb-skins{display:flex;flex-direction:column;gap:6px}'
+      + '.pqb-skincard{display:flex;gap:9px;align-items:center;border:1px solid var(--pqb-line);border-radius:10px;padding:7px 9px;cursor:pointer;background:color-mix(in srgb,var(--pqb-text) 3%,transparent);transition:border-color .15s,background .15s}'
+      + '.pqb-skincard:hover{border-color:var(--pqb-teal)}'
+      + '.pqb-skincard.sel{border-color:var(--pqb-teal);background:var(--pqb-chip)}'
+      + '.pqb-skincard .em{font-size:24px;line-height:1;flex:0 0 auto}'
+      + '.pqb-skincard .info{flex:1;min-width:0}'
+      + '.pqb-skincard b{font-size:12.5px;color:var(--pqb-text)}'
+      + '.pqb-skincard .tg{font-size:10.5px;color:var(--pqb-dim);display:block;margin-top:1px}'
+      + '.pqb-skincard .tr{font-size:10px;color:var(--pqb-teal);display:block;margin-top:2px}'
+      + '.pqb-skin-foot{margin-top:auto;padding-top:9px}'
+      + '.pqb-skin-warn{font-size:10px;color:var(--pqb-dim);line-height:1.5;margin-bottom:7px}'
+      + '.pqb-skin-foot .pqb-btn{width:100%;padding:7px}'
+      /* ---- 身份卡：改名 + 隐藏重置入口 ---- */
+      + '#pqb-idcard .pqb-namein{display:flex;gap:5px;margin-top:4px}'
+      + '#pqb-idcard input{flex:1;min-width:0;background:color-mix(in srgb,var(--pqb-text) 6%,transparent);border:1px solid var(--pqb-line);border-radius:7px;color:inherit;padding:4px 7px;font-size:11.5px;outline:none}'
+      + '#pqb-idcard input:focus{border-color:var(--pqb-teal)}'
+      + '.pqb-sug{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}'
+      + '.pqb-sug button{border:1px dashed var(--pqb-line2);background:none;color:var(--pqb-dim);border-radius:6px;padding:2px 7px;font-size:10.5px;cursor:pointer;font-family:inherit}'
+      + '.pqb-sug button:hover{border-color:var(--pqb-teal);color:var(--pqb-teal)}'
+      + '.pqb-skinbadge{cursor:pointer;user-select:none;-webkit-user-select:none}'
+      /* ---- 重置确认（半透明遮罩，逼你看清代价） ---- */
+      + '#pqb-resetmask{position:absolute;inset:0;z-index:7;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:14px}'
+      + '#pqb-resetmask.show{display:flex}'
+      + '.pqb-resetbox{background:var(--pqb-panel);border:1px solid var(--pqb-line2);border-radius:12px;padding:12px;max-width:100%;color:var(--pqb-text)}'
+      + '.pqb-resetbox h4{margin:0 0 6px;font-size:12.5px;color:#ef4444}'
+      + '.pqb-resetbox ul{margin:0 0 7px;padding-left:16px}'
+      + '.pqb-resetbox li{font-size:11px;color:var(--pqb-dim);margin:3px 0;line-height:1.45}'
+      + '.pqb-resetbox .keep{font-size:10.5px;color:var(--pqb-teal);margin-bottom:8px}'
+      + '.pqb-resetbox .row{display:flex;gap:6px}'
+      + '.pqb-resetbox .row .pqb-btn{flex:1}'
+      + '.pqb-btn.danger{color:#ef4444;border-color:#ef4444}';
     var st = document.createElement('style');
     st.id = STYLE_ID;
     st.textContent = css;
@@ -210,13 +246,46 @@
   function setMood(m, holdMs) {
     mood = m;
     if (gl3d) gl3d.setMood(m);
+    applyMoodTheme(m);
     clearTimeout(moodTimer);
     if (holdMs) {
       moodTimer = setTimeout(function () {
         mood = quiet ? 'sleep' : 'idle';
         if (gl3d) gl3d.setMood(mood);
+        applyMoodTheme(mood);
       }, holdMs);
     }
+  }
+
+  /* ---------------- 心情 → 面板底色 ----------------
+   * 皮肤（体色/建模）不随心情变，但面板底色会跟着情绪走：
+   * 生气偏红、失望偏灰、开心偏暖、困了偏深蓝。只染一点点，保证字看得清。 */
+  var MOOD_BG = {
+    happy: '#f0b46a', smirk: '#9b8cff', listen: '#5fc8f0', surprised: '#ffd166',
+    sad: '#6f8fa8', sleep: '#3f4f7a', angry: '#e0554f', disappointed: '#7b7f7c', fight: '#d94a44',
+  };
+  function hex2rgb(h) {
+    h = String(h || '').replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var n = parseInt(h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function mixHex(a, b, t) {
+    var A = hex2rgb(a), B = hex2rgb(b);
+    return '#' + [0, 1, 2].map(function (i) {
+      return ('0' + Math.round(A[i] + (B[i] - A[i]) * t).toString(16)).slice(-2);
+    }).join('');
+  }
+  function applyMoodTheme(m) {
+    var panel = document.getElementById('pqb-panel');
+    var fab = document.getElementById('pqb-fab');
+    if (!panel && !fab) return;
+    var app = document.getElementById('app');
+    var dark = !!(app && app.getAttribute('data-theme') === 'dark');
+    var base = dark ? '#171a2e' : '#ffffff';
+    var c = MOOD_BG[m];
+    var col = c ? mixHex(base, c, dark ? 0.16 : 0.07) : base;
+    [panel, fab].forEach(function (el) { if (el) el.style.setProperty('--pqb-panel', col); });
   }
 
   var talkTimer = null;
@@ -283,6 +352,12 @@
       }
     });
     if (last !== null && typeof last === 'number') rotY = last;
+    /* 互动演完的表情也顺手改面板底色，演完收回当前心情 */
+    if (rule.mood) {
+      applyMoodTheme(rule.mood);
+      var holdM = rule.k === 'sleep' ? 4200 : 2600;
+      setTimeout(function () { applyMoodTheme(currentMood()); }, holdM);
+    }
     if (rule.say && rule.say.length) {
       var line = rule.say[Math.floor(Math.random() * rule.say.length)];
       if (opts && opts.silent) { if (typeof toast === 'function') toast(line, '阿刺'); }
@@ -865,12 +940,12 @@
       talking(true);
       setTimeout(function () {
         talking(false);
-        pushMsg('bud', txt, { q: text });
+        pushMsg('bud', voiceOut(txt, 'model'), { q: text });
         if (web && web.ok && web.results && web.results.length) pushLinks(web);
       }, 300);
     }
     function plainFallback() {
-      var out = tableOut(rule, m, ctx);
+      var out = voiceOut(tableOut(rule, m, ctx), 'table');
       setMood(rule.mood || 'idle', 5200);
       pushMsg('bud', out, { q: text });
     }
@@ -1742,7 +1817,7 @@
     if (scoldLast[kind] && now - scoldLast[kind] < 2 * 60e3) return; /* 同类提醒 2 分钟内不叠嘴 */
     scoldLast[kind] = now;
     var line = lines[Math.floor(Math.random() * lines.length)];
-    pushMsg('bud', '⚠️ ' + line + (detail ? '\n（' + detail + '）' : ''));
+    pushMsg('bud', '⚠️ ' + voiceOut(line, 'scold') + (detail ? '\n（' + detail + '）' : ''));
     setMood('angry', 5200);
     var badge = document.querySelector('#pqb-fab .pqb-badge');
     if (badge && !open) badge.style.display = 'block';
@@ -1819,6 +1894,20 @@
       say: ['行，我挂机。想让我回来就说「醒醒」。', '安静模式。仙人掌本来就是最安静的植物。'] },
     { k: 'wake', re: /醒醒|回来|说话/, mood: 'happy',
       say: ['回来了。刚才安静得我都快生根了。', '哟，舍得让我开口了？'] },
+    /* 给我改名：先让主进程按皮肤+心情掷骰子，答不答应由阿刺决定（不是用户说了算） */
+    { k: 'rename', re: /(?:改名|名字改成|以后叫你|你就叫|叫你)\s*([\u4e00-\u9fa5a-zA-Z0-9]{1,8})(?:[，。!！]|$)/, mood: 'smirk',
+      fn: function (m) {
+        var nm = m[1];
+        if (!skinId) return '连皮肤都没选，先给我个样子再说名字。';
+        aciDo('tryRename', { name: nm }).then(function (r) {
+          if (r && r.ok && r.renamed) {
+            companionName = nm;
+            if (r.view) syncCompanionModel(r.view);
+            refreshAciGrow();
+          }
+        });
+        return '「' + nm + '」？行，我先掂量掂量这名字——同不同意，我说了算。';
+      } },
     { k: 'name', re: /(?:叫我|记得我叫|我名字是|我是)\s*([\u4e00-\u9fa5a-zA-Z0-9]{1,8})(?:[，。!！]|$)/, mood: 'happy',
       fn: function (m) {
         mem.name = m[1];
@@ -1827,7 +1916,11 @@
         return '记住了，' + mem.name + '。放心，我记性比你的打卡记录稳。';
       } },
     { k: 'whoami', re: /你是谁|你叫什么|什么玩意|什么鬼东西|介绍.*自己/, mood: 'smirk',
-      say: ['阿刺，你的战友——一盆长在计划软件里的仙人掌。工作内容：盯你摸鱼，顺便毒舌。', '我是阿刺，不是宠物，是跟你并肩的搭档。浇水是给我补协作能量，不浇我也照样陪你。'] },
+      fn: function () {
+        var sk = window.PQSkin && window.PQSkin.get(skinId);
+        var head = '我是' + companionName + '，你的战友——一' + (sk ? sk.name : '仙人掌') + '。';
+        return head + '工作内容：盯你摸鱼，顺便毒舌。浇水是给我补协作能量，不浇我也照样陪你。';
+      } },
     { k: 'greet', re: /你好|您好|在吗|嗨[啊呀~]?|哈喽|hello|hi\b/i, mood: 'happy',
       fn: function () { return pick(['哟，搭档' + (nameOf() && nameOf() !== '你' ? nameOf() : '') + '。找我有事，还是单纯想听毒舌？', '在。战友随叫随到，不用睡觉。']); } },
     { k: 'thanks', re: /谢谢|多谢|辛苦|辛苦了/, mood: 'happy',
@@ -2003,6 +2096,14 @@
   function answer(text) {
     text = String(text || '').trim();
     if (!text) return;
+    /* 硬门槛：没选皮肤 = 阿刺还没成形，AI 助手不开放。
+     * 不吞用户这句话，直接把选皮肤面板顶上来。 */
+    if (!skinId) {
+      pushMsg('me', text);
+      pushMsg('sys', '先把我长什么样定下来——选完皮肤，我才能开口。');
+      openSkinPicker();
+      return;
+    }
     pushMsg('me', text);
     /* 有一批动作在等守护密码：先认「密码 xxx」和「取消」 */
     if (pendingAct) {
@@ -2018,10 +2119,42 @@
       pushMsg('bud', '（安静模式中……说「醒醒」能把我叫回来）');
       return;
     }
+    /* 失望模式：阿刺蔫了，不太愿意互动——普通话只冷淡回一句，只有道歉/哄它才搭理。
+     * 唤醒词命中后立即解除失望（调 aci:action setDisappointed:false）。 */
+    if (aciDisappointed) {
+      var wake = /道歉|对不起|哄哄|别生气|醒醒|振作|我错了|补偿|我会努力|加油/.test(text);
+      if (!wake) {
+        /* 蔫着的时候大概率不理你，但逗它玩还是有一点点机会（不情愿地动一下） */
+        var funD = funIntent(text);
+        if (funD && Math.random() < 0.2) {
+          pushMsg('bud', '（它不太情愿，但还是动了一下。）');
+          funDo(funD);
+          return;
+        }
+        var cold = ['（阿刺瞥了你一眼，没说话）', '……（它把头别过去了）', '（蔫巴着，懒得搭理）'];
+        pushMsg('bud', cold[Math.floor(Math.random() * cold.length)]);
+        setMood('disappointed', 4000);
+        return;
+      }
+      aciDisappointed = false;
+      if (aciApi() && aciApi().aciAction) aciApi().aciAction('setDisappointed', { on: false }).catch(function () {});
+      pushMsg('bud', '（阿刺抬了抬头……行吧，这次就当你认错了。）');
+    }
     /* 表情/动作指令：摇一摇、跳一跳、生个气、笑一个、吃个惊、左转右转……
      * 认出来就当场演，不喂模型、不进上下文——这是逗它，不是问它问题。 */
     var fun = funIntent(text);
-    if (fun) { funDo(fun); return; }
+    if (fun) {
+      /* 心情不好就未必理你：生气/难过/犯困时按概率拒绝互动（表情、面板底色都会变） */
+      if (!wantsInteraction()) {
+        var m0 = currentMood();
+        var arr = NO_FUN[m0] || NO_FUN.angry;
+        pushMsg('bud', arr[Math.floor(Math.random() * arr.length)]);
+        setMood(m0 === 'sleep' ? 'sleep' : (m0 === 'happy' || m0 === 'idle' ? 'smirk' : m0), 3200);
+        return;
+      }
+      funDo(fun);
+      return;
+    }
     var rule = null; var m = null;
     for (var i = 0; i < BRAIN.length; i++) {
       m = text.match(BRAIN[i].re);
@@ -2051,7 +2184,7 @@
       alaReply(text, rule, m, ctx);
       return;
     }
-    var out = tableOut(rule, m, ctx);
+    var out = voiceOut(tableOut(rule, m, ctx), 'table');
     /* 略微延迟 + 说话动画，像在想怎么毒你 */
     setMood(listening ? 'listen' : (rule.mood || 'idle'), rule.k === 'mute' ? 0 : 5200);
     talking(true);
@@ -2459,10 +2592,122 @@
   }
   function aciApi() { return (typeof window !== 'undefined' && window.api) ? window.api : null; }
   function escA(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  /* 把阿刺战友状态同步到 3D 建模（失望→蔫巴灰暗造型，战斗→泛红竖刺，等级→花冠大小） */
+  function syncCompanionModel(d) {
+    if (!d || !d.aci) return;
+    aciDisappointed = !!d.aci.disappointed;
+    aciMood = d.aci.mood || 'idle';
+    var id = d.aci.identity || {};
+    skinId = String(id.skin || '');
+    companionName = String(id.name || '阿刺');
+    skinKnown = true;
+    skinCatalog = d.skins || skinCatalog;
+    resetCostInfo = d.resetCost || resetCostInfo;
+    applySkinIdentity();
+    var st = { mood: d.aci.mood, disappointed: !!d.aci.disappointed, level: d.aci.level };
+    if (aciFightUntil && Date.now() < aciFightUntil) st.fighting = true;
+    var sk = window.PQSkin && window.PQSkin.get(skinId);
+    if (sk) st.skin = Object.assign({ id: sk.id }, sk.look);
+    try {
+      if (gl3d && gl3d.setCompanionState) gl3d.setCompanionState(st);
+      if (gl3dFab && gl3dFab.setCompanionState) gl3dFab.setCompanionState(st);
+    } catch (e) {}
+    applyMoodTheme(st.fighting ? 'fight' : (st.disappointed ? 'disappointed' : (st.mood || 'idle')));
+  }
+
+  /* 心情不好时，可能压根不想陪你玩（跳一跳/摇一摇这些）——按概率拒绝，不是永远拒绝 */
+  function currentMood() {
+    if (aciDisappointed) return 'disappointed';
+    if (aciFightUntil && Date.now() < aciFightUntil) return 'fight';
+    if (mood && mood !== 'idle') return mood;
+    return aciMood || 'idle';
+  }
+  function wantsInteraction() {
+    var p = {
+      happy: 1, smirk: 0.9, listen: 0.95, surprised: 0.85,
+      sleep: 0.35, sad: 0.5, angry: 0.45, disappointed: 0.15, fight: 0.75,
+    }[currentMood()];
+    if (p == null) p = 0.95;
+    return Math.random() < p;
+  }
+  var NO_FUN = {
+    disappointed: ['（它把头别过去了，懒得动。）', '……现在不想动。', '（蔫着，连刺都懒得竖。）'],
+    angry: ['不跳。气还没消。', '（瞪了你一眼，没动。）', '现在别逗我。'],
+    sad: ['……没心情。', '（缩了缩，没动。）'],
+    sleep: ['（睡着了，没反应。）', '呼……（翻了个身。）'],
+    fight: ['正打架呢，别闹。'],
+  };
+
+  /* 皮肤=主题色 + 名字 + 头像 emoji。面板/浮标都用同一套 CSS 变量。 */
+  function applySkinIdentity() {
+    var panel = document.getElementById('pqb-panel');
+    var fab = document.getElementById('pqb-fab');
+    var sk = window.PQSkin && window.PQSkin.get(skinId);
+    if (sk && window.PQSkin) {
+      var app = document.getElementById('app');
+      var dark = !!(app && app.getAttribute('data-theme') === 'dark');
+      var vars = window.PQSkin.themeVars(sk.id, dark);
+      [panel, fab].forEach(function (el) {
+        if (!el) return;
+        Object.keys(vars).forEach(function (k) { el.style.setProperty(k, vars[k]); });
+      });
+    }
+    var t = panel && panel.querySelector('#pqb-title');
+    if (t) {
+      t.textContent = (sk ? sk.emoji + ' ' : '🌵 ') + companionName;
+      t.setAttribute('title', sk ? sk.name + ' · ' + sk.tagline : '阿刺');
+    }
+    document.querySelectorAll('.pqb-fallback').forEach(function (el) {
+      el.textContent = sk ? sk.emoji : '🌵';
+    });
+    /* 浮标按钮的无障碍标签也跟着名字走 */
+    if (fab) fab.setAttribute('aria-label', companionName + '（' + (sk ? sk.name : '未选皮肤') + '）');
+  }
+
+  /* 语气微调：同一句毒舌，玫瑰带花、豪猪更硬、板栗说实在话。
+   * 只调味不改事实（数字、建议、结论都保留），没选皮肤就原样返回。 */
+  function voiceOut(text, kind) {
+    try {
+      if (window.PQSkin && skinId) return window.PQSkin.decorate(text, skinId, { kind: kind || 'table' });
+    } catch (e) {}
+    return text;
+  }
+  var aciFightUntil = 0;
+  var aciDisappointed = false;
+  var aciMood = 'idle'; // 主进程侧的心情（心情不好时可能不想陪你玩）
+  /* 身份（皮肤/名字）：由主进程 aci.identity 下发，渲染层只缓存不做判定 */
+  var skinId = '';
+  var companionName = '阿刺';
+  var skinCatalog = null;
+  var resetCostInfo = null;
+  var pickSel = '';
+  var skinKnown = false; // 是否已经拿到过身份状态（避免异步没回来就误判"未选皮肤"）
+
+  /* 网页版没有主进程，皮肤/名字退到 localStorage；桌面版一切以 aci.identity 为准 */
+  var SKIN_KEY = 'pq-skin-v1';
+  function saveLocalIdentity(skin, name) {
+    try { localStorage.setItem(SKIN_KEY, JSON.stringify({ skin: skin, name: name || '阿刺' })); } catch (e) {}
+  }
+  function loadLocalIdentity() {
+    try {
+      var o = JSON.parse(localStorage.getItem(SKIN_KEY) || 'null');
+      if (o && window.PQSkin && window.PQSkin.get(o.skin)) {
+        skinId = o.skin;
+        companionName = o.name || '阿刺';
+      }
+    } catch (e) {}
+    skinKnown = true;
+    applySkinIdentity();
+  }
+
   async function aciFetch() {
     var api = aciApi();
     if (!api || typeof api.aciState !== 'function') return null;
-    try { var r = await api.aciState(); return (r && r.aci) ? r : null; } catch (e) { return null; }
+    try {
+      var r = await api.aciState();
+      if (r && r.aci) syncCompanionModel(r);
+      return (r && r.aci) ? r : null;
+    } catch (e) { return null; }
   }
   async function aciDo(action, payload) {
     var api = aciApi();
@@ -2479,6 +2724,134 @@
       return r;
     } catch (e) { pushMsg('sys', '操作失败：' + ((e && e.message) || e)); return null; }
   }
+  /* ---------------- 首次见面：选皮肤 ----------------
+   * 流程刻意分两步：点卡片=选中，再点"签合同"=确认。
+   * 皮肤是不可逆选择，不给人手滑的机会。 */
+  function skinList() {
+    if (skinCatalog && skinCatalog.length) return skinCatalog;
+    return (window.PQSkin && window.PQSkin.SKINS) ? window.PQSkin.SKINS : [];
+  }
+
+  function openSkinPicker() {
+    var box = document.getElementById('pqb-skinpick');
+    if (!box) return;
+    /* setOpen 在"未选皮肤"时也会调本函数：用 open 状态断开递归 */
+    if (!open) { setOpen(true); return; }
+    pickSel = '';
+    renderSkinPicker();
+    box.classList.add('show');
+  }
+  function closeSkinPicker() {
+    var box = document.getElementById('pqb-skinpick');
+    if (box) box.classList.remove('show');
+  }
+
+  function renderSkinPicker() {
+    var box = document.getElementById('pqb-skinpick');
+    if (!box) return;
+    var list = skinList();
+    var cards = list.map(function (s) {
+      var sel = pickSel === s.id ? ' sel' : '';
+      return '<div class="pqb-skincard' + sel + '" data-sk="' + escA(s.id) + '">'
+        + '<div class="em">' + escA(s.emoji) + '</div>'
+        + '<div class="info"><b>' + escA(s.name) + '</b>'
+        + '<span class="tg">' + escA(s.tagline) + '</span>'
+        + '<span class="tr" style="color:' + escA(s.theme.accent) + '">' + escA(s.trait) + '</span></div>'
+        + '</div>';
+    }).join('');
+    var picked = null;
+    for (var i = 0; i < list.length; i++) if (list[i].id === pickSel) picked = list[i];
+    box.innerHTML = ''
+      + '<h3>先交个底：我是哪种带刺的？</h3>'
+      + '<div class="pqb-skin-sub">皮肤决定我的头像配色、说话语气和面板主色。选完就定下来——想换得付代价。</div>'
+      + '<div class="pqb-skins">' + (cards || '<div class="pqb-muted">皮肤清单没加载出来，重开面板试试。</div>') + '</div>'
+      + '<div class="pqb-skin-foot"><div class="pqb-skin-warn">'
+      + (picked ? '确定是「' + escA(picked.name) + '」？点下面按钮就算签合同，以后不能改。'
+        : '先点一个，再点下面按钮确认。')
+      + '</div><button class="pqb-btn go" id="pqb-skinok"' + (picked ? '' : ' disabled') + '>'
+      + (picked ? '就选它——签合同' : '先选一个') + '</button></div>';
+
+    box.querySelectorAll('[data-sk]').forEach(function (el) {
+      el.onclick = function () { pickSel = el.getAttribute('data-sk'); renderSkinPicker(); };
+    });
+    var ok = box.querySelector('#pqb-skinok');
+    if (ok) ok.onclick = function () {
+      if (!pickSel) return;
+      ok.disabled = true;
+      var chosen = pickSel;
+      aciDo('chooseSkin', { skin: chosen }).then(function (r) {
+        if (r && r.ok && r.view) {
+          closeSkinPicker();
+          pickSel = '';
+          syncCompanionModel(r.view);
+          refreshAciGrow();
+          refreshAciPk();
+          return;
+        }
+        if (!r || !r.view) {
+          /* 网页版：没有主进程，存本地 + 按皮肤改主题和 3D */
+          saveLocalIdentity(chosen);
+          skinId = chosen;
+          skinKnown = true;
+          companionName = companionName || '阿刺';
+          applySkinIdentity();
+          try {
+            var sk = window.PQSkin.get(chosen);
+            var look = Object.assign({ id: sk.id }, sk.look);
+            if (gl3d) gl3d.setCompanionState({ skin: look, mood: 'happy' });
+            if (gl3dFab) gl3dFab.setCompanionState({ skin: look, mood: 'happy' });
+            pushMsg('bud', window.PQSkin.greeting(chosen, companionName));
+          } catch (e) {}
+          closeSkinPicker();
+          pickSel = '';
+          return;
+        }
+        ok.disabled = false;
+      });
+    };
+  }
+
+  /* ---------------- 重置（隐藏入口：身份卡上的皮肤 emoji 连点 5 下） ---------------- */
+  function openResetDialog() {
+    var mask = document.getElementById('pqb-resetmask');
+    if (!mask) return;
+    var c = resetCostInfo || (window.PQSkin ? window.PQSkin.resetCost() : null) || { items: [], keep: '' };
+    var li = (c.items || []).map(function (x) { return '<li>' + escA(x) + '</li>'; }).join('');
+    mask.innerHTML = ''
+      + '<div class="pqb-resetbox"><h4>⚠️ ' + escA(c.title || '和阿刺两清') + '</h4>'
+      + '<ul>' + li + '</ul>'
+      + '<div class="keep">' + escA(c.keep || '') + '</div>'
+      + '<div class="row"><button class="pqb-btn" data-rst="no">算了</button>'
+      + '<button class="pqb-btn danger" data-rst="yes">我想清楚了</button></div></div>';
+    mask.classList.add('show');
+    mask.querySelectorAll('[data-rst]').forEach(function (b) {
+      b.onclick = function () {
+        if (b.getAttribute('data-rst') === 'no') { mask.classList.remove('show'); return; }
+        b.disabled = true;
+        aciDo('resetIdentity', { confirm: '重新开始' }).then(function (r) {
+          mask.classList.remove('show');
+          var hasDesktop = !!(r && r.view);
+          if (!hasDesktop && r && !r.ok && r.message && !/桌面/.test(r.message)) { b.disabled = false; return; }
+          /* 代价兑现：聊天记录、评价、上下文全清；插件里的计数也归零 */
+          alaHist = [];
+          if (msgsEl) msgsEl.innerHTML = '';
+          mem.roasts = 0; mem.chats = 0; saveMem();
+          try { localStorage.removeItem(SKIN_KEY); } catch (e) {}
+          skinId = '';
+          companionName = '阿刺';
+          try {
+            var blank = { tint: null, spine: null, petal: null, flower: 1 };
+            if (gl3d) gl3d.setCompanionState({ skin: blank, mood: 'idle' });
+            if (gl3dFab) gl3dFab.setCompanionState({ skin: blank, mood: 'idle' });
+          } catch (e) {}
+          if (hasDesktop) syncCompanionModel(r.view);
+          else { applySkinIdentity(); }
+          openSkinPicker();
+        });
+      };
+    });
+  }
+
   async function refreshAciGrow() {
     var box = document.getElementById('pqb-view-grow');
     if (!box) return;
@@ -2504,8 +2877,27 @@
         + '<span>' + (got ? '<span class="pqb-tag">已解锁×' + got + '</span> ' : '')
         + '<button class="pqb-btn" data-sup="' + escA(s.id) + '" ' + ((a.energy || 0) < s.energy ? 'disabled' : '') + '>' + s.energy + '能量</button></span></div>';
     });
+    var sk = window.PQSkin && window.PQSkin.get(skinId);
+    var nameSuggest = dv.nameSuggestions || [];
     box.innerHTML = ''
-      + '<div class="pqb-card"><h4>🌵 阿刺 · 战友 <span class="pqb-tag">' + escA(dv.tierName || '新芽段') + '</span></h4>'
+      + '<div class="pqb-card" id="pqb-idcard"><h4>' + (sk ? escA(sk.emoji) : '🌵') + ' 身份 '
+      + '<span class="pqb-tag pqb-skinbadge" id="pqb-skinbadge" title="' + (sk ? escA(sk.tagline) : '还没选皮肤') + '">'
+      + escA(sk ? sk.name : '未选皮肤') + '</span></h4>'
+      + '  <div class="pqb-kv"><span>名字</span><b>' + escA(companionName) + '</b></div>'
+      + (dv.voiceHint ? '  <div class="pqb-muted" style="margin-top:2px">语气：' + escA(dv.voiceHint) + '</div>' : '')
+      + '  <div class="pqb-row"><button class="pqb-btn" id="pqb-rename">✏ 改名</button>'
+      + '  <button class="pqb-btn" id="pqb-skinchange">想换皮肤？</button></div>'
+      + '  <div id="pqb-renamebox" style="display:none">'
+      + '    <div class="pqb-namein"><input id="pqb-nameinput" maxlength="8" placeholder="新名字（1~8 字）" />'
+      + '    <button class="pqb-btn" id="pqb-nameok">提交</button></div>'
+      + (nameSuggest.length ? '    <div class="pqb-sug">' + nameSuggest.map(function (n) {
+        return '<button data-sug="' + escA(n) + '">' + escA(n) + '</button>';
+      }).join('') + '</div>' : '')
+      + '    <div class="pqb-muted" style="margin-top:4px">这几个是我自己想的。改不改，得看我心情。</div>'
+      + '    <div class="pqb-muted" id="pqb-namefb" style="margin-top:3px"></div>'
+      + '  </div>'
+      + '</div>'
+      + '<div class="pqb-card"><h4>' + (sk ? escA(sk.emoji) : '🌵') + ' ' + escA(companionName) + ' · 战友 <span class="pqb-tag">' + escA(dv.tierName || '新芽段') + '</span></h4>'
       + '  <div class="pqb-kv"><span>等级</span><b>Lv.' + (a.level || 1) + ' / ' + (r.MAX_LEVEL || 100) + '</b></div>'
       + '  <div class="pqb-bar"><i style="width:' + pct + '%"></i></div>'
       + '  <div class="pqb-kv"><span>经验</span><b>' + (a.exp || 0) + ' / ' + need + '</b></div>'
@@ -2527,6 +2919,54 @@
       + '</div>';
     var w = box.querySelector('#pqb-water'); if (w) w.onclick = function () { aciDo('water').then(function (r) { if (r && r.ok) refreshAciGrow(); }); };
     var bt = box.querySelector('#pqb-buyticket'); if (bt) bt.onclick = function () { aciDo('buyTicket').then(function (r) { if (r && r.ok) { refreshAciGrow(); refreshAciPk(); } }); };
+    /* ---- 身份卡：改名 / 换皮肤拒绝 / 隐藏重置 ---- */
+    var rn = box.querySelector('#pqb-rename');
+    var rbox = box.querySelector('#pqb-renamebox');
+    var fb = box.querySelector('#pqb-namefb');
+    if (rn) rn.onclick = function () {
+      if (!rbox) return;
+      var show = rbox.style.display === 'none';
+      rbox.style.display = show ? 'block' : 'none';
+      if (show) { var inp0 = box.querySelector('#pqb-nameinput'); if (inp0) inp0.focus(); }
+    };
+    function submitName() {
+      var inp = box.querySelector('#pqb-nameinput');
+      var v = inp ? String(inp.value || '').trim() : '';
+      if (!v) return;
+      aciDo('tryRename', { name: v }).then(function (r) {
+        if (r && r.ok && r.renamed) {
+          companionName = v;
+          if (r.view) syncCompanionModel(r.view);
+          refreshAciGrow();
+        } else if (fb) {
+          fb.style.color = '#ef4444';
+          fb.textContent = (r && r.message) || '这次没答应。';
+          if (inp) inp.select();
+        }
+      });
+    }
+    var nok = box.querySelector('#pqb-nameok'); if (nok) nok.onclick = submitName;
+    var ninp = box.querySelector('#pqb-nameinput');
+    if (ninp) ninp.onkeydown = function (e) { if (e.key === 'Enter') submitName(); };
+    box.querySelectorAll('[data-sug]').forEach(function (b) {
+      b.onclick = function () {
+        var inp = box.querySelector('#pqb-nameinput');
+        if (inp) { inp.value = b.getAttribute('data-sug'); inp.focus(); }
+      };
+    });
+    var chg = box.querySelector('#pqb-skinchange');
+    if (chg) chg.onclick = function () { aciDo('requestSkinChange'); };
+    /* 隐藏入口：皮肤徽章连点 5 下（1.5 秒内）才弹重置，平时点它只是普通标签 */
+    var badge = box.querySelector('#pqb-skinbadge');
+    if (badge) {
+      var taps = 0, tapAt = 0;
+      badge.onclick = function () {
+        var t = Date.now();
+        if (t - tapAt > 1500) taps = 0;
+        tapAt = t; taps++;
+        if (taps >= 5) { taps = 0; openResetDialog(); }
+      };
+    }
     box.querySelectorAll('[data-sup]').forEach(function (b) {
       b.onclick = function () { aciDo('useSupply', { supplyId: b.getAttribute('data-sup') }).then(function (r) { if (r && r.ok) refreshAciGrow(); }); };
     });
@@ -2647,7 +3087,7 @@
     panel.innerHTML = ''
       + '<div id="pqb-head">'
       + '  <div style="flex:0 0 auto">' + cactusDOM('head') + '</div>'
-      + '  <div class="pqb-tt"><b>阿刺 Pro</b><div class="pqb-sub" title="带路 · 汇报 · 毒舌 · 接消息 · 排计划 · 本地语音">带路 · 毒舌 · 会动手</div>'
+      + '  <div class="pqb-tt"><b id="pqb-title">🌵 阿刺</b><div class="pqb-sub" title="带路 · 汇报 · 毒舌 · 接消息 · 排计划 · 本地语音">带路 · 毒舌 · 会动手</div>'
       + '    <div class="pqb-sub-row">'
       + '      <div class="pqb-sub" id="pqb-aimode" title="引擎状态">⚡ 极速</div>'
       + '      <button id="pqb-ro" aria-label="只读模式" title="闭嘴别动手（只读）：阿刺只看不动。右键点浮标也能切">🖐</button>'
@@ -2673,7 +3113,9 @@
       + '  <div id="pqb-hint">对话与数据全部本机生成，不联网；接上模型后，复杂些的问题也能聊。</div>'
       + '</div>'
       + '<div id="pqb-view-grow" class="pqb-view"></div>'
-      + '<div id="pqb-view-pk" class="pqb-view"></div>';
+      + '<div id="pqb-view-pk" class="pqb-view"></div>'
+      + '<div id="pqb-skinpick"></div>'
+      + '<div id="pqb-resetmask"></div>';
     document.body.appendChild(panel);
 
     /* 真 3D：在画布上现场建模（浮标一个小场景，面板一个主场景） */
@@ -2695,6 +3137,8 @@
       if (appEl && window.MutationObserver) {
         new MutationObserver(function () {
           [gl3d, gl3dFab].forEach(function (g) { if (g) g.refreshTheme(); });
+          applySkinIdentity(); // 皮肤主题色的浅/深底透明度不一样，明暗切换要重算
+          applyMoodTheme(currentMood()); // 面板底色的明暗基准也跟着换
         }).observe(appEl, { attributes: true, attributeFilter: ['data-theme'] });
       }
     }
@@ -2824,6 +3268,8 @@
     if (open) {
       positionPanel();
       roHook.paint();  /* 面板里的「只看」按钮要跟设置页同步 */
+      /* 未选皮肤：面板一开就顶上来，AI 助手在此之前不开放 */
+      if (skinKnown && !skinId) openSkinPicker();
       var growV = document.getElementById('pqb-view-grow');
       var pkV = document.getElementById('pqb-view-pk');
       if (growV && growV.classList.contains('on')) refreshAciGrow();
@@ -2965,6 +3411,8 @@
     if (opts && opts.bridge && typeof opts.bridge === 'object') bridge = opts.bridge;
     if (document.getElementById('pqb-fab')) return;
     buildUI();
+    /* 先拿主进程的身份状态；拿不到（网页版）才退回 localStorage，避免误判"未选皮肤" */
+    aciFetch().then(function (d) { if (!d) loadLocalIdentity(); });
     alaProbeNow();   /* 探测外接模型，不可用就纯查表，不阻塞 UI */
     /* 主动催办：每 10 分钟扫一次，到点没打勾的就催（同一条每天最多 2 次，全天最多 6 条） */
     setInterval(nudge, 10 * 60e3);
@@ -2981,6 +3429,18 @@
       if (!api || typeof api.aciRoomSay !== 'function' || quiet) return;
       api.aciRoomSay().catch(function () {});
     }, 4 * 60e3);
+    /* 阿刺自己启动强化态补给：每 5 分钟探测一次。心情好概率大、失望概率小，
+     * 每周最多 3 次、消耗它自己的能量——判定与扣能量都在主进程做。 */
+    setInterval(function () {
+      var api = aciApi();
+      if (!api || typeof api.aciAction !== 'function' || quiet || aciDisappointed) return;
+      api.aciAction('shouldAutoSupply').then(function (r) {
+        if (r && r.ok && r.autoLine) {
+          pushMsg('bud', r.message || ('阿刺自己启用了「' + r.autoLine + '」'));
+          aciFetch(); // 同步状态到建模与面板
+        }
+      }).catch(function () {});
+    }, 5 * 60e3);
   }
 
   window.PQBuddy = {
@@ -2995,6 +3455,21 @@
       };
     },
     scold: scold,
+    /* 阿刺主动说一句（外部事件触发，如 PK 应战）——不经过 BRAIN 规则，直接显示 */
+    say: function (text, mood) {
+      pushMsg('bud', String(text || ''));
+      setMood(mood || 'smirk', 4200);
+      setOpen(true);
+    },
+    /* 切战斗造型（PK 应战瞬间）：泛红/竖刺/核心高亮，到点自动恢复 */
+    setFighting: function (on, ms) {
+      aciFightUntil = on ? Date.now() + (Number(ms) || 8000) : 0;
+      try {
+        if (gl3d && gl3d.setCompanionState) gl3d.setCompanionState({ fighting: !!on, disappointed: aciDisappointed });
+        if (gl3dFab && gl3dFab.setCompanionState) gl3dFab.setCompanionState({ fighting: !!on, disappointed: aciDisappointed });
+      } catch (e) {}
+      if (on) setTimeout(function () { aciFetch(); }, (Number(ms) || 8000) + 100);
+    },
     /* 清掉毒舌节流（切换场景/自测时用，免得 2 分钟内同一类只响一次） */
     scoldReset: function () { scoldLast = {}; },
     /* 战友养成 / 竞技场：外部可主动唤起 tab（供设置页/快捷入口调用） */
@@ -3032,7 +3507,8 @@
     fun: { intent: funIntent, run: funDo, rules: FUN_RULES },
     /* 现实条件（调试/自测用：天气识别与户外改室内） */
     wx: { bad: weatherBad, hint: weatherHint, adjust: adjustForWeather },
-    /* 往面板里塞一句话（调试/自测用，走的是和正式消息同一条渲染路径） */
-    say: pushMsg,
+    /* 往面板里塞一句话（调试/自测用，走的是和正式消息同一条渲染路径）。
+     * 注意别叫 say：上面已有正式的 say（阿刺主动说话），重名会把那个覆盖掉。 */
+    push: pushMsg,
   };
 })();

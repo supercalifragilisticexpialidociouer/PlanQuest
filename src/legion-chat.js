@@ -404,7 +404,7 @@
    *         pq://legion?net=p2p&invite=<urlencoded 邀请码>
    * 计划文件太大，不走文本，走结构化附件 entry.link（见 cleanLink）。
    */
-  const LINK_RE = /pq:\/\/(room|legion)\?[^\s"'<>]{3,4000}/gi;
+  const LINK_RE = /pq:\/\/(room|legion|pk)\?[^\s"'<>]{3,4000}/gi;
 
   function buildLink(kind, info) {
     const i = info || {};
@@ -427,11 +427,17 @@
       if (!ip || !code) return '';
       return `pq://legion?net=lan&ip=${encodeURIComponent(ip)}&port=${port || 0}&code=${encodeURIComponent(code)}`;
     }
+    if (kind === 'pk') {
+      /* PK 挑战券链接：m=matchId, t=创建时间, n=发起人, d=天数, r=对手战力 */
+      const m = String(i.matchId || i.m || '').trim().slice(0, 60);
+      if (!m) return '';
+      return `pq://pk?m=${encodeURIComponent(m)}&t=${Number(i.t) || Date.now()}&n=${encodeURIComponent(i.name || i.n || '搭档')}&d=${Number(i.days || i.d) || 3}&r=${Number(i.rate || i.r) || 0}`;
+    }
     return '';
   }
 
   function parseLink(url) {
-    const m = /^pq:\/\/(room|legion)\?([^\s"'<>]{3,4000})$/i.exec(String(url || '').trim());
+    const m = /^pq:\/\/(room|legion|pk)\?([^\s"'<>]{3,4000})$/i.exec(String(url || '').trim());
     if (!m) return null;
     const kind = m[1].toLowerCase();
     const q = {};
@@ -445,6 +451,17 @@
     if (kind === 'room') {
       const inv = cleanInvite({ ip: q.ip, port: q.port, code: q.code });
       return inv ? { ...inv, kind: 'room' } : null;
+    }
+    if (kind === 'pk') {
+      const matchId = String(q.m || '').slice(0, 60);
+      if (!matchId) return null;
+      return {
+        kind: 'pk', matchId,
+        t: Number(q.t) || 0,
+        name: String(q.n || '搭档').slice(0, 16),
+        days: Math.min(7, Math.max(1, Number(q.d) || 3)),
+        rate: Math.min(100, Math.max(0, Number(q.r) || 0)),
+      };
     }
     const code = String(q.code || '').slice(0, 8);
     if (q.net === 'p2p') {

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8" /><title>buddy skin picker test</title>
+<style>body{margin:0;background:#0e1020;height:100vh;font-family:"Microsoft YaHei",sans-serif}#app{width:100%;height:100vh}</style>
+</head>
+<body>
+<div id="app" data-theme="dark"></div>
+<script src="../web/vendor/three.min.js"></script>
+<script src="../web/aci-skin.js"></script>
+<script src="../web/buddy3d.js"></script>
+<script>
+/* 模拟主进程：皮肤/改名/重置的状态机，够 UI 冒烟用（真规则在 src/aci-core.js 单测里） */
+window.__mock = {
+  aci: {
+    level: 7, exp: 30, energy: 2, waterCount: 5, tickets: 1,
+    supplies: {}, supplyWeek: { week: '', used: 0 }, privileges: {}, mood: 'happy',
+    disappointed: false, identity: { skin: '', name: '阿刺', chosenAt: 0, renameCount: 0 },
+    pk: { matches: [], stats: {} },
+  },
+};
+function view() {
+  const a = window.__mock.aci;
+  const sk = window.PQSkin.get(a.identity.skin);
+  return {
+    aci: JSON.parse(JSON.stringify(Object.assign({}, a, { identity: a.identity }))),
+    skins: window.PQSkin.SKINS,
+    resetCost: window.PQSkin.resetCost(),
+    supplies: [
+      { id: 'deepAnalysis', name: '深度分析', desc: '挖历史数据', energy: 1 },
+      { id: 'replyForMe', name: '代回消息', desc: '代拟回复', energy: 2 },
+    ],
+    rules: { POINTS_PER_ENERGY: 10, MAX_LEVEL: 100 }, tiers: [],
+    derived: {
+      tierName: '新芽段', weekRate: 62, power: 71, expNeeded: 80, ticketPrice: 50,
+      cooling: false, hidden: false, disappointed: false, mood: a.mood,
+      guaranteeCapacity: 1, supplyWeekUsed: 0, autoSupplyChance: 0.3,
+      locked: !sk, skin: a.identity.skin, skinName: sk ? sk.name : '',
+      skinEmoji: sk ? sk.emoji : '', name: a.identity.name,
+      renameCount: a.identity.renameCount,
+      nameSuggestions: sk ? window.PQSkin.suggestNames(sk.id) : [],
+      voiceHint: sk ? window.PQSkin.voiceHint(sk.id) : '',
+    },
+  };
+}
+window.api = {
+  aciState: async () => view(),
+  aciRoomSay: async () => ({ ok: false }),
+  aciAction: async (action, p) => {
+    const a = window.__mock.aci;
+    if (action === 'chooseSkin') {
+      if (a.identity.skin) return { ok: false, refused: true, message: window.PQSkin.requestSkinChange(a.identity.skin).reply, view: view() };
+      a.identity.skin = p.skin; a.identity.chosenAt = Date.now(); a.mood = 'happy';
+      return { ok: true, message: window.PQSkin.greeting(p.skin, a.identity.name), skin: p.skin, view: view() };
+    }
+    if (action === 'tryRename') {
+      const ev = window.PQSkin.evaluateRename(a.identity.skin, p.name, {
+        current: a.identity.name, mood: a.mood, level: a.level,
+        disappointed: a.disappointed, renameCount: a.identity.renameCount, rng: () => 0.01,
+      });
+      if (!ev.accept) return { ok: false, refused: true, message: ev.reply, view: view() };
+      a.identity.name = String(p.name).trim().slice(0, 8);
+      a.identity.renameCount++;
+      return { ok: true, renamed: true, message: ev.reply, view: view() };
+    }
+    if (action === 'requestSkinChange') {
+      const r = window.PQSkin.requestSkinChange(a.identity.skin);
+      return { ok: false, refused: true, message: r.reply, hint: r.hint, view: view() };
+    }
+    if (action === 'resetIdentity') {
+      if (p.confirm !== '重新开始') return { ok: false, message: '确认词不对' };
+      window.__mock.aci = { level: 1, exp: 0, energy: 0, waterCount: 0, tickets: 0, supplies: {}, supplyWeek: { week: '', used: 0 }, privileges: {}, mood: 'idle', disappointed: false, identity: { skin: '', name: '阿刺', chosenAt: 0, renameCount: 0 }, pk: { matches: [], stats: {} } };
+      return { ok: true, purgeChat: true, identityReset: true, message: window.PQSkin.resetLine('rose'), view: view() };
+    }
+    return { ok: false, message: '未知操作' };
+  },
+};
+</script>
+<script src="../web/buddy.js"></script>
+<script>
+PQBuddy.start({ getState: () => ({ profile: { points: 120, streak: 4 }, todayPlans: [] }), nav: () => {} });
+</script>
+</body>
+</html>

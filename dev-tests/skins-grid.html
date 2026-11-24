@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8" /><title>五种皮肤建模对照</title>
+<style>
+  body{margin:0;background:#0e1020;color:#e9e8ff;font-family:"Microsoft YaHei",sans-serif}
+  #grid{display:flex;gap:8px;padding:14px}
+  .cell{width:200px;height:300px;border:1px solid rgba(255,255,255,.12);border-radius:12px;
+        display:flex;flex-direction:column;align-items:center;background:rgba(255,255,255,.03)}
+  .cell canvas{width:200px;height:250px;display:block}
+  .nm{font-size:13px;color:#17cda8;padding:2px 0 8px}
+</style>
+</head>
+<body>
+<div id="grid"></div>
+<script src="../web/vendor/three.min.js"></script>
+<script src="../web/aci-skin.js"></script>
+<script src="../web/buddy3d.js"></script>
+<script>
+  var grid = document.getElementById('grid');
+  PQSkin.SKINS.forEach(function (s) {
+    var d = document.createElement('div');
+    d.className = 'cell';
+    d.innerHTML = '<canvas></canvas><div class="nm">' + s.emoji + ' ' + s.name + '</div>';
+    grid.appendChild(d);
+  });
+  setTimeout(function () {
+    document.querySelectorAll('.cell').forEach(function (c, i) {
+      var sk = PQSkin.SKINS[i];
+      var g = PQBuddy3D.create(c.querySelector('canvas'));
+      if (!g) return;
+      g.setRotY(-12);
+      g.setCompanionState({ skin: Object.assign({ id: sk.id }, sk.look), mood: 'idle' });
+    });
+  }, 120);
+</script>
+</body>
+</html>

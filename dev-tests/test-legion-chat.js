@@ -338,6 +338,37 @@ ok('计划包跟着消息走', () => {
   assert.ok(e.link && e.link.kind === 'plan' && e.link.count === 2);
 });
 
+console.log('\n[14] PK 挑战链接');
+ok('PK 链接能生成', () => {
+  const u = C.buildLink('pk', { matchId: 'pk-abc123', t: T0, name: '阿明', days: 3, rate: 71 });
+  assert.ok(/^pq:\/\/pk\?/.test(u));
+  assert.ok(u.includes('m=pk-abc123'));
+});
+ok('PK 链接能解析回来', () => {
+  const u = C.buildLink('pk', { matchId: 'pk-abc123', t: T0, name: '阿明', days: 5, rate: 71 });
+  const p = C.parseLink(u);
+  assert.equal(p.kind, 'pk');
+  assert.equal(p.matchId, 'pk-abc123');
+  assert.equal(p.name, '阿明');
+  assert.equal(p.days, 5);
+  assert.equal(p.rate, 71);
+});
+ok('PK 链接缺 matchId 不生成', () => {
+  assert.equal(C.buildLink('pk', { matchId: '' }), '');
+});
+ok('PK 链接天数夹在 1~7', () => {
+  const u = C.buildLink('pk', { matchId: 'pk-x', days: 99, rate: 999 });
+  const p = C.parseLink(u);
+  assert.equal(p.days, 7);
+  assert.equal(p.rate, 100);
+});
+ok('正文里的 PK 链接能被切成按钮段', () => {
+  const u = C.buildLink('pk', { matchId: 'pk-abc123', name: '阿明', rate: 71 });
+  const segs = C.splitLinks('来应战：' + u + ' 速来');
+  assert.equal(segs.length, 3);
+  assert.ok(segs[1].link && segs[1].link.kind === 'pk' && segs[1].link.matchId === 'pk-abc123');
+});
+
 console.log(`\n结果：${pass} 通过 / ${fail} 失败\n`);
 if (fail) process.exit(1);
 process.exit(0);

@@ -1921,6 +1921,8 @@ function bindStudyView(room) {
         joinLegionFromLink(lg.getAttribute('data-legion'), window.PQLegion ? PQLegion.info() : null);
         return;
       }
+      const pk = e.target.closest('[data-pk]');
+      if (pk) { acceptPkFromLink(pk.getAttribute('data-pk')); return; }
       onChatBadgeClick(e);
     };
     $('#chat-list').oncontextmenu = (e) => {
@@ -3456,6 +3458,10 @@ function roomChatText(m, roster) {
         if (seg.link.kind === 'room') {
           return `<button class="btn small ghost" data-room="${esc(seg.link.ip)}|${Number(seg.link.port) || 0}|${esc(seg.link.code)}">🏠 进房间 ${esc(seg.link.code)}</button>`;
         }
+        if (seg.link.kind === 'pk') {
+          const rawPk = encodeURIComponent(JSON.stringify(seg.link));
+          return `<button class="btn small pk-challenge" data-pk="${esc(rawPk)}">⚔️ 应战 ${esc(seg.link.name)}（战力 ${Number(seg.link.rate) || 0}）</button>`;
+        }
         const raw = encodeURIComponent(JSON.stringify(seg.link));
         return `<button class="btn small ghost" data-legion="${esc(raw)}">🛡 加入军团 ${esc(seg.link.code)}</button>`;
       })
@@ -3744,8 +3750,16 @@ async function openInviteDialog() {
   mask.innerHTML = `
     <div class="modal" style="width:440px">
       <h2>📨 拉人进房间</h2>
-      <p class="modal-sub">同一 WiFi 下开着本应用的同学会自动出现，点一下就能邀请。</p>
+      <p class="modal-sub">同一 WiFi 下开着本应用的同学会自动出现，点一下就能邀请。也可以把阿刺（虚拟战友）拉进来陪你。</p>
       <div class="peer-list" id="peer-list">
+        <div class="peer-row" style="background:rgba(23,205,168,0.08)">
+          <span class="peer-av">🌵</span>
+          <div class="peer-main">
+            <div class="peer-name">阿刺（我的战友）</div>
+            <div class="peer-meta">虚拟成员 · 陪聊 / PK / 战术建议</div>
+          </div>
+          <button class="btn small" data-companion="1">拉进来</button>
+        </div>
         ${
           peers.length
             ? peers
@@ -3769,6 +3783,12 @@ async function openInviteDialog() {
   mask.addEventListener('click', async (e) => {
     const t = e.target;
     if (t === mask || t.dataset.close) return mask.remove();
+    if (t.dataset.companion) {
+      const r = await api.roomCompanion(true);
+      if (r && r.ok) { toast('阿刺进房了 🌵', r.message); t.textContent = '已进房'; t.disabled = true; }
+      else toast((r && r.message) || '拉入失败', '', true);
+      return;
+    }
     if (t.dataset.inv) {
       const r = await api.roomInvite({ ip: t.dataset.inv, port: Number(t.dataset.port) });
       if (r.ok) {
@@ -5938,6 +5958,15 @@ async function bindLkPanel() {
 
 const SHOP_ICONS = ['🎮', '📺', '🍫', '☕', '🎁', '🏀', '🎵', '😴'];
 
+/* 阿刺强化态补给（与 src/aci-core.js SUPPLIES 的 id/points 口径一致）——在积分商城兑换 */
+const ACI_SUPPLY_CATALOG = [
+  { id: 'deepAnalysis', name: '深度分析', icon: '🔍', points: 30, desc: '历史挖掘、趋势报告' },
+  { id: 'replyForMe',   name: '代回消息', icon: '💬', points: 50, desc: '好友区/军团代拟回复' },
+  { id: 'pkTactics',    name: 'PK 战术建议', icon: '⚔️', points: 30, desc: '针对对手的策略' },
+  { id: 'defyGuard',    name: '抗命担保', icon: '🛡️', points: 80, desc: '替你扛一次后果' },
+  { id: 'forceReview',  name: '强制复盘', icon: '📋', points: 20, desc: '低完成率时弹窗复盘' },
+];
+
 function ticketLeft() {
   const until = state.guard?.allowUntil || 0;
   return Math.max(0, Math.ceil((until - Date.now()) / 60000));
@@ -6093,6 +6122,18 @@ function renderShopPanel() {
         <div class="t">可用积分</div>
       </div>
       <div class="shop-items">${items || '<div class="sd">暂无商品</div>'}</div>
+      <div class="aci-supply-shop" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
+        <div class="st" style="margin-bottom:6px">🌵 阿刺强化态补给 <span class="sd">（兑换后阿刺记下这项能力；它状态好时也会自己启动，消耗它的能量，每周最多 3 次）</span></div>
+        <div class="shop-items">${ACI_SUPPLY_CATALOG.map((s) => `
+          <div class="shop-item ${points < s.points ? 'locked' : ''}">
+            <div class="si-icon">${s.icon}</div>
+            <div class="si-info">
+              <div class="st">${esc(s.name)} <span class="sd">${esc(s.desc)}</span></div>
+              <div class="sd">消耗 <b>${s.points}</b> 积分</div>
+            </div>
+            <button class="btn small ${points < s.points ? 'ghost' : ''}" data-supply-redeem="${s.id}" ${points < s.points ? 'disabled' : ''}>兑换</button>
+          </div>`).join('')}</div>
+      </div>
       <div class="shop-add">
         <input class="input" id="shop-name" placeholder="奖励名称，如：奶茶一杯" maxlength="24" />
         <select class="select" id="shop-icon">${SHOP_ICONS.map((i) => `<option value="${i}">${i}</option>`).join('')}</select>
@@ -6177,6 +6218,16 @@ function bindShopPanel() {
       const r = await api.shopRedeem(el.dataset.redeem);
       if (r.ok) toast('兑换成功 🎉', r.message);
       else toast(r.message || '兑换失败', '', true);
+    };
+  });
+  /* 阿刺强化态补给兑换：走 aciAction，扣积分由主进程统一处理 */
+  $$('[data-supply-redeem]').forEach((el) => {
+    el.onclick = async () => {
+      if (!api || typeof api.aciAction !== 'function') return toast('此功能需桌面版', '', true);
+      const r = await api.aciAction('redeemSupply', { supplyId: el.dataset.supplyRedeem });
+      if (r && r.ok) toast('补给已兑换 🌵', r.message);
+      else toast((r && r.message) || '兑换失败', '', true);
+      if (r && r.ok) api.getState().then((s) => ((state = s), render()));
     };
   });
   $$('[data-shopdel]').forEach((el) => {
@@ -6284,6 +6335,7 @@ function lgMeshHTML() {
 
 let pkCache = null; // 最近一次 PK 快照
 let pkAt = 0; // 上次拉取时间（节流，防渲染循环）
+let pkDuel = null; // 对决动画数据：banner 跃迁时设置，渲染一次后清空
 
 function pkRefresh() {
   if (!(window.api && typeof window.api.legionPkStatus === 'function')) return;
@@ -6292,6 +6344,26 @@ function pkRefresh() {
   window.api
     .legionPkStatus()
     .then((p) => {
+      const prevKey = pkCache && pkCache.banner ? pkCache.banner.kind + '|' + pkCache.banner.until : '';
+      const nextKey = p && p.banner ? p.banner.kind + '|' + p.banner.until : '';
+      /* 结算横幅新出现 → 播放一次对决动画（同一场不重复播） */
+      if (nextKey && nextKey !== prevKey) {
+        pkDuel = {
+          kind: p.banner.kind,
+          mine: (p.my && p.my.rate7) || 0,
+          theirs: (p.match && p.match.opponent && p.match.opponent.rate7) || 0,
+          opponent: (p.match && p.match.opponent && p.match.opponent.code) || '对手',
+        };
+        /* 阿刺在结算这一刻也来一句 */
+        if (window.PQBuddy && window.PQBuddy.say) {
+          const lines = {
+            win: '这局赢了。别飘，下周期望值只会更高。',
+            lose: '输了。安慰奖也是奖——下把把出操率拉回来。',
+            draw: '平局。旗鼓相当，说得好像多体面似的。',
+          };
+          window.PQBuddy.say(lines[p.banner.kind] || '打完了。', p.banner.kind === 'win' ? 'happy' : 'smirk');
+        }
+      }
       pkCache = p || null;
       if (currentView === 'legion') render(false);
     })
@@ -6360,10 +6432,26 @@ function pkPanelHtml(p, L) {
     ? `<div class="lg-hint">下周（${esc(p.buff.from)} 起）全团打卡积分效率 +${p.buff.pct}%，自动生效。</div>`
     : '';
   const bannerTxt = p.banner ? `<div class="lg-you">${esc(pkBannerText(p.banner))}</div>` : '';
+  /* 对决动画：结算横幅新出现时播放一次（含双方出操率与结果） */
+  let duelHtml = '';
+  if (pkDuel) {
+    const d = pkDuel;
+    const resultLabel = { win: '🏆 胜利', lose: '⚔ 失败', draw: '🤝 平局' }[d.kind] || '对决结束';
+    const emoji = d.kind === 'win' ? '🌵🏆' : d.kind === 'lose' ? '🌵💧' : '🌵🤝';
+    duelHtml = `<div class="duel-stage">
+      <div class="duel-slash"></div>
+      <div class="duel-side"><span class="duel-emoji">🌵</span><span class="duel-name">我方军团</span><span class="duel-power">${Number(d.mine) || 0}%</span></div>
+      <div class="duel-vs">VS</div>
+      <div class="duel-side them"><span class="duel-emoji">🛡️</span><span class="duel-name">军团 ${esc(String(d.opponent).slice(0, 8))}</span><span class="duel-power">${Number(d.theirs) || 0}%</span></div>
+    </div>
+    <div class="duel-result ${esc(d.kind)}">${resultLabel} · ${emoji}</div>`;
+    pkDuel = null; // 只播一次
+  }
   const joinBtn = p.canManage && (m.state === 'idle' || m.state === 'done')
     ? '<div class="lg-actions"><button class="btn" id="lg-pk-join">报名参赛（自动匹配）</button></div>'
     : '';
   return `
+    ${duelHtml}
     ${bannerTxt}
     <div class="lg-mood">${stateTxt}</div>
     <div class="lg-hint">${myTxt}</div>
@@ -6860,6 +6948,11 @@ function lgcLinkCard(link) {
     return `<div class="lgc-link"><span class="lgc-link-t">🛡 军团 · ${link.net === 'p2p' ? '异地' : '同一个 WiFi'} · 军团码 <b>${esc(link.code)}</b></span>
       <button class="btn small" data-legion="${esc(raw)}">加入军团</button></div>`;
   }
+  if (link.kind === 'pk') {
+    const rawPk = encodeURIComponent(JSON.stringify(link));
+    return `<div class="lgc-link pk-challenge-card"><span class="lgc-link-t">⚔️ PK 挑战 · 来自 <b>${esc(link.name)}</b> · 战力 ${Number(link.rate) || 0} · ${Number(link.days) || 3} 天有效</span>
+      <button class="btn small" data-pk="${esc(rawPk)}">应战</button></div>`;
+  }
   return '';
 }
 
@@ -7354,6 +7447,41 @@ async function joinLegionFromLink(raw, L) {
   switchView('legion');
 }
 
+/* 聊天里的 PK 挑战链接：先弹「是否应战」确认，确认后才应战；阿刺此时会说一句话 */
+async function acceptPkFromLink(raw) {
+  let link = null;
+  try {
+    link = JSON.parse(decodeURIComponent(String(raw || '')));
+  } catch (_) {}
+  if (!link || link.kind !== 'pk' || !link.matchId) return toast('PK 链接坏了', '让对方再发一次', true);
+  const ageDays = link.t ? (Date.now() - Number(link.t)) / 86400000 : 0;
+  if (ageDays > (Number(link.days) || 3)) return toast('这张挑战券已过期', '', true);
+  if (!api || typeof api.aciAction !== 'function') return toast('PK 需桌面版', '', true);
+  const yes = await confirmDialog(
+    '是否应战？',
+    `${link.name || '对手'} 发来 PK 挑战：对方战力 ${Number(link.rate) || 0}，有效期 ${Number(link.days) || 3} 天。应战消耗 1 张挑战券。`
+  );
+  if (!yes) return;
+  const r = await api.aciAction('acceptPkInvite', {
+    invite: { matchId: link.matchId, name: link.name, rate: link.rate, days: link.days, t: link.t },
+  });
+  if (!r || !r.ok) return toast('应战失败', (r && r.message) || '检查挑战券/冷却', true);
+  /* 阿刺在应战这一刻说一句话，并切到战斗造型 */
+  if (window.PQBuddy) {
+    try {
+      const fightLines = [
+        '（阿刺的活动刺全竖起来了）行，这架我陪你打。',
+        '对手战力 ' + (Number(link.rate) || 0) + '？够看。让我热热身。',
+        '挑战接了。别拖后腿——你本周完成率可得跟上。',
+      ];
+      if (window.PQBuddy.setFighting) window.PQBuddy.setFighting(true, 8000);
+      if (window.PQBuddy.say) window.PQBuddy.say(fightLines[Math.floor(Math.random() * fightLines.length)], 'angry');
+    } catch (_) {}
+  }
+  toast('应战成功 ⚔️', '阿刺已进入战斗状态');
+  if (typeof render === 'function') render(false);
+}
+
 /* 频道里「转发」：计划包走附件，房间/军团走 pq:// 链接文本 */
 async function forwardToChannel(C, L, what) {
   const lib = window.PQLegionChat;
@@ -7542,6 +7670,10 @@ function bindLegionChat(L) {
   /* 军团链接 */
   document.querySelectorAll('#lg-chat [data-legion]').forEach((b) => {
     b.onclick = () => joinLegionFromLink(b.getAttribute('data-legion'), L);
+  });
+  /* PK 挑战链接：点开先弹「是否应战」确认 */
+  document.querySelectorAll('#lg-chat [data-pk]').forEach((b) => {
+    b.onclick = () => acceptPkFromLink(b.getAttribute('data-pk'));
   });
 
   /* 团长：禁言 / 解除 */
@@ -8631,7 +8763,18 @@ function renderFriends() {
               const h = Math.max(0, Math.floor(left / 3600e3));
               const min = Math.max(0, Math.floor((left % 3600e3) / 60e3));
               const remind = m.kind === 'remind';
-              return `<div class="fb-msg${remind ? ' remind' : ''}"><span class="sd">${remind ? '🤖 自动提醒' : '🔥'} ${h}h${min}m 后焚毁</span><div>${esc(m.text || '')}</div></div>`;
+              /* 好友私聊里的 pq:// 链接（尤其 PK 挑战券）也渲染成可点按钮 */
+              const fblib = window.PQLegionChat;
+              const bodyHtml = fblib && fblib.splitLinks
+                ? fblib.splitLinks(m.text || '').map((seg) => {
+                    if (!seg.link) return esc(seg.text);
+                    if (seg.link.kind === 'pk') {
+                      return `<button class="btn small pk-challenge" data-pk="${esc(encodeURIComponent(JSON.stringify(seg.link)))}">⚔️ 应战 ${esc(seg.link.name)}（战力 ${Number(seg.link.rate) || 0}）</button>`;
+                    }
+                    return esc(seg.text); // 好友区不解析 room/legion 链接，避免误入
+                  }).join('')
+                : esc(m.text || '');
+              return `<div class="fb-msg${remind ? ' remind' : ''}"><span class="sd">${remind ? '🤖 自动提醒' : '🔥'} ${h}h${min}m 后焚毁</span><div>${bodyHtml}</div></div>`;
             })
             .join('') || '<div class="sd">还没聊过。说第一句（先各自把完成率干到 50%）。</div>'}
         </div>

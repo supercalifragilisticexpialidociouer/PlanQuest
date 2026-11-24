@@ -367,6 +367,7 @@ window.api = (() => {
     roomUnmute: async () => ({ ok: true }),
     roomPeers: async () => [],
     roomInvite: stub(DESKTOP_ONLY),
+    roomCompanion: async () => ({ ok: false, message: DESKTOP_ONLY }),
     roomFunConfig: async () => ({ minutes: 0, points: data.profile.points || 0, enough: false, leftMin: 0, fee: 0 }),
 
     /* 军团：手机版只能加入，不能当房主 */

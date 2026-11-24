@@ -95,6 +95,7 @@ contextBridge.exposeInMainWorld('api', {
   roomUnmute: (id) => ipcRenderer.invoke('room:unmute', id),
   roomPeers: () => ipcRenderer.invoke('room:peers'),
   roomInvite: (payload) => ipcRenderer.invoke('room:invite', payload),
+  roomCompanion: (joined) => ipcRenderer.invoke('room:companion', joined),
   roomFunConfig: () => ipcRenderer.invoke('room:funConfig'),
 
   /* 军团：局域网批量同步（和自习房同一套 TCP 行协议） */

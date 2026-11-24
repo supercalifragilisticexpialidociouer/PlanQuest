@@ -1,7 +1,6 @@
 'use strict';
 /* ------------------------------------------------------------------ *
  * 阿刺养成 + 战友 PK 核心规则（主进程侧，纯逻辑，可单测，时间可注入）
- *
  * 关系重塑：阿刺是战友/搭档，不是宠物。
  *   - 基础态永远可用（查表、毒舌、排计划提议等核心功能不收费、不消耗）；
  *   - 浇水 = 战术注入：消耗积分换「协作能量」，解锁强化态补给；
@@ -13,10 +12,19 @@
  * 由调用方根据返回的 effect 执行，本模块不碰网络/磁盘/Electron。
  * ------------------------------------------------------------------ */
 
+/* 皮肤表/语气/改名判定都在 aci-skin.js（同一份源码双端共用） */
+const skinCore = require('./aci-skin');
+
 /* ============ 规则常量 ============ */
 const RULES = {
-  POINTS_PER_ENERGY: 100,        // 100 积分 = 1 单位协作能量（一次浇水）
+  POINTS_PER_ENERGY: 10,         // 10 积分 = 1 单位协作能量（一次浇水）—— 从 100 调低
   EXP_PER_WATER: 10,             // 每次浇水 +10 经验（10级→11级需110经验=11次浇水）
+  SUPPLY_WEEKLY_LIMIT: 3,        // 强化态补给：阿刺自己启动的每周次数上限
+  SUPPLY_AUTO_BASE: 0.15,        // 阿刺自己启动补给的基础概率（心情普通）
+  SUPPLY_AUTO_GOOD_BONUS: 0.45,  // 心情好时的概率加成（0.15 → 0.60）
+  SUPPLY_AUTO_BAD_PENALTY: 0.10, // 失望/生气时的概率惩罚（0.15 → 0.05）
+  GUARANTEE_LEVEL_CAP: 5,        // 信用担保：每 5 级可多担保 1 次透支
+  GUARANTEE_ENERGY_PER: 2,       // 信用担保：每 2 点能量可多担保 1 次透支
   EXP_PER_LEVEL: 10,             // 升级所需经验 = 当前等级 × 10
   MAX_LEVEL: 100,                // 阿刺等级上限（另见：用户等级满级 99，两者独立）
   TICKET_COST_PLANS: 5,          // 一张挑战券 = 完成 5 条计划的积分
@@ -50,13 +58,14 @@ const TIERS = [
   { id: 'tall',   name: '参天段', min: 81, max: 100, note: '顶端区' },
 ];
 
-/* 强化态补给（浇水解锁的高级功能） */
+/* 强化态补给（浇水解锁的高级功能）
+ * points: 在积分商城兑换价；energy: 阿刺自己启动时消耗的能量。 */
 const SUPPLIES = [
-  { id: 'deepAnalysis', name: '深度分析', desc: '历史数据挖掘、趋势报告', energy: 1 },
-  { id: 'replyForMe',   name: '代回消息', desc: '好友区/军团里代拟并发送回复', energy: 2 },
-  { id: 'pkTactics',    name: 'PK 战术建议', desc: '针对对手数据的针对性策略', energy: 1 },
-  { id: 'defyGuard',    name: '抗命担保', desc: '替你扛一次不合理命令的后果', energy: 3 },
-  { id: 'forceReview',  name: '强制复盘', desc: '连续低完成率时弹窗复盘', energy: 1 },
+  { id: 'deepAnalysis', name: '深度分析', desc: '历史数据挖掘、趋势报告', points: 30, energy: 1 },
+  { id: 'replyForMe',   name: '代回消息', desc: '好友区/军团里代拟并发送回复', points: 50, energy: 2 },
+  { id: 'pkTactics',    name: 'PK 战术建议', desc: '针对对手数据的针对性策略', points: 30, energy: 1 },
+  { id: 'defyGuard',    name: '抗命担保', desc: '替你扛一次不合理命令的后果', points: 80, energy: 3 },
+  { id: 'forceReview',  name: '强制复盘', desc: '连续低完成率时弹窗复盘', points: 20, energy: 1 },
 ];
 
 /* 战友特权（默认参数，状态在 aci.privileges） */
@@ -78,9 +87,19 @@ function defaultAci() {
     waterCount: 0,      // 累计浇水次数
     waterDay: '',       // 上次浇水的日期 key
     tickets: 0,         // 挑战券 0~3
-    supplies: {},       // 已解锁补给 id -> 解锁次数
+    supplies: {},       // 已解锁补给 id -> 解锁次数（积分商城兑换 + 自己启动）
+    supplyWeek: { week: '', used: 0 }, // 阿刺自己启动补给的每周计数（满 3 次本周不再自动）
     privileges: JSON.parse(JSON.stringify(PRIVILEGE_DEFAULTS)),
-    mood: 'idle',       // 基础态心情（不影响功能）
+    /* 身份：皮肤（五种带刺生物，只选一次）+ 名字（可改，但阿刺有权不接受） */
+    identity: {
+      skin: '',        // cactus/rose/hedgehog/chestnut/porcupine；空 = 还没选
+      name: '阿刺',    // 初始名，改名前先问阿刺
+      chosenAt: 0,     // 选定皮肤的时间戳
+      renameCount: 0,  // 成功改名次数（改得越多越难再改）
+    },
+    mood: 'idle',       // 基础态心情：idle/happy/disappointed/angry/sad（驱动 3D 建模与互动意愿）
+    disappointed: false,// 失望模式激活标志（连续摆烂触发）：样子改变 + 不太接受互动
+    guaranteeLeft: 0,   // 信用担保剩余可透支次数（按阿刺自身等级/能量计算）
     pk: {
       day: '',                  // 频率计数的日期 key
       initiateToday: 0,
@@ -109,6 +128,13 @@ function normalizeAci(raw) {
     tickets: clampInt(a.tickets, 0, RULES.MAX_TICKETS, 0),
     supplies: (a.supplies && typeof a.supplies === 'object') ? a.supplies : {},
     privileges: normalizePrivileges(a.privileges),
+    identity: normalizeIdentity(a.identity),
+    mood: typeof a.mood === 'string' ? a.mood : 'idle',
+    disappointed: !!a.disappointed,
+    guaranteeLeft: clampInt(a.guaranteeLeft, 0, 1e6, 0),
+    supplyWeek: (a.supplyWeek && typeof a.supplyWeek === 'object')
+      ? { week: String(a.supplyWeek.week || ''), used: clampInt(a.supplyWeek.used, 0, RULES.SUPPLY_WEEKLY_LIMIT, 0) }
+      : { week: '', used: 0 },
   };
   const pk = (a.pk && typeof a.pk === 'object') ? a.pk : {};
   out.pk = {
@@ -124,6 +150,20 @@ function normalizeAci(raw) {
     matches: Array.isArray(pk.matches) ? pk.matches : [],
   };
   return out;
+}
+
+/* 身份归一化：皮肤必须是已知五种之一，名字兜底回「阿刺」 */
+function normalizeIdentity(raw) {
+  const r = (raw && typeof raw === 'object') ? raw : {};
+  const skin = skinCore.get(String(r.skin || '')) ? String(r.skin) : '';
+  let name = String(r.name == null ? '' : r.name).trim().slice(0, 8);
+  if (!name) name = '阿刺';
+  return {
+    skin,
+    name,
+    chosenAt: Number(r.chosenAt) || 0,
+    renameCount: clampInt(r.renameCount, 0, 99, 0),
+  };
 }
 
 function normalizePrivileges(raw) {
@@ -143,6 +183,89 @@ function clampInt(v, lo, hi, dflt) {
   return Math.min(hi, Math.max(lo, Math.floor(n)));
 }
 
+/* ============ 身份：选皮肤 / 改名 / 重置 ============ */
+function skinOf(aci) {
+  return skinCore.get(normalizeAci(aci).identity.skin);
+}
+/* 还没选皮肤 → 阿刺是「未成形」状态，AI 助手不可用（产品硬门槛） */
+function isIdentityLocked(aci) {
+  return !normalizeAci(aci).identity.skin;
+}
+
+/* 选皮肤：只允许一次。已选过就按「合同签了就别想反悔」拒绝。 */
+function chooseSkin(aci, skinId, now) {
+  const a = normalizeAci(aci);
+  const s = skinCore.get(String(skinId || ''));
+  if (!s) return { ok: false, reason: '没有这种皮肤', aci: a };
+  if (a.identity.skin) {
+    return { ok: false, refused: true, reason: skinCore.requestSkinChange(a.identity.skin).reply, aci: a };
+  }
+  const next = {
+    ...a,
+    identity: { ...a.identity, skin: s.id, chosenAt: Number(now) || Date.now() },
+    mood: 'happy',
+  };
+  return {
+    ok: true,
+    aci: next,
+    message: skinCore.greeting(s.id, next.identity.name),
+    skin: s.id,
+  };
+}
+
+/* 改名：先让阿刺自己判断接不接受（心情/等级/被改次数都会影响） */
+function evaluateCompanionName(aci, name, rng) {
+  const a = normalizeAci(aci);
+  const ev = skinCore.evaluateRename(a.identity.skin, name, {
+    current: a.identity.name,
+    mood: a.mood,
+    level: a.level,
+    disappointed: a.disappointed,
+    renameCount: a.identity.renameCount,
+    rng,
+  });
+  return ev;
+}
+
+function setCompanionName(aci, name, now) {
+  const a = normalizeAci(aci);
+  const clean = String(name == null ? '' : name).trim().replace(/\s+/g, ' ').slice(0, 8);
+  if (!clean) return { ok: false, reason: '名字不能是空的', aci: a };
+  const next = {
+    ...a,
+    identity: {
+      ...a.identity,
+      name: clean,
+      renameCount: clampInt(a.identity.renameCount, 0, 99, 0) + 1,
+    },
+    mood: 'happy',
+  };
+  return {
+    ok: true,
+    aci: next,
+    message: clean === '阿刺' ? '行，叫回「阿刺」。' : `以后就叫「${clean}」了。`,
+  };
+}
+
+/* 换皮肤请求：永远拒绝，但给出唯一出路（reset）的说明 */
+function requestCompanionSkinChange(aci, rng) {
+  const a = normalizeAci(aci);
+  const r = skinCore.requestSkinChange(a.identity.skin, { rng });
+  return { ok: false, refused: true, message: r.reply, hint: r.hint, aci: a };
+}
+
+/* 重置：清空养成，回到未选皮肤状态（聊天记录由渲染层一并清掉） */
+function resetCompanion(aci, rng) {
+  const a = normalizeAci(aci);
+  return {
+    ok: true,
+    aci: defaultAci(),
+    message: skinCore.resetLine(a.identity.skin, rng),
+    purgeChat: true,
+    identityReset: true,
+  };
+}
+
 /* ============ 浇水 / 能量 / 升级 ============ */
 /* 浇水：消耗 100 积分 → +1 能量 +10 经验；经验满则升级（可连升）。
  * 不浇水不降级（本函数不碰 mood/存活）。
@@ -151,7 +274,7 @@ function water(aci, points, dayKey, now) {
   const a = normalizeAci(aci);
   const cost = RULES.POINTS_PER_ENERGY;
   if (Number(points) < cost) {
-    return { ok: false, reason: `积分不够：浇水要 ${cost} 积分（= 完成 5 条计划的量），当前 ${points}`, aci: a };
+    return { ok: false, reason: `积分不够：浇水要 ${cost} 积分，当前 ${points}`, aci: a };
   }
   let level = a.level, exp = a.exp + RULES.EXP_PER_WATER, levelUps = 0;
   /* 升级所需经验 = 目标等级 × 10（需求例：10级→11级需 110 经验 = 11 次浇水）。
@@ -177,20 +300,94 @@ function water(aci, points, dayKey, now) {
   };
 }
 
-/* 消耗能量解锁/使用一次强化态补给 */
-function useSupply(aci, supplyId) {
+/* 使用一次强化态补给（消耗能量）。source: 'manual' 用户手动 | 'auto' 阿刺自己启动 */
+function useSupply(aci, supplyId, opts) {
+  const o = opts || {};
   const a = normalizeAci(aci);
   const s = SUPPLIES.find((x) => x.id === supplyId);
   if (!s) return { ok: false, reason: '没有这项补给', aci: a };
+  if (a.disappointed && o.fromChat) {
+    return { ok: false, reason: '阿刺现在失望透顶，懒得搭理你（它缓过来再说）', aci: a };
+  }
   if (a.energy < s.energy) {
     return { ok: false, reason: `能量不够：${s.name} 要 ${s.energy} 点协作能量，当前 ${a.energy}`, aci: a };
+  }
+  /* 阿刺自己启动：受每周次数上限约束 */
+  let supplyWeek = a.supplyWeek;
+  if (o.source === 'auto') {
+    supplyWeek = refreshSupplyWeek(supplyWeek, o.now);
+    if (supplyWeek.used >= RULES.SUPPLY_WEEKLY_LIMIT) {
+      return { ok: false, reason: `本周阿刺自己启动补给的次数用完了（每周最多 ${RULES.SUPPLY_WEEKLY_LIMIT} 次）`, aci: a };
+    }
+    supplyWeek = { ...supplyWeek, used: supplyWeek.used + 1 };
   }
   const next = {
     ...a,
     energy: a.energy - s.energy,
     supplies: { ...a.supplies, [s.id]: (a.supplies[s.id] || 0) + 1 },
+    supplyWeek,
   };
-  return { ok: true, aci: next, effect: { costEnergy: s.energy }, message: `已启用「${s.name}」（消耗 ${s.energy} 点协作能量）` };
+  return {
+    ok: true, aci: next,
+    effect: { costEnergy: s.energy, source: o.source || 'manual' },
+    message: o.source === 'auto'
+      ? `阿刺自己启动了「${s.name}」（消耗 ${s.energy} 点能量，本周 ${supplyWeek.used}/${RULES.SUPPLY_WEEKLY_LIMIT} 次）`
+      : `已启用「${s.name}」（消耗 ${s.energy} 点协作能量）`,
+  };
+}
+
+/* 积分商城兑换强化态补给：花积分直接兑换一次使用资格（不消耗能量，能量留给阿刺自己启动时用） */
+function redeemSupplyWithPoints(aci, supplyId, points) {
+  const a = normalizeAci(aci);
+  const s = SUPPLIES.find((x) => x.id === supplyId);
+  if (!s) return { ok: false, reason: '没有这项补给', aci: a };
+  if (Number(points) < s.points) {
+    return { ok: false, reason: `积分不够：兑换「${s.name}」要 ${s.points} 积分，当前 ${points}`, aci: a };
+  }
+  const next = { ...a, supplies: { ...a.supplies, [s.id]: (a.supplies[s.id] || 0) + 1 } };
+  return {
+    ok: true, aci: next, effect: { costPoints: s.points, supplyId: s.id },
+    message: `在积分商城兑换了「${s.name}」（消耗 ${s.points} 积分），阿刺已记下这项补给`,
+  };
+}
+
+/* ISO 周 key（周一为起点），与 main.js weekKeyOf 口径一致 */
+function weekKeyOf(now) {
+  const d = new Date(now || Date.now());
+  const day = (d.getDay() + 6) % 7; // 周一=0
+  d.setDate(d.getDate() - day);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function refreshSupplyWeek(sw, now) {
+  const key = weekKeyOf(now);
+  if (sw && sw.week === key) return sw;
+  return { week: key, used: 0 };
+}
+
+/* 阿刺自己启动补给的概率：心情好更大，失望/生气更小。roll 可注入便于测试（0~1）。 */
+function autoSupplyChance(mood, disappointed) {
+  if (disappointed) return Math.max(0.02, RULES.SUPPLY_AUTO_BASE - RULES.SUPPLY_AUTO_BAD_PENALTY);
+  if (mood === 'happy' || mood === 'excited') return RULES.SUPPLY_AUTO_BASE + RULES.SUPPLY_AUTO_GOOD_BONUS;
+  if (mood === 'angry' || mood === 'sad') return Math.max(0.02, RULES.SUPPLY_AUTO_BASE - RULES.SUPPLY_AUTO_BAD_PENALTY);
+  return RULES.SUPPLY_AUTO_BASE;
+}
+
+/* 判断阿刺此刻是否会自己启动某项补给（不消耗，仅概率判定）。roll 0~1 可注入。
+ * 返回 { trigger, chance, reason }，前端据此决定是否调 useSupply(source:'auto')。 */
+function shouldAutoSupply(aci, mood, roll, now) {
+  const a = normalizeAci(aci);
+  const sw = refreshSupplyWeek(a.supplyWeek, now);
+  if (sw.used >= RULES.SUPPLY_WEEKLY_LIMIT) {
+    return { trigger: false, chance: 0, reason: '本周自动补给次数已用完' };
+  }
+  if (a.energy < 1) return { trigger: false, chance: 0, reason: '没有协作能量' };
+  const chance = autoSupplyChance(mood || a.mood, a.disappointed);
+  const r = (roll == null ? Math.random() : Number(roll));
+  return {
+    trigger: r < chance, chance,
+    reason: r < chance ? `阿刺心情不错（${chance} 概率），主动启用强化态补给` : '这次没触发',
+  };
 }
 
 /* 从当前等级升到下一级所需经验 = 目标等级 × 10（供 UI 显示进度） */
@@ -401,9 +598,15 @@ function createChallenge(aci, opts) {
     message: `已发出挑战券（${venueText}，${days} 天有效），消耗 1 张券。剩 ${next.tickets} 张。`,
   };
   if (venue === 'room' || venue === 'legion') {
+    /* pq://pk?m=<matchId>&t=<时间戳>&n=<发起人>&d=<天数> —— 聊天里渲染成按钮，点击自动匹配 */
+    const pkLink = 'pq://pk?m=' + encodeURIComponent(match.id)
+      + '&t=' + t + '&n=' + encodeURIComponent(o.challengerName || '搭档')
+      + '&d=' + days + '&r=' + Math.round(powerOf(o.challengerRate == null ? 70 : o.challengerRate, a.level));
     out.broadcast = {
       venue,
-      text: `🤖 阿刺代【搭档】发出 PK 挑战券！${days} 天内有效，${o.opponentName ? '指定对手：' + o.opponentName + '。' : '谁来都应。'}想接战回「接 PK」。`,
+      text: `🤖 阿刺代【${o.challengerName || '搭档'}】发出 PK 挑战券！${days} 天内有效，${o.opponentName ? '指定对手：' + o.opponentName + '。' : '谁来都应。'}点下面的链接直接应战 → ${pkLink}`,
+      link: pkLink,
+      matchId: match.id,
     };
   }
   return out;
@@ -431,6 +634,48 @@ function acceptChallenge(aci, matchId, now) {
     },
   };
   return { ok: true, aci: next, effect: { costTickets: 1 }, message: '已应战！PK 开始，阿刺进入战斗状态。' };
+}
+
+/* 通过聊天里的 pq://pk 链接应战：对方发来的邀请，本地生成一场 active 对局并扣 1 张券。
+ * inv: { matchId, name, rate, days, t } */
+function acceptPkInvite(aci, inv, now) {
+  const t = Number(now) || Date.now();
+  const i = inv || {};
+  const ck = canAccept(aci, i.matchId, t);
+  if (!ck.ok) return { ok: false, reason: ck.reason, cooling: !!ck.cooling, aci: normalizeAci(aci) };
+  const a = ck.aci;
+  const days = Math.min(7, Math.max(1, Number(i.days) || 3));
+  const match = {
+    id: 'pk-' + t.toString(36) + Math.random().toString(36).slice(2, 5),
+    inviteId: String(i.matchId || '').slice(0, 60),
+    opponentKey: String(i.matchId || '').slice(0, 60),
+    opponentName: String(i.name || '对手').slice(0, 16),
+    venue: 'link',
+    durationDays: days,
+    createdAt: t,
+    expiresAt: t + days * 24 * 3600 * 1000,
+    state: 'active',
+    acceptedAt: t,
+    confirmBy: t + RULES.MATCH_CONFIRM_MS,
+    respondBy: t + RULES.CHALLENGE_NO_RESPONSE_MS,
+    result: null,
+    rivalPower: Number(i.rate) || 0,
+  };
+  const next = {
+    ...a,
+    tickets: a.tickets - 1,
+    pk: {
+      ...a.pk,
+      acceptToday: a.pk.acceptToday + 1,
+      lastOpponent: { ...a.pk.lastOpponent, [match.opponentKey]: t },
+      matches: [match, ...a.pk.matches].slice(0, 50),
+    },
+  };
+  return {
+    ok: true, aci: next, match, effect: { costTickets: 1 },
+    message: `已应战【${match.opponentName}】的挑战券！PK 开始（对方战力 ${match.rivalPower}），阿刺进入战斗状态。`,
+    autoLine: 'fight',
+  };
 }
 
 /* 未响应 / 超时未确认：不消耗券（券在发起时已扣，这里返还） */
@@ -546,21 +791,77 @@ function guardDeduct(aci) {
   return { ok: true, aci: next, message: '阿刺替你扛下了这次扣分（消耗 1 点协作能量）' };
 }
 
-/* 信用担保：阿刺用等级为用户透支积分；用户赖账则阿刺降级 */
+/* 信用担保额度：按阿刺「自身情况」（等级 + 能量）决定，等级越高/能量越足，能担的越多。
+ * 每 5 级 +1 次，每 2 点能量 +1 次，至少 1 次，最多随等级线性增长。 */
+function guaranteeCapacity(aci) {
+  const a = normalizeAci(aci);
+  return 1 + Math.floor(a.level / RULES.GUARANTEE_LEVEL_CAP) + Math.floor(a.energy / RULES.GUARANTEE_ENERGY_PER);
+}
+
+/* 信用担保：阿刺按自身情况（等级+能量）决定能为你透支几次。 */
 function toggleCreditGuarantee(aci, on) {
   const a = normalizeAci(aci);
-  const next = { ...a, privileges: { ...a.privileges, creditGuarantee: { ...a.privileges.creditGuarantee, active: !!on } } };
-  return { ok: true, aci: next, message: on ? '已开启信用担保：阿刺可为你透支积分（赖账则阿刺降级）' : '已关闭信用担保' };
+  const g = a.privileges.creditGuarantee;
+  if (on) {
+    const cap = guaranteeCapacity(a);
+    const next = {
+      ...a,
+      guaranteeLeft: cap,
+      privileges: { ...a.privileges, creditGuarantee: { ...g, active: true, cap } },
+    };
+    return { ok: true, aci: next, effect: { cap }, message: `阿刺按自身情况（Lv.${a.level}、能量${a.energy}）为你担保，可透支 ${cap} 次` };
+  }
+  const next = { ...a, guaranteeLeft: 0, privileges: { ...a.privileges, creditGuarantee: { ...g, active: false } } };
+  return { ok: true, aci: next, message: '已关闭信用担保' };
 }
 function breakGuarantee(aci) {
   const a = normalizeAci(aci);
   if (!a.privileges.creditGuarantee.active) return { ok: false, reason: '没有进行中的信用担保', aci: a };
+  if (a.guaranteeLeft > 1) {
+    /* 额度内：阿刺按自身情况扛下来，不降级，只消耗一次额度 */
+    const next = { ...a, guaranteeLeft: a.guaranteeLeft - 1 };
+    return { ok: true, aci: next, effect: { usedGuarantee: 1, downgraded: false }, message: `阿刺替你扛下了这次赖账（自身担保额度还剩 ${next.guaranteeLeft} 次）` };
+  }
+  /* 额度耗尽：阿刺扛不住了，降级并关闭担保 */
   const next = {
     ...a,
+    guaranteeLeft: 0,
     level: Math.max(1, a.level - 1), exp: 0,
     privileges: { ...a.privileges, creditGuarantee: { ...a.privileges.creditGuarantee, active: false } },
   };
-  return { ok: true, aci: next, message: '你赖账了，阿刺替你承担后果：等级 -1' };
+  return { ok: true, aci: next, effect: { usedGuarantee: 1, downgraded: true }, message: '阿刺的担保额度用尽，替你扛下了后果：等级 -1' };
+}
+
+/* 设置失望模式：由完成率连续低迷触发/解除。失望时 3D 造型变为蔫巴 + 不太接受互动。
+ * on 时用 checkPrivilege 的结果，或由外部直接传入。 */
+function setDisappointed(aci, on, reason) {
+  const a = normalizeAci(aci);
+  const next = {
+    ...a,
+    disappointed: !!on,
+    mood: on ? 'disappointed' : (a.mood === 'disappointed' ? 'idle' : a.mood),
+    privileges: {
+      ...a.privileges,
+      disappointment: { ...a.privileges.disappointment, active: !!on },
+    },
+  };
+  return {
+    ok: true, aci: next,
+    message: on
+      ? `阿刺进入失望模式：蔫了、话少、不太想搭理你（${reason || '完成率持续偏低'}）`
+      : '阿刺缓过来了，恢复正常状态',
+  };
+}
+
+/* 失望/静音时是否愿意互动：失望时大部分话不接，只回应"哄/道歉/醒醒"类唤醒词 */
+function willingToInteract(aci, text) {
+  const a = normalizeAci(aci);
+  if (!a.disappointed) return { willing: true };
+  const wake = /道歉|对不起|哄哄|别生气|醒醒|振作|我错了|补偿|加油|我会努力/.test(String(text || ''));
+  return {
+    willing: wake,
+    reason: wake ? '' : '阿刺还在失望中，只想静静（说句道歉或哄哄它，它才搭理）',
+  };
 }
 
 /* 抗命机制：不合理命令弹确认框劝阻（返回需确认，不直接执行） */
@@ -586,11 +887,15 @@ function isCoreFeature(feature) {
 
 module.exports = {
   RULES, TIERS, SUPPLIES, PRIVILEGE_DEFAULTS, CORE_FEATURES,
-  defaultAci, normalizeAci, water, useSupply, expNeeded,
+  defaultAci, normalizeAci, water, useSupply, redeemSupplyWithPoints, expNeeded,
+  weekKeyOf, refreshSupplyWeek, autoSupplyChance, shouldAutoSupply,
   ticketPrice, buyTicket, tierOf, levelCoef, powerOf,
   dayKeyOf, refreshDay, isCoolingDown, isHidden, canInitiate, canAccept, skipCooldown, setHidden,
   matchPreference, adjacentTiers, pickOpponent,
-  createChallenge, acceptChallenge, expireChallenge, settle, useLoseStreakProtect,
-  checkPrivilege, guardDeduct, toggleCreditGuarantee, breakGuarantee, defyCheck, autoMute,
+  createChallenge, acceptChallenge, acceptPkInvite, expireChallenge, settle, useLoseStreakProtect,
+  checkPrivilege, guardDeduct, toggleCreditGuarantee, guaranteeCapacity, breakGuarantee,
+  setDisappointed, willingToInteract, defyCheck, autoMute,
+  skinOf, isIdentityLocked, chooseSkin, evaluateCompanionName, setCompanionName,
+  requestCompanionSkinChange, resetCompanion, normalizeIdentity,
   isCoreFeature,
 };

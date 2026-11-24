@@ -215,48 +215,82 @@
     soil.position.y = 0.545;
     swayGroup.add(soil);
 
-    /* ---- 主干（带棱的参数曲面） ---- */
-    var BASE_Y = 0.50, TRUNK_H = 1.30, TRUNK_R = 0.295;
-    function trunkRadius(t) {
-      var r = TRUNK_R * (1 + 0.055 * Math.sin(t * Math.PI * 4.6 - 0.4));
-      r *= 1 - 0.14 * Math.pow(t, 5);       // 顶部微收
-      if (t > 0.90) {                       // 顶球冠
-        var k = (t - 0.90) / 0.10;
-        r *= Math.sqrt(Math.max(0, 1 - k * k));
+    /* ---------------- 身体：五种皮肤各自建模 ----------------
+     * 皮肤不是换名字、不是换贴图——几何体真的换了：
+     *   仙人掌 = 带棱柱状主干 + 两条上翘的手臂
+     *   玫瑰   = 细茎 + 花苞身体 + 大花冠 + 叶片 + 茎刺
+     *   刺猬   = 圆滚滚身体 + 密而短的刺 + 小耳朵和短脚
+     *   板栗   = 球身 + 尖顶 + 底部浅色 + 稀疏短刺
+     *   豪猪   = 细长身体 + 突出的吻部 + 粗长刺
+     * 脸部（眼/眉/嘴/腮红）是同一套骨架，按每个皮肤的头部位置与大小重新摆放。
+     */
+    var bodyGroup = new T.Group();
+    swayGroup.add(bodyGroup);
+    var matLeaf = new T.MeshStandardMaterial({ color: new T.Color('#3f8a5a'), roughness: 0.72, metalness: 0.0 });
+    var BODY = { id: 'cactus', faceY: 1.28, faceZ: 0.289, eyeGap: 0.108, faceScale: 1, mouthDY: 0.185, flowerY: 1.805 };
+
+    function disposeTree(o) {
+      if (o.geometry) o.geometry.dispose();
+      if (o.children && o.children.length) for (var i = 0; i < o.children.length; i++) disposeTree(o.children[i]);
+    }
+    function clearGroup(g) {
+      for (var i = g.children.length - 1; i >= 0; i--) { var o = g.children[i]; g.remove(o); disposeTree(o); }
+    }
+    /* 一批刺：InstancedMesh，一次 draw call。rad/len 决定粗细长短（刺猬短密、豪猪粗长） */
+    function addSpines(list, rad, len) {
+      if (!list.length) return;
+      var g = new T.ConeGeometry(rad, len, 5);
+      g.translate(0, len / 2, 0);
+      var inst = new T.InstancedMesh(g, matSpine, list.length);
+      var mtx = new T.Matrix4(), q = new T.Quaternion(), up = new T.Vector3(0, 1, 0), sc = new T.Vector3();
+      list.forEach(function (s, i) {
+        q.setFromUnitVectors(up, s.n);
+        var k = s.s || 1;
+        sc.set(k, k * (0.85 + Math.random() * 0.4), k);
+        mtx.compose(s.p, q, sc);
+        inst.setMatrixAt(i, mtx);
+      });
+      inst.instanceMatrix.needsUpdate = true;
+      bodyGroup.add(inst);
+    }
+    function v3(x, y, z) { return new T.Vector3(x, y, z); }
+
+    /* ---- 仙人掌：柱状主干 + 双臂 ---- */
+    function buildCactusBody() {
+      BODY = { id: 'cactus', faceY: 1.28, faceZ: 0.289, eyeGap: 0.108, faceScale: 1, mouthDY: 0.185, flowerY: 1.805 };
+      var BASE_Y = 0.50, TRUNK_H = 1.30, TRUNK_R = 0.295;
+      function trunkRadius(t) {
+        var r = TRUNK_R * (1 + 0.055 * Math.sin(t * Math.PI * 4.6 - 0.4));
+        r *= 1 - 0.14 * Math.pow(t, 5);
+        if (t > 0.90) {
+          var k = (t - 0.90) / 0.10;
+          r *= Math.sqrt(Math.max(0, 1 - k * k));
+        }
+        if (t < 0.05) r *= 0.94;
+        return r;
       }
-      if (t < 0.05) r *= 0.94;              // 底部微收
-      return r;
-    }
-    function trunkY(t) { return BASE_Y + t * TRUNK_H; }
-    var trunkGeo = ribbedBody(64, 56, trunkRadius, trunkY, 8, 0.055);
-    var trunk = new T.Mesh(trunkGeo, matSkin);
-    swayGroup.add(trunk);
+      function trunkY(t) { return BASE_Y + t * TRUNK_H; }
+      var trunk = new T.Mesh(ribbedBody(64, 56, trunkRadius, trunkY, 8, 0.055), matSkin);
+      bodyGroup.add(trunk);
 
-    /* ---- 手臂（沿曲线扫掠） ---- */
-    function makeArm(pts, rad) {
-      var curve = new T.CatmullRomCurve3(pts.map(function (p) { return new T.Vector3(p[0], p[1], p[2]); }));
-      var g = ribbedTube(curve, rad, 7, 0.06, 40, 30, true);
-      var m = new T.Mesh(g, matSkin);
-      swayGroup.add(m);
-      return curve;
-    }
-    var armCurves = [];
-    /* 左臂：先横出再上翘（略低） */
-    armCurves.push(makeArm([
-      [-0.18, 1.02, 0.03], [-0.36, 1.05, 0.06], [-0.50, 1.16, 0.05],
-      [-0.555, 1.36, 0.02], [-0.565, 1.52, 0.0],
-    ], 0.145));
-    /* 右臂：更高，先横出再上翘 */
-    armCurves.push(makeArm([
-      [0.18, 1.38, -0.02], [0.37, 1.44, -0.02], [0.52, 1.55, -0.01],
-      [0.575, 1.74, 0.0], [0.575, 1.88, 0.0],
-    ], 0.128));
+      function makeArm(pts, rad) {
+        var curve = new T.CatmullRomCurve3(pts.map(function (p) { return v3(p[0], p[1], p[2]); }));
+        var g = ribbedTube(curve, rad, 7, 0.06, 40, 30, true);
+        bodyGroup.add(new T.Mesh(g, matSkin));
+        return curve;
+      }
+      var armCurves = [];
+      armCurves.push(makeArm([
+        [-0.18, 1.02, 0.03], [-0.36, 1.05, 0.06], [-0.50, 1.16, 0.05],
+        [-0.555, 1.36, 0.02], [-0.565, 1.52, 0.0],
+      ], 0.145));
+      armCurves.push(makeArm([
+        [0.18, 1.38, -0.02], [0.37, 1.44, -0.02], [0.52, 1.55, -0.01],
+        [0.575, 1.74, 0.0], [0.575, 1.88, 0.0],
+      ], 0.128));
 
-    /* ---- 刺（InstancedMesh，一次 draw call） ---- */
-    var spineList = [];
-    (function () {
-      var i, t, th, y, r, nx, ny, nz;
-      /* 主干上的刺：避开正脸（避让区放宽） */
+      var spineList = [];
+      var i, t, th, y, r, nx, nz;
       for (i = 0; i < 42; i++) {
         t = 0.06 + Math.random() * 0.86;
         th = Math.random() * Math.PI * 2;
@@ -264,14 +298,13 @@
         if (Math.cos(th) > 0.30 && y > 0.92 && y < 1.72) continue;
         r = trunkRadius(t) * (1 + 0.055 * Math.cos(8 * th));
         nx = Math.cos(th); nz = Math.sin(th);
-        spineList.push({ p: new T.Vector3(nx * r, y, nz * r), n: new T.Vector3(nx, 0.16, nz).normalize(), s: 0.55 + Math.random() * 0.35 });
+        spineList.push({ p: v3(nx * r, y, nz * r), n: v3(nx, 0.16, nz).normalize(), s: 0.55 + Math.random() * 0.35 });
       }
-      /* 手臂上的刺 */
       armCurves.forEach(function (curve) {
+        var frames = curve.computeFrenetFrames(40, false);
         for (var k = 0; k < 9; k++) {
           var tt = 0.12 + Math.random() * 0.72;
           var p = curve.getPointAt(tt);
-          var frames = curve.computeFrenetFrames(40, false);
           var idxF = Math.min(39, Math.floor(tt * 40));
           var N = frames.normals[idxF], B = frames.binormals[idxF];
           var ang = Math.random() * Math.PI * 2;
@@ -279,26 +312,186 @@
           spineList.push({ p: p.clone().add(dir.clone().multiplyScalar(0.13)), n: dir, s: 0.6 + Math.random() * 0.45 });
         }
       });
-    })();
-    if (spineList.length) {
-      var spineGeo = new T.ConeGeometry(0.0095, 0.042, 5);
-      spineGeo.translate(0, 0.021, 0);
-      var inst = new T.InstancedMesh(spineGeo, matSpine, spineList.length);
-      var mtx = new T.Matrix4(), q = new T.Quaternion(), up = new T.Vector3(0, 1, 0), sc = new T.Vector3();
-      spineList.forEach(function (s, i) {
-        q.setFromUnitVectors(up, s.n);
-        sc.set(s.s, s.s * (0.85 + Math.random() * 0.4), s.s);
-        mtx.compose(s.p, q, sc);
-        inst.setMatrixAt(i, mtx);
-      });
-      inst.instanceMatrix.needsUpdate = true;
-      swayGroup.add(inst);
+      BODY.faceZ = trunkRadius((BODY.faceY - BASE_Y) / TRUNK_H) * 0.99;
+      addSpines(spineList, 0.0095, 0.042);
     }
 
-    /* ---- 脸 ---- */
-    var FACE_Y = 1.28;               // 眼睛高度
-    var FACE_Z = trunkRadius((FACE_Y - BASE_Y) / TRUNK_H) * 0.99;
+    /* ---- 玫瑰：细茎 + 花苞身体 + 大花冠 ---- */
+    function buildRoseBody() {
+      BODY = { id: 'rose', faceY: 1.14, faceZ: 0.325, eyeGap: 0.102, faceScale: 0.95, mouthDY: 0.175, flowerY: 1.52 };
+      var curve = new T.CatmullRomCurve3([
+        v3(0.0, 0.50, 0.02), v3(0.035, 0.68, 0.01), v3(-0.02, 0.88, 0.0), v3(0.0, 1.02, 0.0),
+      ]);
+      bodyGroup.add(new T.Mesh(new T.TubeGeometry(curve, 24, 0.052, 10, false), matSkin));
 
+      /* 花苞身体：脸长在这上面 */
+      var bud = new T.Mesh(new T.SphereGeometry(0.36, 36, 28), matSkin);
+      bud.scale.set(1.0, 0.98, 0.94);
+      bud.position.set(0, 1.12, 0);
+      bodyGroup.add(bud);
+
+      /* 花萼：五片尖叶托住花苞 */
+      for (var i = 0; i < 5; i++) {
+        var a = (i / 5) * Math.PI * 2 + 0.3;
+        var cal = new T.Mesh(new T.ConeGeometry(0.075, 0.24, 8), matLeaf);
+        cal.position.set(Math.cos(a) * 0.19, 1.37, Math.sin(a) * 0.19);
+        cal.rotation.set(Math.sin(a) * 0.55, 0, -Math.cos(a) * 0.55);
+        bodyGroup.add(cal);
+      }
+      /* 叶子：三片压扁的椭球 */
+      [[0.26, 0.86, 0.05, -0.5], [-0.27, 0.73, -0.02, 0.6], [0.19, 1.00, 0.11, -0.28]].forEach(function (L) {
+        var leaf = new T.Mesh(new T.SphereGeometry(0.16, 18, 14), matLeaf);
+        leaf.scale.set(1.55, 0.16, 0.62);
+        leaf.position.set(L[0], L[1], L[2]);
+        leaf.rotation.z = L[3];
+        leaf.rotation.y = L[3] * 0.6;
+        bodyGroup.add(leaf);
+      });
+      /* 茎刺 */
+      var thorns = [];
+      for (var k = 0; k < 16; k++) {
+        var tt = 0.08 + Math.random() * 0.62;
+        var p = curve.getPointAt(tt);
+        var ang = Math.random() * Math.PI * 2;
+        var n = v3(Math.cos(ang), 0.35, Math.sin(ang)).normalize();
+        thorns.push({ p: p.clone().add(n.clone().multiplyScalar(0.05)), n: n, s: 0.5 + Math.random() * 0.3 });
+      }
+      addSpines(thorns, 0.0105, 0.075);
+    }
+
+    /* ---- 刺猬：圆身 + 密短刺 ---- */
+    function buildHedgehogBody() {
+      BODY = { id: 'hedgehog', faceY: 1.02, faceZ: 0.468, eyeGap: 0.132, faceScale: 0.92, mouthDY: 0.17, flowerY: 1.50 };
+      var RX = 0.50, RY = 0.44, RZ = 0.47, CY = 1.00;
+      var body = new T.Mesh(new T.SphereGeometry(0.5, 40, 32), matSkin);
+      body.scale.set(1.0, RY / 0.5, RZ / 0.5);
+      body.position.set(0, CY, 0.02);
+      bodyGroup.add(body);
+
+      /* 肚皮：正面下方贴一块浅色 */
+      var belly = new T.Mesh(new T.SphereGeometry(0.5, 32, 24), matSkinDeep);
+      belly.scale.set(0.78, 0.55, 0.30);
+      belly.position.set(0, 0.86, 0.30);
+      bodyGroup.add(belly);
+
+      [-1, 1].forEach(function (s) {
+        var ear = new T.Mesh(new T.SphereGeometry(0.10, 18, 14), matSkin);
+        ear.position.set(s * 0.27, CY + 0.34, 0.12);
+        ear.scale.set(1, 1, 0.7);
+        bodyGroup.add(ear);
+        var foot = new T.Mesh(new T.SphereGeometry(0.15, 18, 14), matSkinDeep);
+        foot.scale.set(1, 0.55, 1.25);
+        foot.position.set(s * 0.22, 0.58, 0.16);
+        bodyGroup.add(foot);
+      });
+
+      var list = [];
+      for (var i = 0; i < 150; i++) {
+        var u = Math.random() * Math.PI * 2;
+        var ny = Math.pow(Math.random(), 0.72);
+        var rr = Math.sqrt(Math.max(0, 1 - ny * ny));
+        var nx = Math.cos(u) * rr, nz = Math.sin(u) * rr;
+        if (nz > 0.55 && ny < 0.5) continue;  /* 正脸留空 */
+        list.push({
+          p: v3(nx * RX, CY + ny * RY, 0.02 + nz * RZ),
+          n: v3(nx, ny * 0.9 + 0.12, nz).normalize(),
+          s: 0.55 + Math.random() * 0.3,
+        });
+      }
+      addSpines(list, 0.0125, 0.10);
+    }
+
+    /* ---- 板栗：球身 + 尖顶 + 稀刺 ---- */
+    function buildChestnutBody() {
+      BODY = { id: 'chestnut', faceY: 0.97, faceZ: 0.452, eyeGap: 0.122, faceScale: 0.9, mouthDY: 0.165, flowerY: 1.42 };
+      var R = 0.47, CY = 0.95;
+      var body = new T.Mesh(new T.SphereGeometry(R, 40, 32), matSkin);
+      body.scale.set(1, 0.94, 0.95);
+      body.position.set(0, CY, 0.02);
+      bodyGroup.add(body);
+
+      /* 尖顶：板栗的标志 */
+      var tip = new T.Mesh(new T.ConeGeometry(0.17, 0.36, 20), matSkinDeep);
+      tip.position.set(0, CY + R * 0.94 + 0.12, 0.0);
+      bodyGroup.add(tip);
+
+      /* 底部浅色圆盘 */
+      var base = new T.Mesh(new T.SphereGeometry(0.30, 26, 18), matSkinDeep);
+      base.scale.set(1, 0.42, 1);
+      base.position.set(0, 0.64, 0.02);
+      bodyGroup.add(base);
+
+      var list = [];
+      for (var i = 0; i < 52; i++) {
+        var u = Math.random() * Math.PI * 2;
+        var ny = Math.pow(Math.random(), 0.6);
+        var rr = Math.sqrt(Math.max(0, 1 - ny * ny));
+        var nx = Math.cos(u) * rr, nz = Math.sin(u) * rr;
+        if (nz > 0.5 && ny < 0.5) continue;
+        list.push({
+          p: v3(nx * 0.47, CY + ny * 0.44, 0.02 + nz * 0.447),
+          n: v3(nx, ny + 0.12, nz).normalize(),
+          s: 0.6 + Math.random() * 0.35,
+        });
+      }
+      addSpines(list, 0.011, 0.075);
+    }
+
+    /* ---- 豪猪：细长身 + 长刺 + 吻部 ---- */
+    function buildPorcupineBody() {
+      BODY = { id: 'porcupine', faceY: 1.55, faceZ: 0.281, eyeGap: 0.098, faceScale: 0.84, mouthDY: 0.155, flowerY: 1.94 };
+      var body = new T.Mesh(new T.SphereGeometry(0.5, 36, 28), matSkin);
+      body.scale.set(0.80, 1.05, 0.78);
+      body.position.set(0, 1.02, -0.02);
+      bodyGroup.add(body);
+
+      var head = new T.Mesh(new T.SphereGeometry(0.30, 32, 26), matSkin);
+      head.scale.set(1, 0.94, 0.96);
+      head.position.set(0, 1.55, 0.0);
+      bodyGroup.add(head);
+
+      var snout = new T.Mesh(new T.ConeGeometry(0.12, 0.20, 16), matSkinDeep);
+      snout.rotation.x = Math.PI / 2;
+      snout.position.set(0, 1.49, 0.29);
+      bodyGroup.add(snout);
+
+      [-1, 1].forEach(function (s) {
+        var ear = new T.Mesh(new T.SphereGeometry(0.075, 16, 12), matSkin);
+        ear.position.set(s * 0.22, 1.76, -0.02);
+        bodyGroup.add(ear);
+        var foot = new T.Mesh(new T.SphereGeometry(0.12, 16, 12), matSkinDeep);
+        foot.scale.set(1, 0.55, 1.2);
+        foot.position.set(s * 0.18, 0.60, 0.12);
+        bodyGroup.add(foot);
+      });
+
+      var list = [];
+      for (var i = 0; i < 95; i++) {
+        var u = Math.random() * Math.PI * 2;
+        var ny = Math.pow(Math.random(), 0.55);
+        var rr = Math.sqrt(Math.max(0, 1 - ny * ny));
+        var nx = Math.cos(u) * rr, nz = Math.sin(u) * rr;
+        if (nz > 0.35 && ny < 0.8) continue;  /* 脸和吻留空 */
+        list.push({
+          p: v3(nx * 0.40, 1.02 + ny * 0.52, -0.02 + nz * 0.39),
+          n: v3(nx, ny * 0.7 + 0.35, nz).normalize(),
+          s: 0.9 + Math.random() * 0.5,
+        });
+      }
+      addSpines(list, 0.020, 0.30);
+    }
+
+    var BODY_BUILDERS = {
+      cactus: buildCactusBody, rose: buildRoseBody, hedgehog: buildHedgehogBody,
+      chestnut: buildChestnutBody, porcupine: buildPorcupineBody,
+    };
+    function buildBody(id) {
+      clearGroup(bodyGroup);
+      (BODY_BUILDERS[id] || buildCactusBody)();
+    }
+    buildBody('cactus');
+
+    /* ---- 脸（同一套骨架，按 BODY 摆放） ---- */
     function eyeGroup(sign) {
       var g = new T.Group();
       var white = new T.Mesh(new T.SphereGeometry(0.088, 26, 20), matEyeWhite);
@@ -317,20 +510,15 @@
       return g;
     }
     var eyeL = eyeGroup(-1), eyeR = eyeGroup(1);
-    eyeL.position.set(-0.108, FACE_Y, FACE_Z + 0.012);
-    eyeR.position.set(0.108, FACE_Y, FACE_Z + 0.012);
     eyeL.rotation.y = -0.16; eyeR.rotation.y = 0.16;
     swayGroup.add(eyeL); swayGroup.add(eyeR);
 
-    /* 眉毛 */
     function browMesh() {
       var geo = new T.CapsuleGeometry(0.017, 0.082, 4, 10);
       geo.rotateZ(Math.PI / 2);
       return new T.Mesh(geo, matBrow.clone());
     }
     var browL = browMesh(), browR = browMesh();
-    browL.position.set(-0.115, FACE_Y + 0.135, FACE_Z + 0.045);
-    browR.position.set(0.115, FACE_Y + 0.135, FACE_Z + 0.045);
     browL.rotation.z = 0.16; browR.rotation.z = -0.16;
     browL.rotation.y = -0.16; browR.rotation.y = 0.16;
     swayGroup.add(browL); swayGroup.add(browR);
@@ -351,8 +539,6 @@
       return sp2;
     }
     var blushL = blushSprite(), blushR = blushSprite();
-    blushL.position.set(-0.175, FACE_Y - 0.095, FACE_Z + 0.055);
-    blushR.position.set(0.175, FACE_Y - 0.095, FACE_Z + 0.055);
     swayGroup.add(blushL); swayGroup.add(blushR);
 
     /* 嘴：半环（rotation.z = PI 是微笑，= 0 是皱眉） */
@@ -372,31 +558,54 @@
     mouthOpen.position.set(0, 0.006, 0.008);
     mouthOpen.visible = false;
     mouthRoot.add(mouthOpen);
-
-    mouthRoot.position.set(0, FACE_Y - 0.185, FACE_Z + 0.045);
     mouthGroup.rotation.z = Math.PI;
     swayGroup.add(mouthRoot);
 
-    /* ---- 顶上小花 ---- */
-    var flower = new T.Group();
-    var petalGeo = new T.SphereGeometry(0.10, 16, 12);
-    var petals = 6;
-    for (var pi = 0; pi < petals; pi++) {
-      var a = (pi / petals) * Math.PI * 2;
-      var petal = new T.Mesh(petalGeo, matPetal);
-      petal.position.set(Math.cos(a) * 0.098, 0.012, Math.sin(a) * 0.098);
-      petal.scale.set(0.78, 0.62, 1.0);
-      petal.rotation.y = -a;
-      petal.rotation.z = 0.55;
-      flower.add(petal);
+    /* 按当前皮肤把五官摆到头上（换皮肤时重摆，不重建） */
+    function layoutFace() {
+      var s = BODY.faceScale, y = BODY.faceY, z = BODY.faceZ, g = BODY.eyeGap;
+      eyeL.position.set(-g, y, z + 0.012);
+      eyeR.position.set(g, y, z + 0.012);
+      eyeL.scale.setScalar(s); eyeR.scale.setScalar(s);
+      browL.position.set(-g * 1.06, y + 0.135 * s, z + 0.045);
+      browR.position.set(g * 1.06, y + 0.135 * s, z + 0.045);
+      browL.scale.setScalar(s); browR.scale.setScalar(s);
+      blushL.position.set(-g * 1.6, y - 0.095 * s, z + 0.055);
+      blushR.position.set(g * 1.6, y - 0.095 * s, z + 0.055);
+      mouthRoot.position.set(0, y - BODY.mouthDY, z + 0.045);
+      mouthRoot.scale.setScalar(s);
     }
-    var core = new T.Mesh(new T.SphereGeometry(0.07, 18, 14), matCore);
-    core.scale.set(1, 0.85, 1);
-    core.position.y = 0.055;
-    flower.add(core);
-    flower.position.set(0, BASE_Y + TRUNK_H + 0.005, 0);
-    flower.rotation.z = -0.05;
-    flower.rotation.z = -0.12;
+
+    /* ---- 顶上花：瓣数/大小也随皮肤（玫瑰是大花，豪猪几乎没有） ---- */
+    var flower = new T.Group();
+    function buildFlower(id) {
+      clearGroup(flower);
+      var cfg = {
+        cactus: { n: 6, r: 0.098, s: 1.0 },
+        rose: { n: 9, r: 0.155, s: 1.32 },
+        hedgehog: { n: 5, r: 0.062, s: 0.75 },
+        chestnut: { n: 4, r: 0.055, s: 0.62 },
+        porcupine: { n: 3, r: 0.055, s: 0.58 },
+      }[id] || { n: 6, r: 0.098, s: 1.0 };
+      var petalGeo = new T.SphereGeometry(0.10, 16, 12);
+      for (var i = 0; i < cfg.n; i++) {
+        var a = (i / cfg.n) * Math.PI * 2;
+        var petal = new T.Mesh(petalGeo, matPetal);
+        petal.position.set(Math.cos(a) * cfg.r, 0.012, Math.sin(a) * cfg.r);
+        petal.scale.set(0.78 * cfg.s, 0.62 * cfg.s, 1.0 * cfg.s);
+        petal.rotation.y = -a;
+        petal.rotation.z = 0.55;
+        flower.add(petal);
+      }
+      var core = new T.Mesh(new T.SphereGeometry(0.07 * cfg.s, 18, 14), matCore);
+      core.scale.set(1, 0.85, 1);
+      core.position.y = 0.055 * cfg.s;
+      flower.add(core);
+      flower.position.set(0, BODY.flowerY, 0);
+      flower.rotation.z = -0.08;
+    }
+    buildFlower('cactus');
+    layoutFace();
     swayGroup.add(flower);
 
     /* ---- 软阴影 ---- */
@@ -434,20 +643,36 @@
     if (window.ResizeObserver) { ro = new ResizeObserver(resize); ro.observe(canvas); }
 
     /* ---- 情绪 ---- */
+    /* 每个 mood 都是一整套「建模」：五官 + 皮肤色调 + 刺色 + 下垂姿态 + 花冠大小 + 核心发光。
+     * tint/spine 为 null 时用主题默认色（由 palette() 决定）；非 null 时覆盖为状态专属配色。 */
     var MOODS = {
-      idle:   { eyeY: 1, brow: 0, browTilt: 0, mouthRot: Math.PI, mouthSX: 1, mouthSY: 1, blush: 0 },
-      happy:  { eyeY: 0.56, brow: 0, browTilt: 0, mouthRot: Math.PI, mouthSX: 1.2, mouthSY: 1.25, blush: 0.9 },
-      smirk:  { eyeY: 0.5, brow: 0.55, browTilt: 0.5, mouthRot: Math.PI - 0.34, mouthSX: 1.05, mouthSY: 0.85, blush: 0.18 },
-      angry:  { eyeY: 0.82, brow: 1, browTilt: -1, mouthRot: 0.06, mouthSX: 1.06, mouthSY: 0.9, blush: 0.42 },
-      sleep:  { eyeY: 0.09, brow: 0, browTilt: 0, mouthRot: Math.PI, mouthSX: 0.42, mouthSY: 0.55, blush: 0 },
-      listen: { eyeY: 1.34, brow: 0.35, browTilt: 0.2, mouthRot: Math.PI, mouthSX: 0.62, mouthSY: 0.62, blush: 0.24 },
-      /* 吃惊：眼睛瞪圆、眉毛挑高、嘴缩成一个小圆 */
-      surprised: { eyeY: 1.32, brow: 1, browTilt: 0.1, mouthRot: Math.PI, mouthSX: 0.46, mouthSY: 1.45, blush: 0.3 },
-      /* 委屈/蔫了：眼睛下垂、眉毛八字、嘴往下撇 */
-      sad: { eyeY: 0.72, brow: 0.6, browTilt: -0.7, mouthRot: 0.18, mouthSX: 0.9, mouthSY: 0.8, blush: 0.12 },
+      idle:         { eyeY: 1, brow: 0, browTilt: 0, mouthRot: Math.PI, mouthSX: 1, mouthSY: 1, blush: 0,          tint: null,      spine: null,      droop: 0,    flower: 1,    glow: 0.22 },
+      happy:        { eyeY: 0.56, brow: 0, browTilt: 0, mouthRot: Math.PI, mouthSX: 1.2, mouthSY: 1.25, blush: 0.9, tint: '#4fe0b4', spine: '#e6f5b0', droop: -0.05, flower: 1.12, glow: 0.42 },
+      smirk:        { eyeY: 0.5, brow: 0.55, browTilt: 0.5, mouthRot: Math.PI - 0.34, mouthSX: 1.05, mouthSY: 0.85, blush: 0.18, tint: null, spine: null, droop: 0, flower: 1, glow: 0.26 },
+      angry:        { eyeY: 0.82, brow: 1, browTilt: -1, mouthRot: 0.06, mouthSX: 1.06, mouthSY: 0.9, blush: 0.42, tint: '#e0645a', spine: '#ffb28a', droop: -0.02, flower: 0.9,  glow: 0.5 },
+      sleep:        { eyeY: 0.09, brow: 0, browTilt: 0, mouthRot: Math.PI, mouthSX: 0.42, mouthSY: 0.55, blush: 0, tint: '#6a8f86', spine: '#8fa79a', droop: 0.12, flower: 0.82, glow: 0.08 },
+      listen:       { eyeY: 1.34, brow: 0.35, browTilt: 0.2, mouthRot: Math.PI, mouthSX: 0.62, mouthSY: 0.62, blush: 0.24, tint: null, spine: null, droop: 0, flower: 1, glow: 0.3 },
+      surprised:    { eyeY: 1.32, brow: 1, browTilt: 0.1, mouthRot: Math.PI, mouthSX: 0.46, mouthSY: 1.45, blush: 0.3, tint: null, spine: null, droop: -0.08, flower: 1.08, glow: 0.34 },
+      sad:          { eyeY: 0.72, brow: 0.6, browTilt: -0.7, mouthRot: 0.18, mouthSX: 0.9, mouthSY: 0.8, blush: 0.12, tint: '#7a9c8a', spine: '#9bab92', droop: 0.16, flower: 0.72, glow: 0.1 },
+      /* 失望：整个人灰掉、刺耷拉、花冠萎缩、垂头丧气——与 sad 比更灰更蔫 */
+      disappointed: { eyeY: 0.5, brow: 0.75, browTilt: -0.9, mouthRot: 0.3, mouthSX: 0.82, mouthSY: 0.6, blush: 0, tint: '#6f7d78', spine: '#8a938c', droop: 0.28, flower: 0.55, glow: 0.04 },
+      /* 战斗态：通体泛红、刺竖起、花冠张开、核心高亮 */
+      fight:        { eyeY: 1.15, brow: 1, browTilt: -0.6, mouthRot: 0.1, mouthSX: 1.12, mouthSY: 0.95, blush: 0.5, tint: '#e0554f', spine: '#ffd08a', droop: -0.1, flower: 1.2, glow: 0.72 },
     };
-    var cur = { eyeY: 1, brow: 0, browTilt: 0, mouthRot: Math.PI, mouthSX: 1, mouthSY: 1, blush: 0 };
+    var cur = { eyeY: 1, brow: 0, browTilt: 0, mouthRot: Math.PI, mouthSX: 1, mouthSY: 1, blush: 0, droop: 0, flower: 1, glow: 0.22 };
     var want = MOODS.idle;
+    /* 皮肤（头像建模）：基础色/刺色/花瓣色/花冠缩放。
+     * 心情的 tint 优先（生气泛红、失望发灰），没心情色时用皮肤底色。 */
+    var skinLook = { tint: null, spine: null, petal: null, flower: 1 };
+    /* 状态配色：目标色 + 当前色（用 lerp 平滑过渡，做出「建模随状态改变」的效果） */
+    var wantSkin = new T.Color(pal.skin), wantSpine = new T.Color('#cfe0a4');
+    var curSkin = new T.Color(pal.skin), curSpine = new T.Color('#cfe0a4');
+    function applyWantColors() {
+      /* 皮肤不随心情变：体色/刺色只由皮肤（或主题）决定。
+       * 心情只改表情（眼/眉/嘴/腮红）+ 轻微体态（droop），不动配色、不动花冠。 */
+      wantSkin = skinLook.tint ? new T.Color(skinLook.tint) : pal.skin.clone();
+      wantSpine = skinLook.spine ? new T.Color(skinLook.spine) : new T.Color('#cfe0a4');
+    }
     var mood = 'idle', talkUntil = 0, talkingOn = false;
     var moodUntil = 0;   /* 临时表情多久后自己回到 idle */
     var blink = 0, blinkNext = 2 + Math.random() * 3;
@@ -461,6 +686,7 @@
     function setMood(m) {
       mood = MOODS[m] ? m : 'idle';
       want = MOODS[mood];
+      applyWantColors();
     }
     function setTalking(on) {
       talkingOn = !!on;
@@ -489,6 +715,17 @@
       cur.mouthSX += (want.mouthSX - cur.mouthSX) * k;
       cur.mouthSY += (want.mouthSY - cur.mouthSY) * k;
       cur.blush += (want.blush - cur.blush) * k;
+      cur.droop += (want.droop - cur.droop) * k;
+      /* 花冠大小只跟皮肤（和等级）走，不随心情变——心情只挂在脸上 */
+      cur.flower += (1 - cur.flower) * k;
+      cur.glow += (want.glow - cur.glow) * k;
+      /* 建模配色平滑过渡 */
+      curSkin.lerp(wantSkin, k);
+      curSpine.lerp(wantSpine, k);
+      matSkin.color.copy(curSkin);
+      matSkinDeep.color.copy(curSkin).multiplyScalar(0.62);
+      matSpine.color.copy(curSpine);
+      matCore.emissiveIntensity = cur.glow;
 
       /* 眨眼 */
       blinkNext -= dt;
@@ -500,7 +737,7 @@
       browL.material.opacity = cur.brow; browR.material.opacity = cur.brow;
       browL.rotation.z = 0.16 + cur.browTilt * 0.42;
       browR.rotation.z = -0.16 - cur.browTilt * 0.42;
-      browL.position.y = FACE_Y + 0.135 + (cur.browTilt < 0 ? -0.012 : 0.008);
+      browL.position.y = BODY.faceY + 0.135 * BODY.faceScale + (cur.browTilt < 0 ? -0.012 : 0.008);
       browR.position.y = browL.position.y;
       blushL.material.opacity = cur.blush * 0.9;
       blushR.material.opacity = cur.blush * 0.9;
@@ -555,12 +792,16 @@
       /* 临时表情到点自己收敛，别一直瞪着 / 一直笑 */
       if (moodUntil && now > moodUntil) { moodUntil = 0; setMood('idle'); }
       root.rotation.y = ((baseRot + wag) * Math.PI) / 180;
-      root.position.y = hop;
-      root.rotation.x = Math.sin(t * 0.42) * 0.012;
-      var breathe = 1 + Math.sin(t * 1.15) * 0.008;
-      swayGroup.scale.set(1, breathe, 1);
+      root.position.y = hop - Math.max(0, cur.droop) * 0.06; // 蔫巴时整体下沉
+      /* droop：垂头（前倾）+ 呼吸幅度变小；精神时略仰头 */
+      root.rotation.x = Math.sin(t * 0.42) * 0.012 + cur.droop * 0.22;
+      var breathe = 1 + Math.sin(t * 1.15) * (0.008 - Math.max(0, cur.droop) * 0.006);
+      swayGroup.scale.set(1 + (cur.flower - 1) * 0.06, breathe, 1 + (cur.flower - 1) * 0.06);
       swayGroup.position.y = Math.sin(t * 1.15) * 0.005;
+      /* 花冠：蔫巴时下垂并缩小、精神时张开 */
       flower.rotation.y = Math.sin(t * 0.7) * 0.25;
+      flower.rotation.x = cur.droop * 0.5;
+      flower.scale.setScalar(Math.max(0.02, Math.max(0.3, cur.flower) * (flower.userData.levelScale || 1) * skinLook.flower));
       shadow.scale.setScalar(1 + Math.sin(t * 1.15) * 0.01);
 
       renderer.render(scene, camera);
@@ -579,6 +820,34 @@
       jump: function (ms) { jumpStart = performance.now(); jumpUntil = jumpStart + (Number(ms) || 1000); },
       /* 带时限的表情：过一会儿自己回到 idle */
       moodFor: function (m, ms) { setMood(m); moodUntil = performance.now() + (Number(ms) || 2400); },
+      /* 战友状态 → 建模：失望时强制蔫巴灰暗造型；战斗时泛红竖刺；否则按心情。
+       * 等级越高花冠略大，体现「成长」。 */
+      setCompanionState: function (state) {
+        var s = state || {};
+        /* 皮肤：换底色/刺色/花瓣色，花冠大小也跟着变（玫瑰大、板栗小、豪猪几乎没有） */
+        if (s.skin) {
+          /* 换皮肤 = 真的重新建模（几何体重建 + 五官重摆），不是改个色 */
+          if (s.skin.id && s.skin.id !== BODY.id) {
+            buildBody(s.skin.id);
+            buildFlower(s.skin.id);
+            layoutFace();
+          }
+          skinLook.tint = s.skin.tint || null;
+          skinLook.spine = s.skin.spine || null;
+          skinLook.petal = s.skin.petal || null;
+          skinLook.flower = Math.max(0.05, Number(s.skin.flower) || 1);
+          matPetal.color.copy(s.skin.petal ? new T.Color(s.skin.petal) : pal.petal);
+          /* core 为空 = 回到主题默认（重置时用） */
+          matCore.color.copy(s.skin.core ? new T.Color(s.skin.core) : pal.core);
+          matCore.emissive.copy(matCore.color);
+          applyWantColors();
+        }
+        if (s.disappointed) setMood('disappointed');
+        else if (s.fighting) setMood('fight');
+        else if (s.mood && MOODS[s.mood]) setMood(s.mood);
+        if (s.level) flower.userData.levelScale = 1 + Math.min(0.25, (Number(s.level) || 1) / 400);
+        moodUntil = 0; // 状态造型是持久的，不要被临时表情计时器收回
+      },
       rotDeg: function () { return rotY; },
       mood: function () { return mood; },
       isTalking: function () { return !!(talkingOn && performance.now() < talkUntil); },
@@ -588,8 +857,9 @@
       resume: function () { running = true; last = performance.now(); },
       refreshTheme: function () {
         pal = palette();
-        matSkin.color.copy(pal.skin);
-        matSkinDeep.color.copy(pal.skinDeep);
+        applyWantColors(); // 皮肤底色/心情色都按新主题重算，curSkin 在帧循环里平滑过去
+        matSkin.color.copy(curSkin);
+        matSkinDeep.color.copy(curSkin).multiplyScalar(0.62);
         matPot.color.copy(pal.pot);
         matRim.color.copy(pal.potRim);
         matSoil.color.copy(pal.soil);

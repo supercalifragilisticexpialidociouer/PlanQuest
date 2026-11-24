@@ -36,6 +36,7 @@ const alaWeb = require('./ala-web');
 const alaTTS = require('./ala-tts');
 const updateFlow = require('./update-flow');
 const aciCore = require('./aci-core');
+const skinCore = require('./aci-skin');
 
 const APP_NAME = 'PlanQuest';
 app.setName(APP_NAME);
@@ -4254,6 +4255,17 @@ function registerIpc() {
 
   ipcMain.handle('room:invite', (_e, { ip, port }) => discovery.invite(ip, port));
 
+  /* 拉阿刺作为虚拟战友进自习房/娱乐房（仅房主，由于 socket=null 只发言不收包） */
+  ipcMain.handle('room:companion', (_e, joined) => {
+    /* 名字/头像跟着用户选的皮肤走，进房时别人看到的是玫瑰/豪猪，不是一盆固定仙人掌 */
+    const aci = data.aci || {};
+    const id = (aci.identity && aci.identity.name) || '阿刺';
+    const sk = skinCore.get((aci.identity && aci.identity.skin) || '');
+    const r = room.setCompanion(!!joined, { name: id, avatar: sk ? sk.emoji : '🌵' });
+    if (r.ok) broadcast();
+    return r;
+  });
+
   ipcMain.handle('room:funConfig', () => ({
     blockMinutes: FUN_BLOCK_MIN,
     blockCost: FUN_BLOCK_COST,
@@ -5745,13 +5757,44 @@ h1{font-size:22px}table{border-collapse:separate;border-spacing:6px}td{width:52p
     for (const p of due) { total++; if (lg[p.id] && lg[p.id].status === 'done') done++; }
     return total ? Math.round(done / total * 100) : 0;
   };
+  /* 最近 N 天的每日完成率（供失望模式判定）。data.log[dateKey][planId].status='done' */
+  const recentDailyRates = (n) => {
+    const out = [];
+    const today = new Date(); today.setHours(12, 0, 0, 0);
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(today.getTime() - i * 86400000);
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const due = plansForDate(key);
+      const lg = (data.log && data.log[key]) || {};
+      let done = 0;
+      for (const p of due) if (lg[p.id] && lg[p.id].status === 'done') done++;
+      out.push({ day: key, rate: due.length ? Math.round(done / due.length * 100) : 0, hasPlan: due.length > 0 });
+    }
+    return out;
+  };
+  const syncDisappointment = () => {
+    if (!data.aci) return;
+    const days = recentDailyRates(4).filter((x) => x.hasPlan); // 只看有计划的这几天
+    if (days.length < 3) return; // 数据不足不误判
+    const chk = aciCore.checkPrivilege(data.aci, 'disappointment', days);
+    if (chk.active !== !!data.aci.disappointed) {
+      const r = aciCore.setDisappointed(data.aci, chk.active, chk.reason);
+      data.aci = r.aci;
+      try { saveNow(); } catch (_) {}
+    }
+  };
   const aciView = () => {
+    syncDisappointment(); // 每次读状态时按最近完成情况自动同步失望模式
     const aci = data.aci || aciCore.defaultAci();
     const rate = weekRateOf();
     const tier = aciCore.tierOf(aci.level);
+    const skinInfo = aciCore.skinOf(aci);
     return {
       aci,
       rules: aciCore.RULES, tiers: aciCore.TIERS, supplies: aciCore.SUPPLIES,
+      /* 皮肤目录 + 重置代价说明：前端只负责画，不自己编文案 */
+      skins: skinCore.SKINS,
+      resetCost: skinCore.resetCost(),
       derived: {
         weekRate: rate,
         tier: tier.id, tierName: tier.name,
@@ -5761,6 +5804,20 @@ h1{font-size:22px}table{border-collapse:separate;border-spacing:6px}td{width:52p
         cooling: aciCore.isCoolingDown(aci, Date.now()),
         hidden: aciCore.isHidden(aci, Date.now()),
         matchPref: aciCore.matchPreference(aci, rate, Date.now()),
+        disappointed: !!aci.disappointed,
+        mood: aci.mood || 'idle',
+        guaranteeCapacity: aciCore.guaranteeCapacity(aci),
+        supplyWeekUsed: (aci.supplyWeek && aci.supplyWeek.used) || 0,
+        autoSupplyChance: aciCore.autoSupplyChance(aci.mood, aci.disappointed),
+        /* 身份：未选皮肤时 locked=true，AI 助手必须先过这一关 */
+        locked: !skinInfo,
+        skin: aci.identity.skin,
+        skinName: skinInfo ? skinInfo.name : '',
+        skinEmoji: skinInfo ? skinInfo.emoji : '',
+        name: aci.identity.name,
+        renameCount: aci.identity.renameCount,
+        nameSuggestions: skinInfo ? skinCore.suggestNames(skinInfo.id) : [],
+        voiceHint: skinInfo ? skinCore.voiceHint(skinInfo.id) : '',
       },
     };
   };
@@ -5776,7 +5833,40 @@ h1{font-size:22px}table{border-collapse:separate;border-spacing:6px}td{width:52p
         if (r.ok && r.effect) setProfilePoints((data.profile.points || 0) - r.effect.costPoints);
         break;
       }
-      case 'useSupply': r = aciCore.useSupply(data.aci, p.supplyId); break;
+      case 'useSupply': r = aciCore.useSupply(data.aci, p.supplyId, { source: p.source || 'manual', fromChat: p.fromChat, now }); break;
+      case 'redeemSupply': {
+        /* 积分商城兑换强化态补给：扣积分 */
+        r = aciCore.redeemSupplyWithPoints(data.aci, p.supplyId, data.profile.points || 0);
+        if (r.ok && r.effect) setProfilePoints((data.profile.points || 0) - r.effect.costPoints);
+        break;
+      }
+      case 'shouldAutoSupply': {
+        const chance = aciCore.autoSupplyChance(data.aci.mood, data.aci.disappointed);
+        const roll = Math.random();
+        const j = aciCore.shouldAutoSupply(data.aci, data.aci.mood, roll, now);
+        /* 触发则直接消耗能量启动一项可用补给 */
+        if (j.trigger) {
+          const affordable = aciCore.SUPPLIES.filter((s) => (data.aci.energy || 0) >= s.energy);
+          if (affordable.length) {
+            const pick = affordable[Math.floor(Math.random() * affordable.length)];
+            const u = aciCore.useSupply(data.aci, pick.id, { source: 'auto', now });
+            if (u.ok) { data.aci = u.aci; r = { ok: true, message: u.message, effect: u.effect, autoLine: pick.name }; }
+          }
+        }
+        if (!r) r = { ok: false, reason: j.reason, effect: { chance, roll } };
+        break;
+      }
+      case 'setDisappointed': r = aciCore.setDisappointed(data.aci, !!p.on, p.reason); break;
+      case 'checkDisappointment': {
+        /* 用最近 N 天完成率检测失望模式（lowDays 由前端传入，来自 reviews） */
+        const chk = aciCore.checkPrivilege(data.aci, 'disappointment', p.lowDays);
+        if (chk.active !== !!data.aci.disappointed) {
+          r = aciCore.setDisappointed(data.aci, chk.active, chk.reason);
+        } else {
+          r = { ok: true, message: chk.reason, unchanged: true };
+        }
+        break;
+      }
       case 'buyTicket': {
         r = aciCore.buyTicket(data.aci, data.profile.points || 0);
         if (r.ok && r.effect) setProfilePoints((data.profile.points || 0) - r.effect.costPoints);
@@ -5784,8 +5874,15 @@ h1{font-size:22px}table{border-collapse:separate;border-spacing:6px}td{width:52p
       }
       case 'skipCooldown': r = aciCore.skipCooldown(data.aci, now); break;
       case 'setHidden': r = aciCore.setHidden(data.aci, !!p.hidden, now); break;
-      case 'createChallenge': r = aciCore.createChallenge(data.aci, Object.assign({ now }, p)); break;
+      case 'createChallenge': {
+        const myRate = weekRateOf();
+        r = aciCore.createChallenge(data.aci, Object.assign({
+          now, challengerName: (data.profile && data.profile.name) || '搭档', challengerRate: myRate,
+        }, p));
+        break;
+      }
       case 'acceptChallenge': r = aciCore.acceptChallenge(data.aci, p.matchId, now); break;
+      case 'acceptPkInvite': r = aciCore.acceptPkInvite(data.aci, p.invite, now); break;
       case 'expireChallenge': r = aciCore.expireChallenge(data.aci, p.matchId, p.reason); break;
       case 'settle': {
         r = aciCore.settle(data.aci, Object.assign({ now }, p));
@@ -5798,6 +5895,27 @@ h1{font-size:22px}table{border-collapse:separate;border-spacing:6px}td{width:52p
       case 'toggleGuarantee': r = aciCore.toggleCreditGuarantee(data.aci, !!p.on); break;
       case 'breakGuarantee': r = aciCore.breakGuarantee(data.aci); break;
       case 'guardDeduct': r = aciCore.guardDeduct(data.aci); break;
+      /* ---- 身份：选皮肤 / 改名 / 换皮肤拒绝 / 重置 ---- */
+      case 'chooseSkin': r = aciCore.chooseSkin(data.aci, p.skin, now); break;
+      case 'tryRename': {
+        const ev = aciCore.evaluateCompanionName(data.aci, p.name);
+        if (ev.accept) {
+          r = aciCore.setCompanionName(data.aci, p.name, now);
+          if (r.ok) { r.message = ev.reply; r.chance = ev.chance; r.renamed = true; }
+        } else {
+          r = { ok: false, refused: true, chance: ev.chance, message: ev.reply };
+        }
+        break;
+      }
+      case 'requestSkinChange': r = aciCore.requestCompanionSkinChange(data.aci); break;
+      case 'resetIdentity': {
+        if (String(p.confirm || '').trim() !== '重新开始') {
+          return { ok: false, message: '确认词不对。真要重来，把「重新开始」四个字打全。', needConfirm: true };
+        }
+        r = aciCore.resetCompanion(data.aci);
+        if (r.ok) { try { room.setCompanion(false); } catch (_) {} }
+        break;
+      }
       default: return { ok: false, message: '未知的阿刺操作：' + action };
     }
     if (!r) return { ok: false, message: '操作没有返回结果' };
@@ -5807,6 +5925,8 @@ h1{font-size:22px}table{border-collapse:separate;border-spacing:6px}td{width:52p
     return {
       ok: r.ok, message: r.message || r.reason,
       effect: r.effect, broadcast: r.broadcast, cooling: r.cooling,
+      refused: !!r.refused, purgeChat: !!r.purgeChat, identityReset: !!r.identityReset,
+      chance: r.chance, hint: r.hint, skin: r.skin,
       view: aciView(),
     };
   });
@@ -5830,7 +5950,13 @@ h1{font-size:22px}table{border-collapse:separate;border-spacing:6px}td{width:52p
     const t = Date.now();
     if (t - aciRoomLast < 3 * 60 * 1000) return { ok: false, message: '刚聊过，稍等再说', throttled: true };
     const msg = text ? String(text).slice(0, 200)
-      : '🤖 阿刺：' + ACI_ROOM_LINES[Math.floor(Math.random() * ACI_ROOM_LINES.length)];
+      : (function () {
+        /* 房间里的自动发言也走皮肤语气：玫瑰带花、豪猪更短更硬 */
+        const id = (data.aci && data.aci.identity && data.aci.identity.skin) || '';
+        const nm = (data.aci && data.aci.identity && data.aci.identity.name) || '阿刺';
+        const line = ACI_ROOM_LINES[Math.floor(Math.random() * ACI_ROOM_LINES.length)];
+        return '🤖 ' + nm + '：' + skinCore.decorate(line, id, { kind: 'say' });
+      })();
     aciRoomLast = t;
     try { room.sendChat(msg.startsWith('🤖') ? msg : '🤖 ' + msg); } catch (_) {}
     return { ok: true, message: msg };

@@ -777,6 +777,61 @@ input[type='time'].input::-webkit-calendar-picker-indicator { filter: invert(0.6
   100% { opacity: 0; transform: translateY(-60px) scale(1); }
 }
 
+/* ===== 阿刺 PK 挑战链接按钮 & 军团对决动画 ===== */
+.pk-challenge, .pk-challenge-card .btn {
+  border-color: var(--danger, #e0554f) !important;
+  color: var(--danger, #e0554f) !important;
+  font-weight: 700 !important;
+}
+.pk-challenge-card {
+  border-left: 3px solid var(--danger, #e0554f) !important;
+  background: rgba(224, 85, 79, 0.08) !important;
+}
+@keyframes duelClash {
+  0%   { opacity: 0; transform: scale(0.5) rotate(-12deg); }
+  30%  { opacity: 1; transform: scale(1.15) rotate(6deg); }
+  55%  { transform: scale(0.95) rotate(-4deg); }
+  75%  { transform: scale(1.05) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes duelSlash {
+  0%   { opacity: 0; transform: translateX(-60px) skewX(-30deg); }
+  40%  { opacity: 1; transform: translateX(0) skewX(-30deg); }
+  100% { opacity: 0; transform: translateX(60px) skewX(-30deg); }
+}
+@keyframes duelGlow {
+  0%, 100% { box-shadow: 0 0 0 rgba(224,85,79,0); }
+  50% { box-shadow: 0 0 28px rgba(224,85,79,0.55); }
+}
+.duel-stage {
+  position: relative;
+  display: flex; align-items: center; justify-content: center; gap: 18px;
+  padding: 18px 12px; margin: 8px 0;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: radial-gradient(circle at 50% 50%, rgba(224,85,79,0.10), transparent 70%);
+  animation: duelGlow 1.1s ease-in-out 2;
+  overflow: hidden;
+}
+.duel-side { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 96px; }
+.duel-emoji { font-size: 40px; line-height: 1; animation: duelClash 0.9s cubic-bezier(0.22,1,0.36,1) both; }
+.duel-side.them .duel-emoji { animation-delay: 0.15s; }
+.duel-name { font-size: 12px; color: var(--text-2); font-weight: 700; }
+.duel-power { font-size: 20px; font-weight: 800; color: var(--accent-2); }
+.duel-vs { font-size: 16px; font-weight: 900; color: var(--danger, #e0554f); letter-spacing: 2px; }
+.duel-slash {
+  position: absolute; top: 50%; left: 0; width: 100%; height: 3px;
+  background: linear-gradient(90deg, transparent, var(--danger, #e0554f), transparent);
+  animation: duelSlash 0.8s ease-out 0.3s both;
+}
+.duel-result {
+  margin-top: 8px; text-align: center; font-size: 15px; font-weight: 800;
+  animation: pop 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+.duel-result.win { color: var(--accent-2); }
+.duel-result.lose { color: var(--danger, #e0554f); }
+.duel-result.draw { color: var(--text-2); }
+
 /* ================================================================
    自习房
    ================================================================ */
