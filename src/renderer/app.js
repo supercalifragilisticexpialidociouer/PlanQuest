@@ -4956,16 +4956,41 @@ function bindUpdatePanel() {
     if (!r.hasUpdate) { box.textContent = `已是最新版 ${r.current}${r.via ? '（来自 ' + r.via + '）' : ''}。`; return; }
     box.innerHTML = `发现新版本 <b>${esc(r.latest)}</b>（当前 ${esc(r.current)}${r.via ? '，来自 ' + esc(r.via) : ''}）。<br/>` +
       `${esc(String(r.notes || (r.manifest && r.manifest.notes) || '').slice(0, 300))}<br/>` +
-      `<button class="btn" id="pq-up-get">下载新版本</button> <span class="sd" id="pq-up-stage">下到新目录，不覆盖当前程序</span>`;
+      `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">` +
+      `<button class="btn" id="pq-up-install">一键更新</button>` +
+      `<button class="btn ghost" id="pq-up-get">只下载</button>` +
+      `</div>` +
+      `<div class="sd" id="pq-up-stage" style="margin-top:8px;line-height:1.7">一键更新 = 下载 → 校验 → 备份 → 解压 → 自检 → 覆盖；出问题自动还原。数据不迁移。</div>`;
+    const stage = () => $('#pq-up-stage');
+    const watchStage = () => {
+      if (api.onUpdateStage) api.onUpdateStage((t) => { const s = stage(); if (s) s.textContent = t; });
+    };
+    /* 一键更新：完整流水线 */
+    const install = $('#pq-up-install');
+    if (install) install.onclick = async () => {
+      install.disabled = true; const old = install.textContent; install.textContent = '更新中…';
+      const getBtn = $('#pq-up-get'); if (getBtn) getBtn.disabled = true;
+      watchStage();
+      try {
+        const d = await api.updateInstall();
+        toast(d && d.ok ? '✅ 更新完成' : '更新没成功', (d && d.message) || '未知结果', !(d && d.ok));
+        const s = stage(); if (s) s.textContent = (d && d.message) || '更新结束';
+      } catch (e) {
+        const s = stage(); if (s) s.textContent = '更新出错：' + ((e && e.message) || e);
+      } finally {
+        install.disabled = false; install.textContent = old;
+        const getBtn = $('#pq-up-get'); if (getBtn) getBtn.disabled = false;
+      }
+    };
+    /* 只下载（保留原入口：下到新目录，用户自己切换） */
     const get = $('#pq-up-get');
     if (get) get.onclick = async () => {
       get.disabled = true; get.textContent = '下载中…';
-      const stage = $('#pq-up-stage');
-      if (stage && api.onUpdateStage) api.onUpdateStage((t) => { if (stage) stage.textContent = t; });
+      watchStage();
       const d = await api.updateDownload();
-      get.disabled = false; get.textContent = '下载新版本';
+      get.disabled = false; get.textContent = '只下载';
       toast(d && d.ok ? '✅ 下载完成' : '下载没成功', (d && d.message) || '未知结果', !(d && d.ok));
-      if (stage && d && !d.ok) stage.textContent = d.message || '下载失败';
+      const s = stage(); if (s && d && !d.ok) s.textContent = d.message || '下载失败';
     };
   };
   const comp = $('#pq-up-comp');

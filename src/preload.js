@@ -7,7 +7,12 @@ contextBridge.exposeInMainWorld('api', {
   /* R2 直链版本更新 / 可选大模型下载（桌面版专属） */
   updateCheck: () => ipcRenderer.invoke('update:check'),
   updateDownload: () => ipcRenderer.invoke('update:download'),
+  updateInstall: () => ipcRenderer.invoke('update:install'),
   updateComponents: (ids) => ipcRenderer.invoke('update:components', ids),
+  /* 阿刺养成 + 战友 PK */
+  aciState: () => ipcRenderer.invoke('aci:state'),
+  aciAction: (action, payload) => ipcRenderer.invoke('aci:action', action, payload),
+  aciRoomSay: (text) => ipcRenderer.invoke('aci:roomSay', text),
   onUpdateStage: (cb) => {
     const h = (_e, t) => cb && cb(t);
     ipcRenderer.on('update:stage', h);

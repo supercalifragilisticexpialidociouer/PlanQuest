@@ -12,7 +12,8 @@
 ;   CreateUninstallRegKey=no         不写卸载注册表
 ;   Uninstallable=no                 不生成卸载程序
 ;   DisableProgramGroupPage=yes      不建开始菜单
-;   无 [Icons] / [Registry] / [Run]  安装器不改系统、不写自启
+;   无 [Registry] / [Run]            安装器不写注册表、不写自启
+;   [Icons] 只在桌面建一个快捷方式，指向解压后的 PlanQuest.exe（用户明确要求）
 ;
 ; 压缩：本脚本 [Files] 为空（引导器无内嵌文件），产物就是 Inno 的几 MB 壳。
 ; 源地址不写进界面，集中写在「使用说明.txt」；这里只放内置兜底地址。
@@ -41,7 +42,12 @@ WizardStyle=modern
 OutputDir=..\dist\releases
 OutputBaseFilename=PlanQuest-安装助手
 SetupIconFile=..\dist\PlanQuest-win64\PlanQuest.ico
-; 无 [Icons] / [Registry] / [Run] —— 纯解压，不碰系统
+; 只有桌面快捷方式（见 [Icons]）；无 [Registry] / [Run] —— 不写注册表、不写自启
+
+; 桌面快捷方式：ssPostInstall 之前就会创建，目标 exe 此时还没下载下来，
+; 但 Windows 允许 .lnk 指向暂不存在的文件；下载失败时 CurStepChanged 会删掉它。
+[Icons]
+Name: "{autodesktop}\PlanQuest"; Filename: "{app}\PlanQuest.exe"; Comment: "PlanQuest 绿色版"; IconFilename: "{app}\PlanQuest.exe"
 
 ; 说明：本机 Inno Setup 未附中文语言包，沿用默认向导文案（按钮为英文，
 ; 但自定义页与完成页文案均为中文，见 [Code]）—— 与原 setup.iss 口径一致。
@@ -376,6 +382,8 @@ begin
 
   if not FetchMainPackage(Ver, ZipFile) then
   begin
+    { 主包没下到 → 删掉 [Icons] 预先建的桌面快捷方式，不留指向空文件的死链 }
+    DeleteFile(ExpandConstant('{autodesktop}\PlanQuest.lnk'));
     MsgBox('下载 ' + Ver + ' 失败：所有源都没拿到包。' + #13#10 +
            '请检查网络，或按「使用说明.txt」配置自己的下载源后重试。', mbError, MB_OK);
     Exit;
@@ -409,7 +417,7 @@ procedure CurPageChanged(CurPageID: Integer);
 begin
   if CurPageID = wpFinished then
     WizardForm.FinishedLabel.Caption :=
-      '安装完成：' + CurrentVersion + ' 绿色版已解压到所选目录。' + #13#10 + #13#10 +
+      '安装完成：' + CurrentVersion + ' 绿色版已解压到所选目录，桌面已创建「PlanQuest」快捷方式。' + #13#10 + #13#10 +
       '未请求管理员权限、未写注册表、未建开始菜单或卸载项。' + #13#10 +
       '开机自启请在应用「设置」里开启（会写 HKCU\...\Run，仅自己生效）。' + #13#10 + #13#10 +
       '计划数据在 %APPDATA%\PlanQuest\，换版本自动沿用，无需迁移。';

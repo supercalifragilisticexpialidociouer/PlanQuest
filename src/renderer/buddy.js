@@ -168,7 +168,32 @@
       + '.pqb-act-foot button:disabled{opacity:.45;cursor:default}'
       + '.pqb-act-done{color:var(--pqb-teal);font-size:12px}'
       + '.pqb-act-tip{color:var(--pqb-dim);font-size:11px;margin-top:4px}'
-      + '#pqb-hint{padding:0 12px 8px;color:var(--pqb-dim);font-size:11px}';
+      + '#pqb-hint{padding:0 12px 8px;color:var(--pqb-dim);font-size:11px}'
+      /* 战友养成 / 竞技场：tab 切换 + 卡片 */
+      + '#pqb-tabs{display:flex;gap:4px;padding:6px 10px 0;border-bottom:1px solid var(--pqb-line)}'
+      + '#pqb-tabs button{flex:1;border:0;background:none;color:var(--pqb-dim);font-size:12px;padding:6px 2px;'
+      + 'cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}'
+      + '#pqb-tabs button.on{color:var(--pqb-teal);border-bottom-color:var(--pqb-teal);font-weight:600}'
+      + '.pqb-view{display:none;flex:1;min-height:0;flex-direction:column}'
+      + '.pqb-view.on{display:flex}'
+      + '#pqb-view-grow,#pqb-view-pk{overflow-y:auto;padding:10px 12px;gap:8px}'
+      + '.pqb-card{border:1px solid var(--pqb-line);border-radius:10px;padding:9px 10px;'
+      + 'background:color-mix(in srgb,var(--pqb-text) 4%,transparent)}'
+      + '.pqb-card h4{margin:0 0 5px;font-size:12px;color:var(--pqb-teal);display:flex;justify-content:space-between;align-items:center}'
+      + '.pqb-kv{display:flex;justify-content:space-between;font-size:11.5px;padding:2px 0;color:var(--pqb-dim)}'
+      + '.pqb-kv b{color:var(--pqb-text);font-weight:600}'
+      + '.pqb-bar{height:6px;border-radius:4px;background:var(--pqb-line);overflow:hidden;margin:4px 0}'
+      + '.pqb-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--pqb-accent),var(--pqb-teal));border-radius:4px}'
+      + '.pqb-btn{border:1px solid var(--pqb-line2);background:transparent;color:var(--pqb-text);border-radius:8px;'
+      + 'padding:5px 9px;font-size:11.5px;cursor:pointer;font-family:inherit}'
+      + '.pqb-btn:hover{border-color:var(--pqb-teal);color:var(--pqb-teal)}'
+      + '.pqb-btn:disabled{opacity:.45;cursor:default}'
+      + '.pqb-btn.go{background:color-mix(in srgb,var(--pqb-teal) 18%,transparent);border-color:color-mix(in srgb,var(--pqb-teal) 45%,transparent)}'
+      + '.pqb-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}'
+      + '.pqb-supply{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px dashed var(--pqb-line)}'
+      + '.pqb-supply:last-child{border-bottom:0}'
+      + '.pqb-tag{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--pqb-chip);color:var(--pqb-teal)}'
+      + '.pqb-muted{color:var(--pqb-dim);font-size:11px}';
     var st = document.createElement('style');
     st.id = STYLE_ID;
     st.textContent = css;
@@ -1802,9 +1827,9 @@
         return '记住了，' + mem.name + '。放心，我记性比你的打卡记录稳。';
       } },
     { k: 'whoami', re: /你是谁|你叫什么|什么玩意|什么鬼东西|介绍.*自己/, mood: 'smirk',
-      say: ['阿刺，一盆长在计划软件里的仙人掌。工作内容：看你摸鱼，顺便毒舌。', '我是阿刺。没工资，没假期，浇水都没有——你还好意思问？'] },
+      say: ['阿刺，你的战友——一盆长在计划软件里的仙人掌。工作内容：盯你摸鱼，顺便毒舌。', '我是阿刺，不是宠物，是跟你并肩的搭档。浇水是给我补协作能量，不浇我也照样陪你。'] },
     { k: 'greet', re: /你好|您好|在吗|嗨[啊呀~]?|哈喽|hello|hi\b/i, mood: 'happy',
-      fn: function () { return pick(['哟，' + nameOf() + '。找我有事，还是单纯想听听毒舌？', '在。仙人掌不用睡觉，随叫随到。']); } },
+      fn: function () { return pick(['哟，搭档' + (nameOf() && nameOf() !== '你' ? nameOf() : '') + '。找我有事，还是单纯想听毒舌？', '在。战友随叫随到，不用睡觉。']); } },
     { k: 'thanks', re: /谢谢|多谢|辛苦|辛苦了/, mood: 'happy',
       say: ['谢什么，把你今天的计划清了比什么都强。', '客气。要谢就拿打卡记录来谢。'] },
     { k: 'praise', re: /你真棒|你真厉害|好厉害|真牛|666|太强了|可爱/, mood: 'happy',
@@ -1907,6 +1932,22 @@
           return '我能答本机数据，也能接模型（设置页四选）：① LongCat（美团长猫）——longcat.chat 开放平台注册，每日 10 万免费 token，填 API Key 就能用；② 本机 Qwen3-4B——ollama.com 装 Ollama → ollama pull qwen3:4b；③ 自定义模型——填任意 Ollama/OpenAI 兼容地址；④ 极速模式——最快，不联网。\n不管哪档，我都只说本机数据，答不了就直说不知道，不编。';
         }
         return alaReadyLine();
+      } },
+    { k: 'aciwater', re: /浇水|浇水吗| watering|给阿刺浇水|战术注入/, mood: 'happy',
+      fn: function () {
+        switchAciTab('grow');
+        aciDo('water').then(function (r) { if (r && r.ok) refreshAciGrow(); });
+        return '浇水要花 100 积分换成协作能量——我先把养成面板叫出来，你自己点「浇水」。放心，不浇我只会嘴毒，不会枯萎。';
+      } },
+    { k: 'acipk', re: /^PK$|发起PK|约战|竞技场|挑战券|挑战赛|对战谁/, mood: 'smirk',
+      fn: function () {
+        switchAciTab('pk');
+        return '竞技场给你叫出来了。挑战券得用积分换（一张 = 完成 5 条计划的量），每次发起消耗 1 张；也能发到自习房或军团频道约人。战友制，不设全服榜。';
+      } },
+    { k: 'acistat', re: /查看属性|我的属性|阿刺属性|阿刺等级|我现在什么段位|综合战力/, mood: 'idle',
+      fn: function () {
+        switchAciTab('grow');
+        return '养成面板开着呢——等级、能量、战力、段位都在上面，我这儿只读本机数据，不给自己加特效。';
       } },
     { k: 'default', re: /.*/, mood: 'smirk',
       fn: function (m, ctx) {
@@ -2401,6 +2442,151 @@
 
   /* ---------------- 面板与浮标 ---------------- */
 
+  /* ---------------- 战友养成 / 竞技场（aci） ----------------
+   * 数据来自主进程 window.api.aciState / aciAction；纯查表兜底不依赖模型。 */
+  var aciCache = null;
+  function switchAciTab(name) {
+    var panel = document.getElementById('pqb-panel');
+    if (!panel) return;
+    setOpen(true);
+    panel.querySelectorAll('#pqb-tabs button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-view') === name); });
+    ['chat', 'grow', 'pk'].forEach(function (v) {
+      var el = panel.querySelector('#pqb-view-' + v);
+      if (el) el.classList.toggle('on', v === name);
+    });
+    if (name === 'grow') refreshAciGrow();
+    if (name === 'pk') refreshAciPk();
+  }
+  function aciApi() { return (typeof window !== 'undefined' && window.api) ? window.api : null; }
+  function escA(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  async function aciFetch() {
+    var api = aciApi();
+    if (!api || typeof api.aciState !== 'function') return null;
+    try { var r = await api.aciState(); return (r && r.aci) ? r : null; } catch (e) { return null; }
+  }
+  async function aciDo(action, payload) {
+    var api = aciApi();
+    if (!api || typeof api.aciAction !== 'function') { pushMsg('sys', '阿刺养成只在桌面版可用'); return null; }
+    try {
+      var r = await api.aciAction(action, payload || {});
+      if (r && r.broadcast && r.broadcast.venue === 'room' && api.aciRoomSay) {
+        // 自习房有 🤖 旁路：由主进程转发，不算刷屏
+        try { await api.aciRoomSay(r.broadcast.text); } catch (e) {}
+      } else if (r && r.broadcast && r.broadcast.venue === 'legion') {
+        pushMsg('sys', '挑战文案已生成，请复制到军团频道发布（避免绕过发言规则）：\n' + r.broadcast.text);
+      }
+      if (r && r.message) pushMsg('bud', r.message);
+      return r;
+    } catch (e) { pushMsg('sys', '操作失败：' + ((e && e.message) || e)); return null; }
+  }
+  async function refreshAciGrow() {
+    var box = document.getElementById('pqb-view-grow');
+    if (!box) return;
+    var d = await aciFetch();
+    if (!d) { box.innerHTML = '<div class="pqb-card pqb-muted">桌面版才能查看养成数据。</div>'; return; }
+    aciCache = d;
+    var a = d.aci, r = d.rules || {}, dv = d.derived || {};
+    var need = dv.expNeeded || ((a.level + 1) * (r.EXP_PER_LEVEL || 10));
+    var pct = Math.min(100, Math.round((a.exp || 0) / need * 100));
+    var Sup = (r.__supplies || []);
+    var suppliesHtml = '';
+    // 补给清单：优先用主进程下发的 SUPPLIES，兜底内置
+    var sup = d.supplies || [
+      { id: 'deepAnalysis', name: '深度分析', desc: '历史数据挖掘、趋势报告', energy: 1 },
+      { id: 'replyForMe', name: '代回消息', desc: '好友区/军团代拟并发送回复', energy: 2 },
+      { id: 'pkTactics', name: 'PK 战术建议', desc: '针对对手的策略', energy: 1 },
+      { id: 'defyGuard', name: '抗命担保', desc: '替你扛一次不合理命令', energy: 3 },
+      { id: 'forceReview', name: '强制复盘', desc: '连续低完成率时弹窗复盘', energy: 1 },
+    ];
+    sup.forEach(function (s) {
+      var got = (a.supplies && a.supplies[s.id]) || 0;
+      suppliesHtml += '<div class="pqb-supply"><span><b>' + escA(s.name) + '</b> <span class="pqb-muted">' + escA(s.desc) + '</span></span>'
+        + '<span>' + (got ? '<span class="pqb-tag">已解锁×' + got + '</span> ' : '')
+        + '<button class="pqb-btn" data-sup="' + escA(s.id) + '" ' + ((a.energy || 0) < s.energy ? 'disabled' : '') + '>' + s.energy + '能量</button></span></div>';
+    });
+    box.innerHTML = ''
+      + '<div class="pqb-card"><h4>🌵 阿刺 · 战友 <span class="pqb-tag">' + escA(dv.tierName || '新芽段') + '</span></h4>'
+      + '  <div class="pqb-kv"><span>等级</span><b>Lv.' + (a.level || 1) + ' / ' + (r.MAX_LEVEL || 100) + '</b></div>'
+      + '  <div class="pqb-bar"><i style="width:' + pct + '%"></i></div>'
+      + '  <div class="pqb-kv"><span>经验</span><b>' + (a.exp || 0) + ' / ' + need + '</b></div>'
+      + '  <div class="pqb-kv"><span>协作能量</span><b>' + (a.energy || 0) + '</b></div>'
+      + '  <div class="pqb-kv"><span>浇水次数</span><b>' + (a.waterCount || 0) + '</b></div>'
+      + '  <div class="pqb-kv"><span>本周完成率</span><b>' + (dv.weekRate || 0) + '%</b></div>'
+      + '  <div class="pqb-kv"><span>综合战力</span><b>' + (dv.power || 0) + '</b></div>'
+      + '  <div class="pqb-row"><button class="pqb-btn go" id="pqb-water">💧 浇水（' + (r.POINTS_PER_ENERGY || 100) + ' 积分）</button>'
+      + '  <button class="pqb-btn" id="pqb-buyticket">🎫 换挑战券（' + (dv.ticketPrice || 50) + ' 积分）</button></div>'
+      + '  <div class="pqb-muted" style="margin-top:6px">浇水 = 战术注入，解锁强化态；不浇水只停止成长，阿刺永远不会枯萎。基础功能（查表/毒舌/排计划）一直免费。</div>'
+      + '</div>'
+      + '<div class="pqb-card"><h4>⚡ 强化态补给</h4>' + suppliesHtml + '</div>'
+      + '<div class="pqb-card"><h4>🤝 战友特权</h4>'
+      + '  <div class="pqb-kv"><span>失望模式</span><b>' + ((a.privileges && a.privileges.disappointment && a.privileges.disappointment.enabled) ? '开' : '关') + '</b></div>'
+      + '  <div class="pqb-kv"><span>代扣分（已用 ' + ((a.privileges && a.privileges.deductGuard && a.privileges.deductGuard.charges) || 0) + ' 次）</span>'
+      + '  <button class="pqb-btn" data-priv="guardDeduct">代扣</button></div>'
+      + '  <div class="pqb-kv"><span>信用担保</span>'
+      + '  <button class="pqb-btn" data-priv="guarantee">' + (((a.privileges && a.privileges.creditGuarantee && a.privileges.creditGuarantee.active)) ? '关闭' : '开启') + '</button></div>'
+      + '</div>';
+    var w = box.querySelector('#pqb-water'); if (w) w.onclick = function () { aciDo('water').then(function (r) { if (r && r.ok) refreshAciGrow(); }); };
+    var bt = box.querySelector('#pqb-buyticket'); if (bt) bt.onclick = function () { aciDo('buyTicket').then(function (r) { if (r && r.ok) { refreshAciGrow(); refreshAciPk(); } }); };
+    box.querySelectorAll('[data-sup]').forEach(function (b) {
+      b.onclick = function () { aciDo('useSupply', { supplyId: b.getAttribute('data-sup') }).then(function (r) { if (r && r.ok) refreshAciGrow(); }); };
+    });
+    box.querySelectorAll('[data-priv]').forEach(function (b) {
+      b.onclick = function () {
+        var p = b.getAttribute('data-priv');
+        if (p === 'guardDeduct') aciDo('guardDeduct').then(function (r) { if (r && r.ok) refreshAciGrow(); });
+        else if (p === 'guarantee') {
+          var on = !((a.privileges && a.privileges.creditGuarantee && a.privileges.creditGuarantee.active));
+          aciDo('toggleGuarantee', { on: on }).then(function (r) { if (r && r.ok) refreshAciGrow(); });
+        }
+      };
+    });
+  }
+  async function refreshAciPk() {
+    var box = document.getElementById('pqb-view-pk');
+    if (!box) return;
+    var d = await aciFetch();
+    if (!d) { box.innerHTML = '<div class="pqb-card pqb-muted">桌面版才能查看竞技场。</div>'; return; }
+    aciCache = d;
+    var a = d.aci, r = d.rules || {}, dv = d.derived || {};
+    var tix = a.tickets || 0;
+    var cooling = dv.cooling, hidden = dv.hidden;
+    var matches = (a.pk && a.pk.matches) || [];
+    var stats = (a.pk && a.pk.stats) || {};
+    var matchHtml = matches.slice(0, 5).map(function (m) {
+      var vtxt = { local: '本地', room: '自习房', legion: '军团' }[m.venue] || m.venue;
+      return '<div class="pqb-kv"><span>' + escA(vtxt) + ' · ' + m.durationDays + '天 · ' + escA(m.state) + '</span>'
+        + (m.state === 'pending' || m.state === 'matching'
+          ? '<button class="pqb-btn" data-accept="' + escA(m.id) + '">应战</button>'
+          : '<b>' + escA(m.result || '—') + '</b>') + '</div>';
+    }).join('') || '<div class="pqb-muted">还没有挑战记录。</div>';
+    box.innerHTML = ''
+      + '<div class="pqb-card"><h4>🎫 挑战券 <span class="pqb-tag">' + tix + ' / ' + (r.MAX_TICKETS || 3) + '</span></h4>'
+      + '  <div class="pqb-kv"><span>段位</span><b>' + escA(dv.tierName || '新芽段') + '</b></div>'
+      + '  <div class="pqb-kv"><span>综合战力</span><b>' + (dv.power || 0) + '</b></div>'
+      + '  <div class="pqb-kv"><span>今日发起 / 应战</span><b>' + (a.pk ? a.pk.initiateToday : 0) + ' / ' + (a.pk ? a.pk.acceptToday : 0) + '</b></div>'
+      + '  <div class="pqb-kv"><span>状态</span><b>' + (cooling ? '冷却中' : hidden ? '隐身中' : '可战') + '</b></div>'
+      + '  <div class="pqb-muted" style="margin:6px 0">战友制：券用积分换，每次消耗 1 张。发起每日 1 次、应战每日 2 次；同对手 48h 冷却；赛后 12h 冷却（可用 1 张券解除）。胜负 = 完成率×70% + 阿刺等级×30%。无全服榜，只看战绩。</div>'
+      + '  <div class="pqb-row"><button class="pqb-btn go" id="pqb-pk-local">⚔ 发起（本地）</button>'
+      + '  <button class="pqb-btn" id="pqb-pk-room">发到自习房</button>'
+      + '  <button class="pqb-btn" id="pqb-pk-legion">发到军团</button></div>'
+      + '  <div class="pqb-row"><label class="pqb-muted">时长 <select id="pqb-pk-days"><option value="1">1天</option><option value="3" selected>3天</option><option value="7">1周</option></select></label>'
+      + '  <button class="pqb-btn" id="pqb-pk-hidden">' + (hidden ? '退出隐身' : '隐身24h') + '</button>'
+      + (cooling ? '<button class="pqb-btn" id="pqb-pk-skip">用券解冷却</button>' : '') + '</div>'
+      + '</div>'
+      + '<div class="pqb-card"><h4>📜 战绩 <span class="pqb-muted">' + (stats.wins || 0) + '胜 ' + (stats.draws || 0) + '平 ' + (stats.losses || 0) + '负</span></h4>'
+      + matchHtml + '</div>';
+    function days() { var s = box.querySelector('#pqb-pk-days'); return s ? Number(s.value) : 3; }
+    var mk = function (venue) { return function () { aciDo('createChallenge', { venue: venue, durationDays: days() }).then(function (r) { if (r && r.ok) refreshAciPk(); }); }; };
+    var bl = box.querySelector('#pqb-pk-local'); if (bl) bl.onclick = mk('local');
+    var br = box.querySelector('#pqb-pk-room'); if (br) br.onclick = mk('room');
+    var bg = box.querySelector('#pqb-pk-legion'); if (bg) bg.onclick = mk('legion');
+    var bh = box.querySelector('#pqb-pk-hidden'); if (bh) bh.onclick = function () { aciDo('setHidden', { hidden: !hidden }).then(function (r) { if (r && r.ok) refreshAciPk(); }); };
+    var bs = box.querySelector('#pqb-pk-skip'); if (bs) bs.onclick = function () { aciDo('skipCooldown').then(function (r) { if (r && r.ok) refreshAciPk(); }); };
+    box.querySelectorAll('[data-accept]').forEach(function (b) {
+      b.onclick = function () { aciDo('acceptChallenge', { matchId: b.getAttribute('data-accept') }).then(function (r) { if (r && r.ok) refreshAciPk(); }); };
+    });
+  }
+
   function buildUI() {
     injectStyle();
     loadMem();
@@ -2470,15 +2656,24 @@
       + '    </div>'
       + '  </div>'
       + '</div>'
-      + '<div id="pqb-msgs"></div>'
-      + '<div id="pqb-fun">想让它动？直接说：<b>摇一摇</b> · <b>跳一跳</b> · <b>生个气</b> · <b>笑一个</b> · <b>吃个惊</b> · <b>向左转</b></div>'
-      + '<div id="pqb-input">'
-      + '  <input id="pqb-text" placeholder="说话，或者点右边麦克风…" maxlength="200" />'
-      + '  <button id="pqb-send">发</button>'
-      + '  <button id="pqb-mic" title="语音识别（本地）">🎤</button>'
-      + '  <button id="pqb-speak" title="朗读：关（点一下让阿刺出声）">🔈</button>'
+      + '<div id="pqb-tabs">'
+      + '  <button data-view="chat" class="on">💬 聊天</button>'
+      + '  <button data-view="grow">🌵 养成</button>'
+      + '  <button data-view="pk">⚔ 竞技场</button>'
       + '</div>'
-      + '<div id="pqb-hint">对话与数据全部本机生成，不联网；接上模型后，复杂些的问题也能聊。</div>';
+      + '<div id="pqb-view-chat" class="pqb-view on">'
+      + '  <div id="pqb-msgs"></div>'
+      + '  <div id="pqb-fun">想让它动？直接说：<b>摇一摇</b> · <b>跳一跳</b> · <b>生个气</b> · <b>笑一个</b> · <b>吃个惊</b> · <b>向左转</b></div>'
+      + '  <div id="pqb-input">'
+      + '    <input id="pqb-text" placeholder="说话，或者点右边麦克风…" maxlength="200" />'
+      + '    <button id="pqb-send">发</button>'
+      + '    <button id="pqb-mic" title="语音识别（本地）">🎤</button>'
+      + '    <button id="pqb-speak" title="朗读：关（点一下让阿刺出声）">🔈</button>'
+      + '  </div>'
+      + '  <div id="pqb-hint">对话与数据全部本机生成，不联网；接上模型后，复杂些的问题也能聊。</div>'
+      + '</div>'
+      + '<div id="pqb-view-grow" class="pqb-view"></div>'
+      + '<div id="pqb-view-pk" class="pqb-view"></div>';
     document.body.appendChild(panel);
 
     /* 真 3D：在画布上现场建模（浮标一个小场景，面板一个主场景） */
@@ -2520,6 +2715,20 @@
 
     panel.querySelector('#pqb-clear').addEventListener('click', function () { clearChat(); });
     panel.querySelector('#pqb-close').addEventListener('click', function () { setOpen(false); });
+
+    /* 战友养成 / 竞技场 tab */
+    panel.querySelectorAll('#pqb-tabs button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var v = btn.getAttribute('data-view');
+        panel.querySelectorAll('#pqb-tabs button').forEach(function (b) { b.classList.toggle('on', b === btn); });
+        ['chat', 'grow', 'pk'].forEach(function (name) {
+          var el = panel.querySelector('#pqb-view-' + name);
+          if (el) el.classList.toggle('on', name === v);
+        });
+        if (v === 'grow') refreshAciGrow();
+        if (v === 'pk') refreshAciPk();
+      });
+    });
 
     /* ---------------- 只读总开关的两个快入口 ----------------
      * 设置页藏在「设置 → 动手能力 → 最上面」，找三下才找到，用户嫌深。
@@ -2615,6 +2824,10 @@
     if (open) {
       positionPanel();
       roHook.paint();  /* 面板里的「只看」按钮要跟设置页同步 */
+      var growV = document.getElementById('pqb-view-grow');
+      var pkV = document.getElementById('pqb-view-pk');
+      if (growV && growV.classList.contains('on')) refreshAciGrow();
+      if (pkV && pkV.classList.contains('on')) refreshAciPk();
       var input = document.getElementById('pqb-text');
       if (input) setTimeout(function () { input.focus(); }, 120);
       if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -2761,6 +2974,13 @@
       if (!open || listening || quiet) return;
       if (Math.random() < 0.12) setMood(Math.random() < 0.5 ? 'smirk' : 'sleep', 2200);
     }, 12000);
+    /* 加入自习室一起陪聊：每 4 分钟请主进程代发一句（它内部 3 分钟节流 +
+     * 只在不 notInRoom 时发，查表文案离线可用），有队友时才开口。 */
+    setInterval(function () {
+      var api = aciApi();
+      if (!api || typeof api.aciRoomSay !== 'function' || quiet) return;
+      api.aciRoomSay().catch(function () {});
+    }, 4 * 60e3);
   }
 
   window.PQBuddy = {
@@ -2777,6 +2997,13 @@
     scold: scold,
     /* 清掉毒舌节流（切换场景/自测时用，免得 2 分钟内同一类只响一次） */
     scoldReset: function () { scoldLast = {}; },
+    /* 战友养成 / 竞技场：外部可主动唤起 tab（供设置页/快捷入口调用） */
+    aci: {
+      openGrow: function () { switchAciTab('grow'); },
+      openPk: function () { switchAciTab('pk'); },
+      refresh: function () { refreshAciGrow(); refreshAciPk(); },
+      switchTab: switchAciTab,
+    },
     alaCfgApi: {
       get: alaCfg, set: alaSetCfg, probe: alaProbeNow, mode: alaMode, MODES: ALA_MODES,
       caps: alaCaps, setCaps: alaSetCaps, ro: alaReadOnly, actReady: actReady,

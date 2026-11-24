@@ -22,8 +22,13 @@ ok('不写卸载注册表', () => assert.match(ISS, /CreateUninstallRegKey=no/))
 ok('不生成卸载程序', () => assert.match(ISS, /Uninstallable=no/));
 ok('不建开始菜单', () => assert.match(ISS, /DisableProgramGroupPage=yes/));
 ok('没有 [Registry] 段', () => assert.doesNotMatch(ISS, /^\[Registry\]/mi));
-ok('没有 [Icons] 段', () => assert.doesNotMatch(ISS, /^\[Icons\]/mi));
 ok('没有 [Run] 段（不代写开机自启）', () => assert.doesNotMatch(ISS, /^\[Run\]/mi));
+ok('桌面建快捷方式', () => {
+  assert.match(ISS, /^\[Icons\]/mi);
+  assert.match(ISS, /\{autodesktop\}\\PlanQuest/);
+  assert.match(ISS, /Filename: "?\{app\}\\PlanQuest\.exe/);
+});
+ok('下载失败时删除桌面快捷方式（不留死链）', () => assert.match(ISS, /DeleteFile\(ExpandConstant\('\{autodesktop\}\\PlanQuest\.lnk'\)\)/));
 ok('[Files] 为空（引导器不内嵌主程序）', () => {
   const m = /\[Files\]([\s\S]*?)(?=\n\[|$)/.exec(ISS);
   const body = m ? m[1].split('\n').filter((l) => /^\s*Source:/i.test(l)) : [];

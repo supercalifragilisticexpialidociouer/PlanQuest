@@ -34,6 +34,8 @@ const guardian = require('./guardian');
 const alaLLM = require('./ala-llm');
 const alaWeb = require('./ala-web');
 const alaTTS = require('./ala-tts');
+const updateFlow = require('./update-flow');
+const aciCore = require('./aci-core');
 
 const APP_NAME = 'PlanQuest';
 app.setName(APP_NAME);
@@ -178,6 +180,7 @@ function defaultData() {
     friendGates: {}, // 问答申请：friendGates[uid] = { questions, answers, status }
     friendMsgs: {},  // friendMsgs[uid] = 消息数组（24h 焚毁，本地缓存上限 200 条）
     sandbox: null,   // .pqplan 沙箱：{ text, src, at, expiresAt, promoted }
+    aci: aciCore.defaultAci(), // 阿刺养成 + 战友 PK 状态（aci-core.js），独立于用户积分等级
   };
 }
 
@@ -240,6 +243,7 @@ function normalize(d) {
   out.micro = d?.micro && typeof d.micro === 'object' ? d.micro : {};
   out.witness = d?.witness && typeof d.witness === 'object' ? d.witness : {};
   out.forceDays = d?.forceDays && typeof d.forceDays === 'object' ? d.forceDays : {};
+  out.aci = aciCore.normalizeAci(d?.aci); // 阿刺养成状态：缺字段补齐 + 数值兜底
   return out;
 }
 
@@ -5651,6 +5655,39 @@ h1{font-size:22px}table{border-collapse:separate;border-spacing:6px}td{width:52p
     };
   });
 
+  /* 一键更新：下载→校验→备份→解压→自检→覆盖/回滚 的完整流水线。
+   * 期望 sha256/size 来自版本清单（先远端、后本地打包的 version.json）。 */
+  const emitStage = (t) => { try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update:stage', t); } catch (_) {} };
+  const expectOf = async () => {
+    const remote = await readManifestSafe((data.settings || {}).updateBase);
+    let m = remote;
+    if (!m) {
+      try { m = JSON.parse(fs.readFileSync(path.join(ROOT, 'dist', 'version.json'), 'utf8')); }
+      catch (_) { m = null; }
+    }
+    const pack = (m && m.portable) || (m && m.installer) || null;
+    return pack ? { sha256: pack.sha256, size: pack.size } : {};
+  };
+  ipcMain.handle('update:install', async () => {
+    const expect = await expectOf();
+    emitStage('准备更新…');
+    return updateFlow.applyUpdate({
+      updatesDir: path.join(updateDir(), 'flow'),
+      appDir: path.dirname(app.getPath('exe')),
+      expect,
+      entryExe: 'PlanQuest.exe',
+      onStage: emitStage,
+      download: async (dest, say) => {
+        const r = await sources.downloadFirst(updateSources(), {
+          wanted: /portable.*\.zip/i,
+          dest,
+          onStage: say,
+        });
+        return r.ok ? { ok: true, file: r.file } : { ok: false, reason: r.reason };
+      },
+    });
+  });
+
   /* 内置可选组件白名单：GitHub Releases 不依赖 version.json 也能装 AI。
    * 官网直链与体积来自这里，前端传什么 id 都不会凭空下别的东西。 */
   const DEFAULT_COMPONENTS = [
@@ -5686,6 +5723,117 @@ h1{font-size:22px}table{border-collapse:separate;border-spacing:6px}td{width:52p
       }
     }
     return { ok: true, message: out.join('；') };
+  });
+
+  /* ---------------- 阿刺养成 + 战友 PK ----------------
+   * 数据权威在主进程：aci-core 是纯函数，这里负责写回 data.aci、
+   * 扣加积分（setProfilePoints）、落盘（saveNow）、房间广播。 */
+  const weekKeyOf = () => {
+    const d = new Date();
+    const day = d.getDay() || 7; // 周一为一周起点
+    d.setDate(d.getDate() - day + 1);
+    return d.getFullYear() + '-W' + String(Math.ceil(((d - new Date(d.getFullYear(), 0, 1)) / 86400000 + 1) / 7)).padStart(2, '0');
+  };
+  const weekRateOf = () => {
+    const r = data.reviews && data.reviews[weekKeyOf()];
+    if (r && Number.isFinite(Number(r.rate))) return Number(r.rate);
+    // 兜底：今日完成率
+    let done = 0, total = 0;
+    const today = dateKey();
+    const due = plansForDate(today);
+    const lg = (data.log && data.log[today]) || {};
+    for (const p of due) { total++; if (lg[p.id] && lg[p.id].status === 'done') done++; }
+    return total ? Math.round(done / total * 100) : 0;
+  };
+  const aciView = () => {
+    const aci = data.aci || aciCore.defaultAci();
+    const rate = weekRateOf();
+    const tier = aciCore.tierOf(aci.level);
+    return {
+      aci,
+      rules: aciCore.RULES, tiers: aciCore.TIERS, supplies: aciCore.SUPPLIES,
+      derived: {
+        weekRate: rate,
+        tier: tier.id, tierName: tier.name,
+        power: aciCore.powerOf(rate, aci.level),
+        expNeeded: aciCore.expNeeded(aci.level),
+        ticketPrice: aciCore.ticketPrice(),
+        cooling: aciCore.isCoolingDown(aci, Date.now()),
+        hidden: aciCore.isHidden(aci, Date.now()),
+        matchPref: aciCore.matchPreference(aci, rate, Date.now()),
+      },
+    };
+  };
+  ipcMain.handle('aci:state', () => aciView());
+
+  ipcMain.handle('aci:action', (_e, action, payload) => {
+    const p = payload || {};
+    const now = Date.now();
+    let r = null;
+    switch (action) {
+      case 'water': {
+        r = aciCore.water(data.aci, data.profile.points || 0, dateKey(), now);
+        if (r.ok && r.effect) setProfilePoints((data.profile.points || 0) - r.effect.costPoints);
+        break;
+      }
+      case 'useSupply': r = aciCore.useSupply(data.aci, p.supplyId); break;
+      case 'buyTicket': {
+        r = aciCore.buyTicket(data.aci, data.profile.points || 0);
+        if (r.ok && r.effect) setProfilePoints((data.profile.points || 0) - r.effect.costPoints);
+        break;
+      }
+      case 'skipCooldown': r = aciCore.skipCooldown(data.aci, now); break;
+      case 'setHidden': r = aciCore.setHidden(data.aci, !!p.hidden, now); break;
+      case 'createChallenge': r = aciCore.createChallenge(data.aci, Object.assign({ now }, p)); break;
+      case 'acceptChallenge': r = aciCore.acceptChallenge(data.aci, p.matchId, now); break;
+      case 'expireChallenge': r = aciCore.expireChallenge(data.aci, p.matchId, p.reason); break;
+      case 'settle': {
+        r = aciCore.settle(data.aci, Object.assign({ now }, p));
+        if (r.ok && r.effect) {
+          if (r.effect.bonusPoints) setProfilePoints((data.profile.points || 0) + r.effect.bonusPoints);
+          if (r.effect.repPenalty && data.credit) data.credit.score = Math.max(0, (data.credit.score || 0) - r.effect.repPenalty);
+        }
+        break;
+      }
+      case 'toggleGuarantee': r = aciCore.toggleCreditGuarantee(data.aci, !!p.on); break;
+      case 'breakGuarantee': r = aciCore.breakGuarantee(data.aci); break;
+      case 'guardDeduct': r = aciCore.guardDeduct(data.aci); break;
+      default: return { ok: false, message: '未知的阿刺操作：' + action };
+    }
+    if (!r) return { ok: false, message: '操作没有返回结果' };
+    if (r.ok && r.aci) { data.aci = r.aci; saveNow(); }
+    /* 频道广播：由前端拿到 broadcast 后走 room:chat 的 🤖 旁路 / legion 频道发送，
+       主进程不替用户发言，避免绕过军团发言规则。 */
+    return {
+      ok: r.ok, message: r.message || r.reason,
+      effect: r.effect, broadcast: r.broadcast, cooling: r.cooling,
+      view: aciView(),
+    };
+  });
+
+  /* 阿刺加入自习室陪聊：复用 study-room 的 🤖 旁路（不判违规词、不算刷屏）。
+   * 不传 text 时按查表池自动说一句（离线可用）；传 text 则转发前端引擎生成的文案。
+   * 只有确实在房间里才发；3 分钟内最多一句，避免自己把自己刷屏禁言。 */
+  const ACI_ROOM_LINES = [
+    '都在啊？那我盯着你们，谁摸鱼我记着。',
+    '搭档们专心点，完成的计划我替你数着呢。',
+    '这屋子挺安静，说明都在干活——继续保持。',
+    '别硬撑，累了就歇五分钟，回来我照旧盯你。',
+    '又过一阵了，进度我看在眼里。别让我白夸。',
+    '带路的不催进度，但摸鱼我可不惯着。',
+  ];
+  let aciRoomLast = 0;
+  ipcMain.handle('aci:roomSay', (_e, text) => {
+    let rs;
+    try { rs = room.roomStatus(); } catch (_) { rs = null; }
+    if (!rs || !rs.inRoom) return { ok: false, message: '不在自习房里', notInRoom: true };
+    const t = Date.now();
+    if (t - aciRoomLast < 3 * 60 * 1000) return { ok: false, message: '刚聊过，稍等再说', throttled: true };
+    const msg = text ? String(text).slice(0, 200)
+      : '🤖 阿刺：' + ACI_ROOM_LINES[Math.floor(Math.random() * ACI_ROOM_LINES.length)];
+    aciRoomLast = t;
+    try { room.sendChat(msg.startsWith('🤖') ? msg : '🤖 ' + msg); } catch (_) {}
+    return { ok: true, message: msg };
   });
 }
 
@@ -6004,6 +6152,14 @@ function startWakeServer() {
 
   app.whenReady().then(() => {
     loadData();
+    /* 自更新收尾：上次更新时若正在运行的 exe 无法覆盖，会在 updates/flow 下留
+     * pending-swap 标记；此刻旧进程已退出，补做替换（只动被占用的文件）。 */
+    try {
+      const fin = updateFlow.finalizePending(
+        path.join(updateDir(), 'flow', updateFlow.PENDING)
+      );
+      if (fin && !fin.skipped) bootLog('自更新收尾：' + (fin.ok ? '已替换 ' + fin.replaced + ' 个文件' : '仍有 ' + fin.left + ' 个待替换'));
+    } catch (_) {}
     // 借分逾期结算 + 欠分期间的「打开软件」微目标（每天第一次打开自动算一步）
     try {
       creditCheckOverdue();

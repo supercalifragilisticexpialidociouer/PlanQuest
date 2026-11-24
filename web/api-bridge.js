@@ -507,7 +507,12 @@ window.api = (() => {
     /* 版本更新只在桌面版有：网页 / 安卓优雅降级，不让按钮点了报错 */
     updateCheck: async () => ({ ok: false, reason: DESKTOP_ONLY }),
     updateDownload: async () => ({ ok: false, message: DESKTOP_ONLY }),
+    updateInstall: async () => ({ ok: false, message: DESKTOP_ONLY }),
     updateComponents: async () => ({ ok: false, message: DESKTOP_ONLY }),
+    /* 阿刺养成/PK 只在桌面版有（数据落本地 data.json），网页/安卓优雅降级 */
+    aciState: async () => ({ ok: false, message: DESKTOP_ONLY }),
+    aciAction: async () => ({ ok: false, message: DESKTOP_ONLY }),
+    aciRoomSay: async () => ({ ok: false, message: DESKTOP_ONLY }),
     onUpdateStage: () => () => {},
 
     /* 窗口控制（手机上无意义，静默） */
