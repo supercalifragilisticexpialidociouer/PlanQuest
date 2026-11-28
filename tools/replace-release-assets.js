@@ -19,6 +19,7 @@ const ROOT = path.resolve(__dirname, '..');
 /* 本地文件 -> Release 资产名（助手用 ASCII 名，避免客户端 URL 中文转义问题） */
 const ASSETS = [
   { local: 'dist/PlanQuest-win64-portable.zip', name: 'PlanQuest-win64-portable.zip' },
+  { local: 'dist/releases/PlanQuest-win64-portable-backup.zip', name: 'PlanQuest-win64-portable-backup.zip' },
   { local: 'dist/releases/PlanQuest-安装助手.exe', name: 'PlanQuest-install-assistant.exe' },
   { local: 'dist/releases/PlanQuest-2.9.11-setup.exe', name: 'PlanQuest-2.9.11-setup.exe' },
   { local: 'dist/version.json', name: 'version.json' },

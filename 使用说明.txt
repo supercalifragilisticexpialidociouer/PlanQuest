@@ -126,7 +126,11 @@ PlanQuest 使用说明（v2.9.7）
        双击后向导里选「装哪个版本」+ 勾「要不要装 AI」，再去下载源把对应
        版本的绿色 ZIP 原样完整解压到所选目录（保留包内 PlanQuest-win64\），
        解压成功后才在桌面建「PlanQuest」快捷方式，指向真实 exe，图标用软件自带图标。
+       下载优先走 GitHub API 资产接口（releases/download 被代理拦时仍能下载），
+       失败会自动退回 releases 直链；失败详情写到所选安装目录的 pq-download.log。
        下载或解压失败会明确报错、不留死链；网络不好时它就下不动。
+       实际所需磁盘空间：主程序解压后 376.1 MiB，下载临时 ZIP 194.2 MiB，
+       两者同时存在时峰值约 570 MiB；安装助手本身约 2 MiB（不含可选 AI 组件）。
        发布的 ZIP 只含程序与资源，没有任何用户数据，始终是初始状态。
     2) PlanQuest-<版本>-setup.exe（单文件，约 161 MB）：内嵌整包，
        双击离线也能装上，版本固定。不提权、只解压、不写注册表。
@@ -144,9 +148,13 @@ PlanQuest 使用说明（v2.9.7）
       装不上 torch<2.0，勾了只会得到源码 zip，不代表能运行。
 
 【安装源（换源看这里）】
-· 五类源按优先级自动切换，任一成功即可：
+· 五类源按优先级自动切换，任一成功即可；每个源都应同时放两份字节一致的 ZIP：
+    主包 PlanQuest-win64-portable.zip 与备份 PlanQuest-win64-portable-backup.zip。
+    安装助手会先试 GitHub API 资产接口（绕过 releases 直链被拦），再试两份 ZIP 的
+    直链、备份直链，最后才用你在 assistant-sources.txt 里写的源。
     ① GitHub Releases（内置主源）：https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/latest
        专属版本直链形如 https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-win64-portable.zip
+       备份直链形如 https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-win64-portable-backup.zip
     ② R2 / 任意直链：https://your-domain.com/planquest/2.9.11/PlanQuest-win64-portable.zip
     ③ pixeldrain：https://pixeldrain.com/u/xxxxx
     ④ MediaFire 分享页　⑤ GoFile 分享页

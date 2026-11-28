@@ -22,7 +22,7 @@ function arg(k, d) {
 const BASE = String(arg('--base', 'https://dl.example.com/planquest')).replace(/\/+$/, '');
 const VER = String(arg('--ver', pkg.version));
 const CHANNEL = String(arg('--channel', 'stable'));
-const NOTES = String(arg('--notes', '安装助手全中文向导；ZIP 原样完整解压，快捷方式指向真实 exe 并使用软件图标；新手引导浅色主题按钮修复；ZIP 无用户数据（初始状态）；阿刺五套皮肤心情/顶罪；.pqplan 覆盖审讯与阶梯扣刺'));
+const NOTES = String(arg('--notes', '安装助手全中文向导；修复版本号拼进下载 URL 导致所有源失败；GitHub API 资产源优先；每个源同时提供主包与备份 ZIP；ZIP 原样完整解压、快捷方式指向真实 exe 与软件图标；ZIP 无用户数据（初始状态）'));
 /* base 已经是 releases/download/<tag> 时不要再拼一层版本号 */
 const BASE_HAS_TAG = /\/releases\/download\/[^/]+$/.test(BASE);
 function assetUrl(file) {
@@ -83,6 +83,7 @@ const COMPONENTS = [
 const zip = stat('PlanQuest-win64-portable.zip');
 const exe = stat(path.join('releases', `PlanQuest-${VER}-setup.exe`));
 const assistant = stat(path.join('releases', 'PlanQuest-安装助手.exe'), 'PlanQuest-install-assistant.exe');
+const portableBackup = stat('releases/PlanQuest-win64-portable-backup.zip');
 
 const manifest = {
   schema: 1,
@@ -106,6 +107,8 @@ const manifest = {
     ...(assistant ? { built: true } : {}),
   },
   portable: zip || null,
+  /* 备份 ZIP：与 portable 字节一致，供其他源/备用直链使用 */
+  portableBackup: portableBackup || null,
   /* 数据不用迁移：userData 与 exe 目录解耦 */
   data: {
     path: '%APPDATA%\\PlanQuest\\data.json',

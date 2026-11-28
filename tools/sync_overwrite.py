@@ -219,7 +219,9 @@ SHARED_FILES = [
     'dist/version.json',
     'dist/version.hash',
     'dist/PlanQuest-win64-portable.zip',
+    'dist/releases/PlanQuest-win64-portable-backup.zip',
     'dist/releases/PlanQuest-安装助手.exe',
+    'tools/replace-release-assets.js',
 ]
 
 

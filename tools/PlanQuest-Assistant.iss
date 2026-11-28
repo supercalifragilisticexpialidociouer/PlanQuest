@@ -61,6 +61,8 @@ const
   { 内置兜底源：官方 GitHub 仓库发布页。使用者可在 exe 同目录放一个
     assistant-sources.txt 覆盖（每行一个源，见使用说明.txt）。源不写进 UI。 }
   DEFAULT_SOURCE = 'https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/latest';
+  { GitHub API 资产接口：代理/网络拦 releases/download 时仍可下载，首选 }
+  API_RELEASES = 'https://api.github.com/repos/supercalifragilisticexpialidociouer/PlanQuest/releases';
   { 可选组件：只下不解压，放到安装目录下的 components\ }
   OLLAMA_URL = 'https://github.com/ollama/ollama/releases/download/v0.40.17/ollama-windows-amd64.zip';
   MELOTTS_URL = 'https://github.com/myshell-ai/MeloTTS/archive/refs/heads/main.zip';
@@ -72,6 +74,7 @@ var
   MeloTsCheck: TCheckBox;
   SelectPage: TWizardPage;
   AvailVersions: array of string;   { 形如 "版本|说明" }
+  VersionKeys: array of string;     { 下拉框每一项对应的纯版本号 }
   SelectedIndex: Integer;
   InstalledExe: string;             { 解压后真实主程序路径，供完成页显示 }
 
@@ -112,14 +115,73 @@ begin
                  SW_HIDE, ewWaitUntilTerminated, RC) and (RC = 0);
 end;
 
-{ 下载一个文件到 Target，成功 True；--fail 保证 HTTP 码正确 }
-function DownloadTo(const Url, Target: string): Boolean;
+{ 下载一个文件到 Target，成功 True；--fail 保证 HTTP 码正确。
+  Extra 用来给 GitHub API 资产加 Accept 头，普通直链传空串。 }
+function DownloadToEx(const Url, Target, Extra: string): Boolean;
 var
-  Args: string;
+  Args, ErrFile: string;
 begin
   { speed-time/speed-limit：连接半开或网速低于 1KB/s 持续 30 秒就放弃，避免离线时卡死 }
-  Args := '-L --fail --silent --show-error --connect-timeout 15 --speed-time 30 --speed-limit 1024 --max-time 3600 -o "' + Target + '" "' + Url + '"';
+  ErrFile := AddBackslash(ExpandConstant('{localappdata}')) + 'Temp\pq-curl-last.log';
+  Args := '-L --fail --silent --show-error --connect-timeout 15 --speed-time 30 --speed-limit 1024 --max-time 3600 ' + Extra +
+          '--stderr "' + ErrFile + '" -o "' + Target + '" "' + Url + '"';
   Result := CurlExec(Args) and FileExists(Target);
+end;
+
+function DownloadTo(const Url, Target: string): Boolean;
+begin
+  Result := DownloadToEx(Url, Target, '');
+end;
+
+{ 从 release JSON 里找指定资产名对应的 API 下载直链 }
+function ExtractAssetApiUrl(const S, AssetName: string): string;
+var
+  NamePat, UrlPat, Rest, U, LastUrl: string;
+  NamePos, StartPos, P, AbsP, Q, E: Integer;
+begin
+  Result := '';
+  NamePat := '"name": "' + AssetName + '"';
+  NamePos := Pos(NamePat, S);
+  if NamePos <= 0 then Exit;
+  UrlPat := '"url": "https://api.github.com/';
+  LastUrl := '';
+  StartPos := 1;
+  while StartPos < NamePos do
+  begin
+    Rest := Copy(S, StartPos, NamePos - StartPos);
+    P := Pos(UrlPat, Rest);
+    if P <= 0 then Break;
+    AbsP := StartPos + P - 1;
+    Q := AbsP + Length(UrlPat);
+    E := Q;
+    while (E <= Length(S)) and (S[E] <> '"') do Inc(E);
+    U := 'https://api.github.com/' + Copy(S, Q, E - Q);
+    if Pos('/releases/assets/', U) > 0 then LastUrl := U;
+    StartPos := E + 1;
+  end;
+  Result := LastUrl;
+end;
+
+{ 取指定版本（或最新版）的指定资产 API 直链；失败返回空串 }
+function FetchApiAssetUrl(const Ver, AssetName: string): string;
+var
+  JsonFile, S: string;
+  L: TStringList;
+begin
+  Result := '';
+  JsonFile := AddBackslash(ExpandConstant('{tmp}')) + 'pq-release-' + Ver + '.json';
+  if not DownloadToEx(API_RELEASES + '/tags/v' + Ver, JsonFile, '-H "Accept: application/vnd.github+json" ') then
+    DeleteFile(JsonFile);
+  if not FileExists(JsonFile) then
+    if not DownloadToEx(API_RELEASES + '/latest', JsonFile, '-H "Accept: application/vnd.github+json" ') then Exit;
+  L := TStringList.Create;
+  try
+    L.LoadFromFile(JsonFile);
+    S := L.Text;
+  finally
+    L.Free;
+  end;
+  Result := ExtractAssetApiUrl(S, AssetName);
 end;
 
 { 读源：优先 exe 同目录的 assistant-sources.txt（每行一个），否则内置兜底 }
@@ -203,6 +265,8 @@ begin
       SetLength(AvailVersions, 1);
       AvailVersions[0] := Ver + '|' + Notes;
     end;
+    if Length(VersionKeys) = 0 then SetLength(VersionKeys, Length(AvailVersions));
+    VersionKeys[0] := Ver;
     Result := True;
   finally
     Srcs.Free;
@@ -227,24 +291,37 @@ end;
 function CurrentVersion: string;
 var
   S: string;
-  P: Integer;
+  P, Idx: Integer;
 begin
   Result := '';
   if (VersionCombo = nil) or (VersionCombo.ItemIndex < 0) then Exit;
-  S := VersionCombo.Items[VersionCombo.ItemIndex];
+  Idx := VersionCombo.ItemIndex;
+  { 下拉框显示的是「版本  说明」，不能用它拼 URL；只取 VersionKeys 里的纯版本号 }
+  if (Idx >= 0) and (Idx < Length(VersionKeys)) and (VersionKeys[Idx] <> '') then
+  begin
+    Result := VersionKeys[Idx];
+    Exit;
+  end;
+  S := VersionCombo.Items[Idx];
   P := Pos('|', S);
-  if P > 0 then Result := Trim(Copy(S, 1, P - 1)) else Result := Trim(S);
+  if P > 0 then Result := Trim(Copy(S, 1, P - 1)) else Result := Trim(Copy(S, 1, Pos('  ', S + '  ') - 1));
 end;
 
-{ 按选中版本组装下载源：GitHub tag 直链优先，再拼上自定义源 }
+{ 按选中版本组装下载源：GitHub API 资产接口优先（代理常拦 releases 直链），
+  再退回 releases 直链，最后拼上自定义源 }
 function BuildDownloadUrls(const Ver: string): TStringList;
 var
   Custom: TStringList;
   I: Integer;
-  U: string;
+  U, ApiUrl, BackupUrl: string;
 begin
   Result := TStringList.Create;
+  ApiUrl := FetchApiAssetUrl(Ver, 'PlanQuest-win64-portable.zip');
+  if ApiUrl <> '' then Result.Add(ApiUrl);
+  BackupUrl := FetchApiAssetUrl(Ver, 'PlanQuest-win64-portable-backup.zip');
+  if (BackupUrl <> '') and (Result.IndexOf(BackupUrl) < 0) then Result.Add(BackupUrl);
   Result.Add('https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v' + Ver + '/PlanQuest-win64-portable.zip');
+  Result.Add('https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v' + Ver + '/PlanQuest-win64-portable-backup.zip');
   Result.Add('https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/' + Ver + '/PlanQuest-win64-portable.zip');
   Custom := LoadSources;
   try
@@ -259,27 +336,57 @@ begin
   end;
 end;
 
-{ 按源顺序下载主包：任一成功即可 }
+function ReadFileText(const Path: string): string;
+var
+  L: TStringList;
+begin
+  Result := '';
+  L := TStringList.Create;
+  try
+    try L.LoadFromFile(Path); Result := Trim(L.Text); except end;
+  finally
+    L.Free;
+  end;
+end;
+
+{ 按源顺序下载主包：任一成功即可；每个失败源都写进安装目录 pq-download.log }
 function FetchMainPackage(const Ver, Target: string): Boolean;
 var
-  Urls: TStringList;
+  Urls, Failed: TStringList;
   I: Integer;
+  OK: Boolean;
+  LogFile, ErrFile: string;
 begin
   Result := False;
   Urls := BuildDownloadUrls(Ver);
+  Failed := TStringList.Create;
   try
     for I := 0 to Urls.Count - 1 do
     begin
       WizardForm.StatusLabel.Caption := '正在下载 ' + Ver + ' 绿色包（源 ' + IntToStr(I + 1) + '/' + IntToStr(Urls.Count) + '）…';
       WizardForm.StatusLabel.Update;
-      if DownloadTo(Urls[I], Target) then
+      DeleteFile(Target);
+      if Pos('/releases/assets/', Urls[I]) > 0 then
+        OK := DownloadToEx(Urls[I], Target, '-H "Accept: application/octet-stream" ')
+      else
+        OK := DownloadTo(Urls[I], Target);
+      if OK then
       begin
         Result := True;
         Exit;
       end;
+      Failed.Add('失败源 ' + IntToStr(I + 1) + ': ' + Urls[I]);
+      ErrFile := AddBackslash(ExpandConstant('{localappdata}')) + 'Temp\pq-curl-last.log';
+      if FileExists(ErrFile) then
+        Failed.Add('  curl: ' + Trim(ReadFileText(ErrFile)));
     end;
+    Failed.Add('版本: ' + Ver + '，目标: ' + Target);
+    Failed.Add('提示: 若 GitHub Releases 被拦，可把 API 资产直链写进 assistant-sources.txt。');
+    LogFile := AddBackslash(ExpandConstant('{app}')) + 'pq-download.log';
+    try Failed.SaveToFile(LogFile); except end;
   finally
     Urls.Free;
+    Failed.Free;
   end;
 end;
 
@@ -361,7 +468,7 @@ procedure CreateSelectPage;
 var
   I: Integer;
   Parts: TStringList;
-  CapLabel, TipLabel: TLabel;
+  CapLabel, TipLabel, SpaceLabel: TLabel;
 begin
   SelectPage := CreateCustomPage(wpSelectDir, '选择版本与组件',
     '选要装的 PlanQuest 版本；AI 组件默认不装，勾了才从官网下载。');
@@ -375,14 +482,16 @@ begin
   VersionCombo.Parent := SelectPage.Surface;
   VersionCombo.Left := 80; VersionCombo.Top := 5;
   VersionCombo.Width := 380;
+  SetLength(VersionKeys, Length(AvailVersions));
   for I := 0 to High(AvailVersions) do
   begin
     Parts := SplitBy(AvailVersions[I], '|');
     try
+      VersionKeys[I] := Trim(Parts[0]);
       if Parts.Count >= 2 then
-        VersionCombo.Items.Add(Trim(Parts[0]) + '  ' + Trim(Parts[1]))
+        VersionCombo.Items.Add(VersionKeys[I] + '  ' + Trim(Parts[1]))
       else
-        VersionCombo.Items.Add(AvailVersions[I]);
+        VersionCombo.Items.Add(VersionKeys[I]);
     finally
       Parts.Free;
     end;
@@ -394,20 +503,28 @@ begin
   TipLabel := TLabel.Create(SelectPage);
   TipLabel.Parent := SelectPage.Surface;
   TipLabel.Left := 80; TipLabel.Top := 34;
-  TipLabel.Width := 390; TipLabel.Height := 48;
+  TipLabel.Width := 390; TipLabel.Height := 20;
   TipLabel.AutoSize := False; TipLabel.WordWrap := True;
-  TipLabel.Caption := 'AI 不勾 → 一个字节都不下。下载源不写在这里，见安装目录的「使用说明.txt」。';
+  TipLabel.Caption := 'AI 不勾 → 一个字节都不下。下载源见「使用说明.txt」。';
+
+  SpaceLabel := TLabel.Create(SelectPage);
+  SpaceLabel.Parent := SelectPage.Surface;
+  SpaceLabel.Left := 80; SpaceLabel.Top := 56;
+  SpaceLabel.Width := 390; SpaceLabel.Height := 38;
+  SpaceLabel.AutoSize := False; SpaceLabel.WordWrap := True;
+  SpaceLabel.Caption := '所需磁盘空间：主程序解压后约 376 MiB；下载临时文件再占 194 MiB，' +
+                        '峰值约 570 MiB（不含可选 AI 组件）。';
 
   OllamaCheck := TCheckBox.Create(SelectPage);
   OllamaCheck.Parent := SelectPage.Surface;
-  OllamaCheck.Left := 0; OllamaCheck.Top := 92;
+  OllamaCheck.Left := 0; OllamaCheck.Top := 102;
   OllamaCheck.Width := 470;
   OllamaCheck.Caption := '同时装 Ollama 绿色版（官网 zip 约 1.5 GB，模型另需 1.9 GB）';
   OllamaCheck.Checked := False;
 
   MeloTsCheck := TCheckBox.Create(SelectPage);
   MeloTsCheck.Parent := SelectPage.Surface;
-  MeloTsCheck.Left := 0; MeloTsCheck.Top := 118;
+  MeloTsCheck.Left := 0; MeloTsCheck.Top := 128;
   MeloTsCheck.Width := 470;
   MeloTsCheck.Caption := '同时装 MeloTTS 源码（官网无 Windows 运行包，仅源码 zip）';
   MeloTsCheck.Checked := False;
@@ -429,7 +546,9 @@ begin
   if not FetchMainPackage(Ver, ZipFile) then
   begin
     MsgBox('下载 ' + Ver + ' 失败：所有源都没拿到包。' + #13#10 +
-           '请检查网络，或按「使用说明.txt」配置自己的下载源后重试。', mbError, MB_OK);
+           '失败详情见所选安装目录的 pq-download.log。' + #13#10 +
+           '请检查网络，或按「使用说明.txt」配置自己的下载源后重试。' + #13#10 +
+           '所需空间：安装后约 376 MiB，下载临时文件约 194 MiB，峰值约 570 MiB。', mbError, MB_OK);
     Exit;
   end;
 

@@ -3,7 +3,7 @@
   "version": "2.9.11",
   "channel": "stable",
   "releasedAt": "2026-11-28",
-  "notes": "安装助手全中文向导；ZIP 原样完整解压，快捷方式指向真实 exe 并使用软件图标；新手引导浅色主题按钮修复；ZIP 无用户数据（初始状态）；阿刺五套皮肤心情/顶罪；.pqplan 覆盖审讯与阶梯扣刺",
+  "notes": "安装助手全中文向导；修复版本号拼进下载 URL 导致所有源失败；GitHub API 资产源优先；每个源同时提供主包与备份 ZIP；ZIP 原样完整解压、快捷方式指向真实 exe 与软件图标；ZIP 无用户数据（初始状态）",
   "base": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11",
   "installer": {
     "admin": false,
@@ -19,13 +19,19 @@
     "action": "bootstrap",
     "file": "releases/PlanQuest-安装助手.exe",
     "url": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-install-assistant.exe",
-    "size": 2121999,
-    "sha256": "7fe2c458767b21b77993fa12dcf8b28271513c19b6be0a13014d39dbfbb1d007",
+    "size": 2123161,
+    "sha256": "a17c0cef6b36efea311e1dc2dbfddf6ccd0fae397ade262b2217f4b7748974e1",
     "built": true
   },
   "portable": {
     "file": "PlanQuest-win64-portable.zip",
     "url": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-win64-portable.zip",
+    "size": 203648782,
+    "sha256": "2f918852059f4c868aeb7ef303e5baf8a367c3f617d3427bfcac79680538b9b5"
+  },
+  "portableBackup": {
+    "file": "releases/PlanQuest-win64-portable-backup.zip",
+    "url": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-win64-portable-backup.zip",
     "size": 203648782,
     "sha256": "2f918852059f4c868aeb7ef303e5baf8a367c3f617d3427bfcac79680538b9b5"
   },
