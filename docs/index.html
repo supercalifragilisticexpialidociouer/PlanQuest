@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f6f4f1">
+<meta name="description" content="PlanQuest — 带刺、记仇、偶尔背锅的自律搭子。下载安装器，挑一只阿刺，开始被扎。">
+<title>PlanQuest · 带刺、记仇、偶尔背锅</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#/home" aria-label="PlanQuest 首页">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+        <path d="M20 34V14" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+        <path d="M20 22 9 12M20 26 31 15M20 17 12 7M20 19 28 8" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+        <path d="M20 30c-5 0-8-4-8-9 0-6 3-11 8-14 5 3 8 8 8 14 0 5-3 9-8 9z" fill="currentColor" opacity=".16"/>
+        <circle cx="17" cy="23" r="1.3" fill="currentColor"/>
+        <circle cx="23" cy="23" r="1.3" fill="currentColor"/>
+      </svg>
+      <span>PlanQuest</span>
+    </a>
+    <nav class="main-nav" aria-label="主导航">
+      <a href="#/home">首页</a>
+      <a href="#/download">下载</a>
+      <a href="#/guide">驯刺手册</a>
+      <a href="community.html" title="刺窝：进来挨扎，出去变强。阿刺不陪你玩虚的。">刺窝</a>
+    </nav>
+    <a class="web-link" id="top-web-link" href="#" target="_blank" rel="noopener">网页版 <span>（免安装，阿刺在线盯梢）</span></a>
+  </div>
+</header>
+
+<main id="app" tabindex="-1"></main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-col footer-brand">
+      <div class="footer-logo">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 34V14" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/><path d="M20 22 9 12M20 26 31 15M20 17 12 7M20 19 28 8" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>
+        <strong>PlanQuest</strong>
+      </div>
+      <p>带刺、记仇、偶尔背锅</p>
+    </div>
+    <div class="footer-col">
+      <h3>帮助</h3>
+      <a href="#/guide">驯刺手册（教程）</a>
+      <a href="#/guide#usage">生存指南（使用说明）</a>
+      <a href="community.html">刺窝（反馈 / GitHub Issues）</a>
+    </div>
+    <div class="footer-col">
+      <h3>联系</h3>
+      <a href="#/about">关于（开源协议）</a>
+      <a href="mailto:zirc0656@agent.qq.com">zirc0656@agent.qq.com</a>
+      <a href="https://github.com/supercalifragilisticexpialidociouer/PlanQuest" target="_blank" rel="noopener">源码：GitHub（别搞 QQ 群，极客范儿）</a>
+    </div>
+  </div>
+  <div class="footer-bottom">Powered by 阿刺 © 2024-2026（简体中文）</div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "PlanQuest — 带刺、记仇、偶尔背锅",
+  "short_name": "PlanQuest",
+  "description": "网页版免安装，阿刺在线盯梢。支持 PWA 添加到桌面，假装是个 App。",
+  "start_url": "./index.html#/home",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f5f2",
+  "theme_color": "#6d4aff",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "下载阿刺", "url": "./index.html#/download" },
+    { "name": "驯刺手册", "url": "./index.html#/guide" },
+    { "name": "刺窝", "url": "./community.html" }
+  ]
+}
