@@ -2,23 +2,32 @@
   "schema": 1,
   "version": "2.9.11",
   "channel": "stable",
-  "releasedAt": "2026-11-22",
-  "notes": "新手期翻案隔离；GitHub Releases 多源冗余更新与可选大模型下载",
+  "releasedAt": "2026-11-28",
+  "notes": "安装助手全中文向导；ZIP 原样完整解压，快捷方式指向真实 exe 并使用软件图标；新手引导浅色主题按钮修复；ZIP 无用户数据（初始状态）；阿刺五套皮肤心情/顶罪；.pqplan 覆盖审讯与阶梯扣刺",
   "base": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11",
   "installer": {
     "admin": false,
     "action": "unpack-only",
-    "file": "releases\\PlanQuest-2.9.11-setup.exe",
+    "file": "releases/PlanQuest-2.9.11-setup.exe",
     "url": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-2.9.11-setup.exe",
-    "size": 168655138,
-    "sha256": "edea17a775b5064d35a17848bb76e19efd482af610fbc7f7220b498ea2ba6117",
+    "size": 168751402,
+    "sha256": "8534708fea978a9011af07b5793649fbc2df42cd428332bc7c5c4d70d96268ac",
+    "built": true
+  },
+  "assistant": {
+    "admin": false,
+    "action": "bootstrap",
+    "file": "releases/PlanQuest-安装助手.exe",
+    "url": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-install-assistant.exe",
+    "size": 2121999,
+    "sha256": "7fe2c458767b21b77993fa12dcf8b28271513c19b6be0a13014d39dbfbb1d007",
     "built": true
   },
   "portable": {
     "file": "PlanQuest-win64-portable.zip",
     "url": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-win64-portable.zip",
-    "size": 203480288,
-    "sha256": "03596d0ec7c0e89ccfa5aa690505842a76871d3cd6448f6cd31459e98a3fc465"
+    "size": 203648782,
+    "sha256": "2f918852059f4c868aeb7ef303e5baf8a367c3f617d3427bfcac79680538b9b5"
   },
   "data": {
     "path": "%APPDATA%\\PlanQuest\\data.json",

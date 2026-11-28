@@ -1,0 +1,28 @@
+{
+  "eval_set": "126 张留出验证集（64 摸鱼 / 62 认真），与训练集 md5 全局去重、零重叠",
+  "best_onnx_256": {
+    "model": "best.onnx",
+    "input_size": 256,
+    "overall_acc": 0.8651,
+    "per_class": {
+      "摸鱼": { "correct": 55, "total": 64, "acc": 0.8594 },
+      "认真": { "correct": 54, "total": 62, "acc": 0.871 }
+    }
+  },
+  "best_onnx_224": {
+    "model": "best_224.onnx",
+    "input_size": 224,
+    "overall_acc": 0.8413,
+    "per_class": {
+      "摸鱼": { "correct": 52, "total": 64, "acc": 0.8125 },
+      "认真": { "correct": 54, "total": 62, "acc": 0.871 }
+    }
+  },
+  "training": {
+    "dataset": "628 张（摸鱼 319 / 认真 309），train 502 / val 126",
+    "imgsz_256_best_epoch": 17,
+    "imgsz_224_best_epoch": 7,
+    "optimizer": "AdamW lr0=0.001, cos_lr, 30/50 epochs (early stop patience=15)"
+  },
+  "note": "指标由 ONNX 推理链路逐张统计，与 ultralytics val 一致；对比旧版（172 张数据、224 输入）：旧版留出集 88.6% 但样本仅 35 张且划分有泄漏，新版 126 张无泄漏更可信"
+}

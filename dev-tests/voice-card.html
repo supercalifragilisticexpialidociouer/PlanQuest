@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8" /><title>娇脸 · 傲话 反差对照</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#0e1020;color:#e9e8ff;font-family:"Microsoft YaHei","PingFang SC",sans-serif}
+  #app{padding:22px 26px}
+  h1{font-size:20px;margin:0 0 4px;letter-spacing:.5px}
+  .sub{font-size:12.5px;color:#9a9fc4;margin-bottom:16px}
+  .sub b{color:#17cda8}
+  #grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+  .cell{border:1px solid rgba(255,255,255,.10);border-radius:14px;background:linear-gradient(180deg,rgba(124,108,255,.07),rgba(255,255,255,.02));
+        display:flex;align-items:center;gap:8px;padding:10px;min-height:150px;overflow:hidden}
+  .face{width:112px;height:132px;flex-shrink:0;border-radius:11px;background:radial-gradient(circle at 50% 40%,rgba(23,205,168,.10),rgba(0,0,0,0));position:relative}
+  .face canvas{width:112px;height:132px;display:block}
+  .tag{font-size:10px;font-weight:800;color:#17cda8;letter-spacing:1px;margin-bottom:5px}
+  .tag .jiao{background:rgba(23,205,168,.16);border-radius:5px;padding:1px 6px}
+  .line{font-size:12.5px;line-height:1.6;color:#f0efff;font-weight:600}
+  .ao{margin-top:7px;font-size:10px;color:#f0a45a}
+  .foot{margin-top:14px;font-size:11px;color:#7d83aa;line-height:1.7}
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>表情负责「娇」，文案负责「傲」</h1>
+  <div class="sub">六个圆润笑脸，吐出来的全是 <b>居高临下、赏你恩赐</b> 的话 —— 反差越大，越上头。</div>
+  <div id="grid"></div>
+  <div class="foot">同一张萌脸（happy / smirk）配不同傲句；台词取自 buddy.js 的 FUN_RULES 与 CHEERS。深/浅色两套主题共用同一份文案。</div>
+</div>
+<script src="../web/vendor/three.min.js"></script>
+<script src="../web/aci-skin.js"></script>
+<script src="../web/buddy3d.js"></script>
+<script>
+  var CARDS = [
+    { mood:'happy',  tag:'笑一个',  line:'笑成这样，够了吧？我这张脸不是谁都配看的。', ao:'傲 · 不配' },
+    { mood:'smirk',  tag:'摇一摇',  line:'我肯为你晃一下，你今天就算没白活。', ao:'傲 · 恩赐' },
+    { mood:'happy',  tag:'跳一跳',  line:'蹦完了。本刺肯为你离地，你这辈子受过这恩赐吗？', ao:'傲 · 自命不凡' },
+    { mood:'angry',  tag:'生个气',  line:'行，气给你看了。收藏好，这表情不外传。', ao:'傲 · 金贵' },
+    { mood:'happy',  tag:'拖延提醒', line:'你再拖下去，我都想自己拔根刺下来替你扎一下了。', ao:'傲 · 标杆意象' },
+    { mood:'surprised', tag:'吃个惊', line:'啊？就这？本刺还以为你干了件人事。', ao:'傲 · 轻视' },
+  ];
+  var grid = document.getElementById('grid');
+  CARDS.forEach(function (c) {
+    var d = document.createElement('div');
+    d.className = 'cell';
+    d.innerHTML = '<div class="face"><canvas></canvas></div>'
+      + '<div style="flex:1;min-width:0"><div class="tag"><span class="jiao">娇</span> ' + c.tag + '</div>'
+      + '<div class="line">' + c.line + '</div><div class="ao">' + c.ao + '</div></div>';
+    grid.appendChild(d);
+  });
+  window.__insts = [];
+  setTimeout(function () {
+    document.querySelectorAll('.cell .face canvas').forEach(function (cv, i) {
+      var g = PQBuddy3D.create(cv);
+      if (!g) return;
+      try { g.setRotY(0); } catch (e) {}
+      try { if (g.setMicro) g.setMicro(false); } catch (e) {}
+      try { g.setSkin && g.setSkin('cactus'); } catch (e) {}
+      try { g.setMood(CARDS[i].mood); } catch (e) {}
+      window.__insts.push(g);
+    });
+  }, 160);
+</script>
+</body>
+</html>

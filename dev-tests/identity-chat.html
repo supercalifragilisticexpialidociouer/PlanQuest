@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8" /><title>identity chat</title>
+<style>body{margin:0;background:#0e1020;height:100vh}#app{width:100%;height:100vh}</style>
+</head>
+<body>
+<div id="app" data-theme="dark"></div>
+<script src="../web/vendor/three.min.js"></script>
+<script src="../web/aci-skin.js"></script>
+<script src="../web/buddy3d.js"></script>
+<script src="../web/buddy.js"></script>
+<script>
+  /* 预置一个已选好的皮肤：跳过首启选皮面板 */
+  localStorage.setItem('pq-skin-v1', JSON.stringify({ skin: 'cactus', name: '阿刺' }));
+  /* 模拟桌面主进程：aciState 给出养成数据（身份卡才会渲染），
+     aciAction 用同一份 PQSkin 规则掷骰子，验的是真实桌面链路 */
+  var fakeName = '阿刺';
+  function fakeView(mood) {
+    return { aci: { identity: { skin: 'cactus', name: fakeName }, mood: mood || 'idle', level: 1, disappointed: false }, skins: PQSkin.SKINS };
+  }
+  window.api = {
+    aciState: async function () { return {
+      aci: { identity: { skin: 'cactus', name: fakeName, chosenAt: 1, renameCount: 0 }, level: 1, exp: 0, energy: 0, mood: 'idle', waterCount: 0, supplies: {}, privileges: {} },
+      rules: { POINTS_PER_ENERGY: 100, MAX_LEVEL: 100, EXP_PER_LEVEL: 10, __supplies: [] },
+      derived: { nameSuggestions: PQSkin.suggestNames('cactus'), voiceHint: PQSkin.voiceHint('cactus'), tierName: '新芽段', weekRate: 0, power: 0, ticketPrice: 50 },
+      skins: PQSkin.SKINS, resetCost: {}, supplies: [],
+    }; },
+    aciAction: async function (action, p) {
+      if (action === 'requestSkinChange') {
+        var sr = PQSkin.requestSkinChange('cactus', { rng: Math.random });
+        return { ok: false, refused: true, message: sr.reply, hint: sr.hint, view: fakeView() };
+      }
+      if (action === 'tryRename') {
+        var ev = PQSkin.evaluateRename('cactus', p.name, { current: fakeName, mood: 'idle', level: 1, disappointed: false, renameCount: 0, rng: Math.random });
+        if (!ev.accept) return { ok: false, refused: true, chance: ev.chance, message: ev.reply, view: fakeView() };
+        fakeName = p.name;
+        return { ok: true, renamed: true, message: '以后就叫「' + fakeName + '」了。', view: fakeView('happy') };
+      }
+      return { ok: false, message: '未知操作' };
+    },
+  };
+  PQBuddy.start({
+    getState: () => ({ profile: { points: 120, streak: 4, bestStreak: 9 }, todayPlans: [] }),
+    nav: () => {},
+  });
+  window.__probe = async function () {
+   try {
+    var P = PQBuddy.aci;
+    var before = document.querySelectorAll('#pqb-msgs .pqb-item').length;
+    P.askIdentity('我想给你换个皮肤');
+    P.askIdentity('以后叫你刺头');
+    /* 判定是异步的（主进程 IPC / 本地 Promise），等阿刺把话说完再采样 */
+    await new Promise(function (r) { setTimeout(r, 600); });
+    var lines = [].slice.call(document.querySelectorAll('#pqb-msgs .pqb-item')).map(function (el) {
+      return { who: el.classList.contains('me') ? 'me' : el.classList.contains('bud') ? 'bud' : 'sys', text: el.textContent };
+    });
+    /* 养成面板是异步渲染的，等它把身份卡画出来再点按钮 */
+    P.switchTab('grow');
+    await new Promise(function (r) { setTimeout(r, 400); });
+    var btn = document.getElementById('pqb-rename');
+    if (btn) btn.click();
+    var inp = document.getElementById('pqb-text');
+    return {
+      parse: {
+        rename: P.parseIdentity('以后叫你刺头'),
+        renameAsk: P.parseIdentity('改个名'),
+        skin: P.parseIdentity('我想给你换个皮肤'),
+        skinRose: P.parseIdentity('我想换成玫瑰'),
+        fun: P.parseIdentity('跳一跳'),
+        nameRose: P.parseIdentity('改名叫玫瑰'),
+      },
+      before: before,
+      lines: lines,
+      name: P.companionName(),
+      hasNameForm: !!document.getElementById('pqb-nameinput') || !!document.getElementById('pqb-nameok'),
+      renameBtn: !!btn,
+      inputPrefill: inp ? inp.value : '(no input)',
+    };
+   } catch (e) { return { error: String(e && (e.stack || e.message || e)) }; }
+  };
+</script>
+</body>
+</html>

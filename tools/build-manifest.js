@@ -22,14 +22,25 @@ function arg(k, d) {
 const BASE = String(arg('--base', 'https://dl.example.com/planquest')).replace(/\/+$/, '');
 const VER = String(arg('--ver', pkg.version));
 const CHANNEL = String(arg('--channel', 'stable'));
+const NOTES = String(arg('--notes', '安装助手全中文向导；ZIP 原样完整解压，快捷方式指向真实 exe 并使用软件图标；新手引导浅色主题按钮修复；ZIP 无用户数据（初始状态）；阿刺五套皮肤心情/顶罪；.pqplan 覆盖审讯与阶梯扣刺'));
+/* base 已经是 releases/download/<tag> 时不要再拼一层版本号 */
+const BASE_HAS_TAG = /\/releases\/download\/[^/]+$/.test(BASE);
+function assetUrl(file) {
+  return `${BASE_HAS_TAG ? BASE : `${BASE}/${VER}`}/${file}`;
+}
 
-function stat(file) {
+function stat(file, assetNameOverride) {
   const p = path.join(DIST, file);
   if (!fs.existsSync(p)) return null;
   const buf = fs.readFileSync(p);
+  const rel = file.replace(/\\/g, '/');
+  /* 发布包在 GitHub Release 里是平铺的，不带 releases/ 前缀；
+     安装助手用纯 ASCII 资产名，避免客户端 URL 出现未转义中文。 */
+  const assetName = assetNameOverride ||
+    (rel.startsWith('releases/') ? rel.slice('releases/'.length) : rel);
   return {
-    file,
-    url: `${BASE}/${VER}/${file}`,
+    file: rel,
+    url: assetUrl(assetName),
     size: buf.length,
     sha256: crypto.createHash('sha256').update(buf).digest('hex'),
   };
@@ -71,20 +82,28 @@ const COMPONENTS = [
 
 const zip = stat('PlanQuest-win64-portable.zip');
 const exe = stat(path.join('releases', `PlanQuest-${VER}-setup.exe`));
+const assistant = stat(path.join('releases', 'PlanQuest-安装助手.exe'), 'PlanQuest-install-assistant.exe');
 
 const manifest = {
   schema: 1,
   version: VER,
   channel: CHANNEL,
   releasedAt: new Date().toISOString().slice(0, 10),
-  notes: '新手期翻案隔离；R2 直链更新与可选大模型下载',
+  notes: NOTES,
   base: BASE,
   /* 绿色版：不提权、只解压、不写注册表、不改系统 */
   installer: {
     admin: false,
     action: 'unpack-only',
-    ...(exe || { file: `PlanQuest-${VER}-setup.exe`, url: `${BASE}/${VER}/PlanQuest-${VER}-setup.exe`, size: null, sha256: null, built: false }),
+    ...(exe || { file: `PlanQuest-${VER}-setup.exe`, url: assetUrl(`PlanQuest-${VER}-setup.exe`), size: null, sha256: null, built: false }),
     ...(exe ? { built: true } : {}),
+  },
+  /* 在线安装助手：全中文向导；ZIP 原样完整解压；快捷方式指向真实 exe + 软件图标 */
+  assistant: {
+    admin: false,
+    action: 'bootstrap',
+    ...(assistant || { file: 'PlanQuest-安装助手.exe', url: assetUrl('PlanQuest-安装助手.exe'), size: null, sha256: null, built: false }),
+    ...(assistant ? { built: true } : {}),
   },
   portable: zip || null,
   /* 数据不用迁移：userData 与 exe 目录解耦 */
@@ -110,4 +129,5 @@ console.log('MANIFEST_OK', out);
 console.log('  version =', VER, ' base =', BASE);
 console.log('  portable =', zip ? `${zip.size} bytes / ${zip.sha256.slice(0, 16)}…` : '未找到 ZIP');
 console.log('  installer =', exe ? `${exe.size} bytes / ${exe.sha256.slice(0, 16)}…` : '未编译（built:false，跑 ISCC 后重跑本脚本）');
+console.log('  assistant =', assistant ? `${assistant.size} bytes / ${assistant.sha256.slice(0, 16)}…` : '未编译');
 console.log('  components =', COMPONENTS.map((c) => c.id).join(', '), '（默认全不勾）');

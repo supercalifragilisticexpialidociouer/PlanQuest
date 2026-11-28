@@ -13,13 +13,19 @@
 ;   Uninstallable=no                 不生成卸载程序
 ;   DisableProgramGroupPage=yes      不建开始菜单
 ;   无 [Registry] / [Run]            安装器不写注册表、不写自启
-;   [Icons] 只在桌面建一个快捷方式，指向解压后的 PlanQuest.exe（用户明确要求）
+;   [Icons] 不静态创建：解压完成后由 [Code] 动态建桌面快捷方式，
+;           目标指向真实解压出来的 PlanQuest.exe，图标用软件自带的 PlanQuest.ico。
+;   ZIP 原封不动完整解压：不用 --strip-components，保留包内 PlanQuest-win64\ 目录。
 ;
 ; 压缩：本脚本 [Files] 为空（引导器无内嵌文件），产物就是 Inno 的几 MB 壳。
 ; 源地址不写进界面，集中写在「使用说明.txt」；这里只放内置兜底地址。
 ; 编译：ISCC.exe tools\PlanQuest-Assistant.iss
 ; 产物：dist\releases\PlanQuest-安装助手.exe
 ; ============================================================================
+
+[Languages]
+; 官方简体中文语言包（Inno Setup 6.5+），路径相对本脚本，随源码一起分发。
+Name: "zh"; MessagesFile: "lang\ChineseSimplified.isl"
 
 [Setup]
 AppName=PlanQuest 安装助手
@@ -42,19 +48,12 @@ WizardStyle=modern
 OutputDir=..\dist\releases
 OutputBaseFilename=PlanQuest-安装助手
 SetupIconFile=..\dist\PlanQuest-win64\PlanQuest.ico
-; 只有桌面快捷方式（见 [Icons]）；无 [Registry] / [Run] —— 不写注册表、不写自启
-
-; 桌面快捷方式：ssPostInstall 之前就会创建，目标 exe 此时还没下载下来，
-; 但 Windows 允许 .lnk 指向暂不存在的文件；下载失败时 CurStepChanged 会删掉它。
-[Icons]
-Name: "{autodesktop}\PlanQuest"; Filename: "{app}\PlanQuest.exe"; Comment: "PlanQuest 绿色版"; IconFilename: "{app}\PlanQuest.exe"
-
-; 说明：本机 Inno Setup 未附中文语言包，沿用默认向导文案（按钮为英文，
-; 但自定义页与完成页文案均为中文，见 [Code]）—— 与原 setup.iss 口径一致。
+; 只有桌面快捷方式（见 [Code] 里的 CreateDesktopShortcut）；无 [Registry] / [Run]
+; —— 不写注册表、不写自启。
 
 ; ============================================================================
 ; [Files] 故意留空：这个 exe 是「引导器」，不内嵌主程序。
-; 主程序在安装阶段由 [Code] 从下载源拉取并解压。
+; 主程序在安装阶段由 [Code] 从下载源拉取并原样完整解压。
 ; ============================================================================
 
 [Code]
@@ -74,6 +73,7 @@ var
   SelectPage: TWizardPage;
   AvailVersions: array of string;   { 形如 "版本|说明" }
   SelectedIndex: Integer;
+  InstalledExe: string;             { 解压后真实主程序路径，供完成页显示 }
 
 { ---------- 全部辅助函数按依赖顺序定义（Inno Pascal 不支持先使用后定义） ---------- }
 
@@ -133,7 +133,7 @@ begin
   SrcList := TStringList.Create;
   Lines := TStringList.Create;
   try
-    ExeDir := ExtractFilePath(ExpandConstant('{exe}'));
+    ExeDir := ExtractFilePath(ExpandConstant('{srcexe}'));
     Custom := AddBackslash(ExeDir) + 'assistant-sources.txt';
     if FileExists(Custom) then Lines.LoadFromFile(Custom);
     if Lines.Count > 0 then
@@ -283,24 +283,68 @@ begin
   end;
 end;
 
-{ 解压 zip 到 DestDir：优先系统 tar（Win10 自带），--strip-components 1 去顶层目录 }
+{ 在解压目录里找到真正的主程序；兼容 zip 顶层目录名变化 }
+function FindExtractedExe(const Root: string): string;
+var
+  P: string;
+begin
+  Result := '';
+  { 官方绿色包解压后主程序在 PlanQuest-win64\ 下；兼容早期直接放根目录的包 }
+  P := AddBackslash(Root) + 'PlanQuest-win64\PlanQuest.exe';
+  if FileExists(P) then begin Result := P; Exit; end;
+  P := AddBackslash(Root) + 'PlanQuest.exe';
+  if FileExists(P) then Result := P;
+end;
+
+{ ZIP 原封不动完整解压：保留包内目录结构，不 strip。
+  优先系统 tar.exe（Win10+ 自带），失败再退回 PowerShell Expand-Archive。
+  两种都做「解压后必须能找到 PlanQuest.exe」的校验，空文件夹不再算成功。 }
 function UnzipTo(const ZipFile, DestDir: string): Boolean;
 var
   Tar, PsExe, Args: string;
   RC: Integer;
 begin
+  Result := False;
   ForceDirectories(DestDir);
   Tar := ExpandConstant('{sys}\tar.exe');
   if FileExists(Tar) then
   begin
-    Args := '-xf "' + ZipFile + '" -C "' + DestDir + '" --strip-components 1';
-    Result := Exec(Tar, Args, '', SW_HIDE, ewWaitUntilTerminated, RC) and (RC = 0);
-    if Result then Exit;
+    Args := '-xf "' + ZipFile + '" -C "' + DestDir + '"';
+    if Exec(Tar, Args, '', SW_HIDE, ewWaitUntilTerminated, RC) and (RC = 0) and
+       (FindExtractedExe(DestDir) <> '') then
+    begin
+      Result := True;
+      Exit;
+    end;
   end;
   PsExe := ExpandConstant('{sys}\windowspowershell\v1.0\powershell.exe');
   Args := '-NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath ''{0}'' -DestinationPath ''{1}'' -Force"';
   Args := Format(Args, [ZipFile, DestDir]);
-  Result := Exec(PsExe, Args, '', SW_HIDE, ewWaitUntilTerminated, RC) and (RC = 0);
+  Result := Exec(PsExe, Args, '', SW_HIDE, ewWaitUntilTerminated, RC) and (RC = 0) and
+            (FindExtractedExe(DestDir) <> '');
+end;
+
+{ 解压成功后才建桌面快捷方式：目标 = 真实 exe，图标 = 软件自带的 PlanQuest.ico }
+procedure CreateDesktopShortcut(const ExePath: string);
+var
+  ShellObj, Link: Variant;
+  IconPath, LinkPath: string;
+begin
+  IconPath := ExtractFilePath(ExePath) + 'PlanQuest.ico';
+  if not FileExists(IconPath) then IconPath := ExePath;
+  LinkPath := AddBackslash(ExpandConstant('{autodesktop}')) + 'PlanQuest.lnk';
+  try
+    ShellObj := CreateOleObject('WScript.Shell');
+    Link := ShellObj.CreateShortcut(LinkPath);
+    Link.TargetPath := ExePath;
+    Link.WorkingDirectory := ExtractFilePath(ExePath);
+    Link.Arguments := '';
+    Link.Description := 'PlanQuest 绿色版';
+    Link.IconLocation := IconPath + ',0';
+    Link.Save;
+  except
+    MsgBox('桌面快捷方式创建失败，可手动运行：' + ExePath, mbError, MB_OK);
+  end;
 end;
 
 procedure DownloadComponent(const Url, Dest, LabelText: string);
@@ -371,10 +415,12 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  Ver, Tmp, ZipFile, CompDir: string;
+  Ver, Tmp, ZipFile, CompDir, ExePath: string;
 begin
   if CurStep <> ssPostInstall then Exit;
 
+  InstalledExe := '';
+  DeleteFile(ExpandConstant('{autodesktop}\PlanQuest.lnk'));
   Ver := CurrentVersion;
   if Ver = '' then Ver := '2.9.11';
   Tmp := ExpandConstant('{tmp}');
@@ -382,16 +428,23 @@ begin
 
   if not FetchMainPackage(Ver, ZipFile) then
   begin
-    { 主包没下到 → 删掉 [Icons] 预先建的桌面快捷方式，不留指向空文件的死链 }
-    DeleteFile(ExpandConstant('{autodesktop}\PlanQuest.lnk'));
     MsgBox('下载 ' + Ver + ' 失败：所有源都没拿到包。' + #13#10 +
            '请检查网络，或按「使用说明.txt」配置自己的下载源后重试。', mbError, MB_OK);
     Exit;
   end;
 
-  WizardForm.StatusLabel.Caption := '正在解压 ' + Ver + ' 到 ' + ExpandConstant('{app}') + ' …';
+  WizardForm.StatusLabel.Caption := '正在原样完整解压 ' + Ver + ' 到 ' + ExpandConstant('{app}') + ' …';
   WizardForm.StatusLabel.Update;
-  UnzipTo(ZipFile, ExpandConstant('{app}'));
+  if not UnzipTo(ZipFile, ExpandConstant('{app}')) then
+  begin
+    MsgBox('解压 ' + Ver + ' 失败：目标目录里没有找到 PlanQuest.exe。' + #13#10 +
+           '请检查下载的文件是否完整，或换一个下载源后重试。', mbError, MB_OK);
+    Exit;
+  end;
+
+  ExePath := FindExtractedExe(ExpandConstant('{app}'));
+  InstalledExe := ExePath;
+  CreateDesktopShortcut(ExePath);
 
   CompDir := AddBackslash(ExpandConstant('{app}')) + 'components';
   if (OllamaCheck <> nil) and OllamaCheck.Checked then
@@ -416,9 +469,18 @@ end;
 procedure CurPageChanged(CurPageID: Integer);
 begin
   if CurPageID = wpFinished then
-    WizardForm.FinishedLabel.Caption :=
-      '安装完成：' + CurrentVersion + ' 绿色版已解压到所选目录，桌面已创建「PlanQuest」快捷方式。' + #13#10 + #13#10 +
-      '未请求管理员权限、未写注册表、未建开始菜单或卸载项。' + #13#10 +
-      '开机自启请在应用「设置」里开启（会写 HKCU\...\Run，仅自己生效）。' + #13#10 + #13#10 +
-      '计划数据在 %APPDATA%\PlanQuest\，换版本自动沿用，无需迁移。';
+  begin
+    if InstalledExe = '' then
+      WizardForm.FinishedLabel.Caption :=
+        '安装未完成：主程序没有解压成功，详见上一步的提示。' + #13#10 + #13#10 +
+        '请重新运行安装助手，或在「使用说明.txt」里换一个下载源。'
+    else
+      WizardForm.FinishedLabel.Caption :=
+        '安装完成：' + CurrentVersion + ' 绿色版已原样完整解压到所选目录。' + #13#10 +
+        '主程序：' + InstalledExe + #13#10 +
+        '桌面「PlanQuest」快捷方式已指向上面的程序，图标使用软件自带图标。' + #13#10 + #13#10 +
+        '未请求管理员权限、未写注册表、未建开始菜单或卸载项。' + #13#10 +
+        '开机自启请在应用「设置」里开启（会写 HKCU\...\Run，仅自己生效）。' + #13#10 + #13#10 +
+        '计划数据在 %APPDATA%\PlanQuest\，换版本自动沿用，无需迁移。';
+  end;
 end;

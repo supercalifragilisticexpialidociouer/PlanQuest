@@ -6,6 +6,67 @@
  */
 'use strict';
 
+/* 覆盖合并惩罚核心（与桌面版 src/plan-overwrite.js 同源，页面先加载 plan-overwrite.js） */
+function PO() { return (typeof window !== 'undefined' && window.PQPlanOverwrite) || null; }
+/* 五套皮肤利弊 + 顶罪核心（页面须在 pq-core.js 之前加载 aci-perk.js） */
+function PK() { return (typeof window !== 'undefined' && window.PQPerk) || null; }
+/* 契约罚金核心（与桌面 src/contract-fine.js 同源，页面须在 pq-core.js 之前加载 contract-fine.js）。
+   模块缺失时用等价兜底，避免旧页面漏算当日罚金。 */
+function CF() { return (typeof window !== 'undefined' && window.PQContractFine) || null; }
+function fineCalc(stake, due, done) {
+  const m = CF();
+  if (m) return m.calc(stake, due, done);
+  const cap = Math.max(0, Number(stake) || 0);
+  const total = Math.max(0, Math.floor(Number(due) || 0));
+  const finished = Math.max(0, Math.min(total, Math.floor(Number(done) || 0)));
+  if (!total) return { due: 0, done: 0, pct: null, owe: 0, fine: false };
+  const pct = Math.round((finished / total) * 100);
+  const owe = pct < 100 ? Math.max(1, Math.round((cap * (100 - pct)) / 100)) : 0;
+  return { due: total, done: finished, pct, owe, fine: owe > 0 };
+}
+/* 契约任务锁定（与桌面 contract-fine.js 同源；模块缺失时用等价兜底） */
+function fineIsContract(p) {
+  const m = CF();
+  return m ? m.isContractTask(p) : !!(p && p.contract);
+}
+function fineLock(p, projects) {
+  const m = CF();
+  if (m) return m.editLock(p, projects);
+  if (!fineIsContract(p)) return { locked: false, reason: '' };
+  let end = '';
+  for (const c of (Array.isArray(projects) ? projects : [])) {
+    if (c && c.id === p.contract) { end = c.endDate || c.end || ''; break; }
+  }
+  return {
+    locked: true,
+    reason: '契约任务创建后不可修改' + (end ? '（' + end + ' 到期）' : '')
+      + '。立下的约，岂能由你随手涂改？到期前也不可删除。',
+  };
+}
+function fineCombine(settlements, paid, todayKey, todayCalc, todaySettled) {
+  const m = CF();
+  if (m) return m.combine(settlements, paid, todayKey, todayCalc, todaySettled);
+  const sum = (onlyUnpaid) => Object.entries(settlements || {}).reduce((acc, [k, s]) => {
+    if (!s || !Number(s.owe) || (onlyUnpaid && paid && paid[k])) return acc;
+    return acc + Number(s.owe);
+  }, 0);
+  const settled = sum(false), unpaid = sum(true);
+  const paidToday = !!(paid && todayKey && paid[todayKey]);
+  const todayOwe = (!todaySettled && !paidToday) ? (Number(todayCalc && todayCalc.owe) || 0) : 0;
+  return { settled, todayOwe, total: settled + todayOwe, unpaid: unpaid + todayOwe, fineToday: todayOwe > 0 };
+}
+/* 当前生效皮肤 id（与桌面端同源；网页端 PQBuddy.currentSkin 提供） */
+function skinNow() {
+  return (typeof window !== 'undefined' && window.PQBuddy && typeof window.PQBuddy.currentSkin === 'function')
+    ? (window.PQBuddy.currentSkin() || '') : '';
+}
+/* 统一事件名 → 分皮肤事件名（与桌面 main.js 的 SKIN_MOOD_EVENT 一致） */
+const SKIN_MOOD_EVENT = {
+  checkin: 'completedAll', challenge: 'provedWorth', interact: 'interactedDaily',
+  noLogin: 'inactiveDays', overwrite: 'overwrotePlanFile', idle: 'ignoredForDays',
+  ignoreReminder: 'arguedBack', dailyRecover: '', apology: 'honestBehavior',
+};
+
 /* ---------------- 时间工具 ---------------- */
 const pad = (n) => String(n).padStart(2, '0');
 const dateKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -46,6 +107,7 @@ function defaultData() {
     version: 1,
     settings: {
       autoStart: false, closeToTray: true, sound: true, theme: 'dark',
+      guideDone: false,  // 新手引导：首次打开自动播一次，看完/跳过置 true；设置里可重开
       snoozeMinutes: 10, repeatRemind: true, eyeCare: false, eyeCarePlan: 45,
       eyeExerciseMs: 4 * 60 * 1000 + 12 * 1000, eyeRestMs: 15 * 60 * 1000, eyeIntervalMs: 45 * 60 * 1000,
     },
@@ -71,6 +133,10 @@ function defaultData() {
       ban: null,
       frozenUntil: 0,
     },
+    /* .pqplan 覆盖账本：阶梯次数 / 逃兵标签 / 24h 冻结 / 加密备份索引 */
+    overwrite: (PO() ? PO().defaultState() : { v: 1, count: 0, lastAt: 0, lockUntil: 0, deserter: false, tags: [], vault: [], pendingBoot: null }),
+    /* 顶罪账本：周 3 / 月 10，网页端没有 aci 对象，能量与好感记在这里 */
+    sin: (PK() ? PK().defaultSin() : { v: 1, week: '', month: '', weekUsed: 0, monthUsed: 0, total: 0, energy: 100, favor: 0 }),
   };
 }
 
@@ -92,6 +158,8 @@ function normalize(d) {
   out.discipline = { ...base.discipline, ...(d?.discipline && typeof d.discipline === 'object' ? d.discipline : {}) };
   out.discipline.contracts = out.discipline.contracts && typeof out.discipline.contracts === 'object' ? out.discipline.contracts : {};
   out.discipline.flags = Array.isArray(out.discipline.flags) ? out.discipline.flags : [];
+  out.overwrite = PO() ? PO().normalizeState(d?.overwrite) : (out.overwrite || { v: 1, count: 0, lastAt: 0, lockUntil: 0, deserter: false, tags: [], vault: [], pendingBoot: null });
+  out.sin = PK() ? PK().normalizeSin(d?.sin) : (out.sin || { v: 1, week: '', month: '', weekUsed: 0, monthUsed: 0, total: 0, energy: 100, favor: 0 });
   return out;
 }
 
@@ -299,7 +367,10 @@ function snapshot() {
       dd.setDate(dd.getDate() + 1);
     }
     const tTasks = contractTasksForDate(c, today);
-    // 每个项目自己的热度图：近 35 天，只统计本项目
+    const tDone = tTasks.filter((p) => logOf(today)[p.id]?.status === 'done').length;
+    const tCalc = fineCalc(c.stake, tTasks.length, tDone);
+    const money = fineCombine(c.settlements, c.paid, today, tCalc, !!c.settlements?.[today]);
+    // 每个项目自己的热度图：近 35 天，只统计本项目；今天用实时罚金，不重复计账本
     const heat = (() => {
       const days = [];
       for (let i = 34; i >= 0; i--) {
@@ -308,16 +379,27 @@ function snapshot() {
         const tasks = k >= c.start && k <= end ? contractTasksForDate(c, k) : [];
         const due = tasks.length;
         const done = tasks.filter((p) => logOf(k)[p.id]?.status === 'done').length;
-        days.push({ key: k, due, done, owe: c.settlements?.[k]?.owe || 0, pct: due ? Math.round((done / due) * 100) : null, isToday: k === today, future: k > today });
+        const settled = c.settlements?.[k];
+        const isToday = k === today;
+        days.push({
+          key: k, due, done,
+          owe: settled ? (settled.owe || 0) : (isToday ? tCalc.owe : 0),
+          pct: settled ? settled.pct : (due ? Math.round((done / due) * 100) : null),
+          isToday, future: k > today,
+        });
       }
-      return { days, totalOwe: contractOweTotal(c) };
+      return { days, totalOwe: money.total };
     })();
     return {
       ...c, dayIndex, endDate: end, expired: today > end,
       progressPct: sched ? Math.round((doneN / sched) * 100) : 0,
-      todayCount: tTasks.length,
-      todayDone: tTasks.filter((p) => logOf(today)[p.id]?.status === 'done').length,
-      oweTotal: contractOweTotal(c), oweUnpaid: contractOweTotal(c, true),
+      todayCount: tCalc.due,
+      todayDone: tCalc.done,
+      todayOwe: money.todayOwe,      // 有任务没做完 → 今天实时预估应扣
+      noTaskToday: tCalc.due === 0,  // 今天没排任务 → 一分钱不扣
+      oweTotal: money.total,
+      oweSettled: money.settled,
+      oweUnpaid: money.unpaid,
       heat,
     };
   });
@@ -350,6 +432,8 @@ function snapshot() {
     peers: [],
     shop: { items: data.shop.items || [], history: data.shop.history || [] },
     guard: guardian.publicInfo(),
+    overwrite: PO() ? PO().publicState(data.overwrite, Date.now()) : data.overwrite,
+    sin: PK() ? PK().publicSin(data.sin, Date.now(), skinNow()) : data.sin,
     penalty: (() => {
       const on = !!data.guardian.enabled;
       const p = data.profile.points || 0;
@@ -470,6 +554,10 @@ function savePlan(plan) {
   const rejected = [];
   const title = String(plan?.title || '').trim().slice(0, 30);
   if (!title) return { ok: false, message: '请填写计划名称' };
+  /* 契约任务创建后不可修改：以账本里的原计划为准，抹掉 contract 字段也绕不过去 */
+  const existing = isEdit ? data.plans.find((p) => p.id === plan.id) : null;
+  const lock = fineLock(existing, data.contractProjects);
+  if (lock.locked) return { ok: false, message: lock.reason, contractLocked: true };
   const time = /^\d{1,2}:\d{2}$/.test(String(plan?.time || '')) ? plan.time : '08:00';
   if (guardian.hasPassword() && !guardian.verify(plan?.password)) return { ok: false, needPassword: true };
   const days = Array.isArray(plan?.days) ? plan.days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6) : [];
@@ -512,11 +600,11 @@ function deletePlan(id, password) {
   if (guardian.hasPassword() && !guardian.verify(password)) return { ok: false, needPassword: true };
   const existed = data.plans.some((p) => p.id === id);
   const isTemp = data.plans.some((p) => p.id === id && p.temp);
-  /* 契约任务到期前不可删除 */
+  /* 契约任务到期前不可删除（与「创建后不可修改」配套） */
   const cPlan = data.plans.find((p) => p.id === id);
-  if (cPlan?.contract) {
+  if (fineIsContract(cPlan)) {
     const c = (data.contractProjects || []).find((x) => x.id === cPlan.contract);
-    if (c && !contractExpired(c)) return { ok: false, message: `契约任务在项目到期（${contractEndDate(c)}）前不可删除` };
+    if (c && !contractExpired(c)) return { ok: false, message: `契约任务在项目到期（${contractEndDate(c)}）前不可删除`, contractLocked: true };
   }
   data.plans = data.plans.filter((p) => p.id !== id);
   delete data.snooze[id];
@@ -527,6 +615,9 @@ function deletePlan(id, password) {
 }
 function togglePlan(id, enabled) {
   const p = data.plans.find((x) => x.id === id);
+  /* 停用契约任务 = 变相修改（停掉就不进每日罚金结算），一并锁住 */
+  const lock = fineLock(p, data.contractProjects);
+  if (lock.locked) return { ok: false, message: lock.reason, contractLocked: true };
   if (p) p.enabled = !!enabled;
   // 暂停 / 重新启用都不扣分
   saveNow();
@@ -842,14 +933,14 @@ function contractTasksForDate(c, key) {
   const dow = new Date(key + 'T00:00:00').getDay();
   return data.plans.filter((p) => p.contract === c.id && !p.temp && p.enabled !== false && (p.days || []).includes(dow));
 }
+/* 有任务且没全做完才扣：有任务(due>0) + 未完成(done<due) → 至少 1 元；无任务不扣 */
 function contractSettleDay(c, key) {
   if (!c.settlements) c.settlements = {};
   if (c.settlements[key]) return false;
   const tasks = contractTasksForDate(c, key);
   const done = tasks.filter((p) => logOf(key)[p.id]?.status === 'done').length;
-  const pct = tasks.length ? Math.round((done / tasks.length) * 100) : null;
-  const owe = tasks.length && pct < 100 ? Math.max(1, Math.round(((Number(c.stake) || 0) * (100 - pct)) / 100)) : 0;
-  c.settlements[key] = { pct, owe, due: tasks.length, done };
+  const r = fineCalc(c.stake, tasks.length, done);
+  c.settlements[key] = { pct: r.pct, owe: r.owe, due: r.due, done: r.done };
   return true;
 }
 function settleContractProjects() {
@@ -1031,7 +1122,7 @@ function filterDataByScope(src, scope) {
     out.plans = [];
     out.contractProjects = [];
     out.log = {};
-    for (const k of ['fired', 'snooze', 'bonus', 'mits', 'diary', 'reviews', 'makeups', 'grayRedeem', 'guardian', 'shop', 'profile', 'goals', 'pomodoro', 'focus', 'lastRemind', 'reminderStrikes', 'settings']) delete out[k];
+    for (const k of ['fired', 'snooze', 'bonus', 'mits', 'diary', 'reviews', 'makeups', 'grayRedeem', 'guardian', 'shop', 'profile', 'goals', 'pomodoro', 'focus', 'lastRemind', 'reminderStrikes', 'settings', 'overwrite', 'sin']) delete out[k];
     return out;
   }
   // 先记下契约项目 id：下面 normal 分支会清空 contractProjects，闭包再读就判断不出来了
@@ -1052,19 +1143,15 @@ function filterDataByScope(src, scope) {
   }
   out.log = log;
   if (scope !== 'all') {
-    for (const k of ['fired', 'snooze', 'bonus', 'mits', 'diary', 'reviews', 'makeups', 'grayRedeem', 'guardian', 'shop', 'profile', 'goals', 'pomodoro', 'focus', 'lastRemind', 'reminderStrikes', 'settings']) delete out[k];
+    for (const k of ['fired', 'snooze', 'bonus', 'mits', 'diary', 'reviews', 'makeups', 'grayRedeem', 'guardian', 'shop', 'profile', 'goals', 'pomodoro', 'focus', 'lastRemind', 'reminderStrikes', 'settings', 'overwrite', 'sin']) delete out[k];
   }
   return out;
 }
-function importDataObj(obj, mode, scope) {
-  const inc = normalize(filterDataByScope(obj, scope));
-  const stats = { plans: 0, logs: 0, goals: 0, contracts: 0, shop: 0, mode: mode === 'replace' ? '覆盖' : '合并' };
-
+/* 合并 / 覆盖的数据落地部分（不保存、不广播，由 importDataObj 统一收口） */
+function mergeInto(inc, mode, scope, stats) {
   if (mode === 'replace' && (!scope || scope === 'all')) {
     data = inc;
-    saveNow();
-    emitState();
-    return { ok: true, message: `已覆盖为本机数据：${data.plans.length} 个计划`, stats };
+    return stats;
   }
 
   if (mode === 'replace') {
@@ -1125,20 +1212,183 @@ function importDataObj(obj, mode, scope) {
   const histKeys = new Set(data.shop.history.map((h) => JSON.stringify(h)));
   for (const h of inc.shop.history || []) { const k = JSON.stringify(h); if (!histKeys.has(k)) { data.shop.history.push(h); histKeys.add(k); } }
 
-  saveNow();
-  emitState();
+  return stats;
+}
+
+/* 导入主流程：
+ * 新增计划按「普通新建」扣分、被覆盖掉的按「删除计划」扣分；
+ * 只打开编辑不扣分不应用；覆盖必须过审讯，点确认才扣刺 + 记逃兵标签 + 加密留痕。 */
+function importDataObj(obj, mode, scope, opts) {
+  const o = opts || {}, m = PO(), now = Date.now();
+  const inc = normalize(filterDataByScope(obj, scope));
+  const stats = { plans: 0, logs: 0, goals: 0, contracts: 0, shop: 0, mode: mode === 'replace' ? '覆盖' : '合并' };
+  /* 只打开编辑：不扣分、不应用、不记账、不进审讯 */
+  if (m && m.isInspect(mode)) return Object.assign({}, m.inspectResult(), { stats });
+  /* 核心模块没加载 / 同步码老通道：走原来的导入逻辑，不审讯、不扣刺 */
+  if (!m || o.legacy) {
+    mergeInto(inc, mode, scope, stats);
+    saveNow(); emitState();
+    return { ok: true, message: '导入完成', stats };
+  }
+  const isReplace = mode === 'replace';
+  const diff = m.diffPlans(data.plans, inc.plans, mode, scope);
+  const ctx = {
+    whitelist: data.guardian.whitelist || [], normProc: (x) => String(x || '').toLowerCase(),
+    points: data.profile.points || 0, aciLevel: 1, at: now, source: o.source || '',
+  };
+  const cost = m.baseCost(diff, ctx);
+  const plan = m.assess(data.overwrite, diff, ctx, now);
+  /* 五套皮肤利弊倍率（与桌面端同一份 PQPerk 纯函数） */
+  const skinId = (typeof window !== 'undefined' && window.PQBuddy && typeof window.PQBuddy.currentSkin === 'function')
+    ? window.PQBuddy.currentSkin() : '';
+  const shaped = PK() ? PK().shapePlan(plan, skinId, ctx) : null;
+  const effPlan = shaped ? shaped.plan : plan;
+  if (isReplace && !o.confirmed) {
+    return {
+      ok: false, needConfirm: true, message: '阿刺拦下来了：先过审讯',
+      interrogation: m.interrogation(diff, effPlan, cost, ctx),
+      preview: { adds: diff.adds, removes: diff.removes, pointsCut: effPlan.pointsCut,
+        expCut: effPlan.expCut, energyCut: effPlan.energyCut, tier: effPlan.tier, count: effPlan.count,
+        lock: effPlan.lock, demote: effPlan.demote, skin: skinId, pointsCutRaw: effPlan.pointsCutRaw },
+    };
+  }
+  /* 文件别想把逃兵账本 / 顶罪账本一起覆盖掉 */
+  const savedOverwrite = m.normalizeState(data.overwrite);
+  const savedSin = PK() ? PK().normalizeSin(data.sin) : null;
+  const vaultPayload = (isReplace && diff.removes > 0) ? m.vaultPayload(data, diff, ctx, now) : null;
+  mergeInto(inc, mode, scope, stats);
+  data.overwrite = savedOverwrite;
+  if (savedSin) data.sin = savedSin;
+  let verdict, pun, cover = null;
+  if (isReplace) {
+    /* 系统正要报「扣除 N 积分」—— 阿刺按自己心情决定跳不跳出来扛。
+     * 无开关、无请求入口、界面不摆概率；命中则实扣 0，改扣他自己的能量。 */
+    const cutTotal = effPlan.pointsCut + cost.points;
+    if (PK()) {
+      /* 删除 / 覆盖 .pqplan：心情先 −2，再拿新心情算顶罪概率 */
+      data.sin = PK().applyMood(data.sin, 'overwrite', { source: o.source || '' }, now).sin;
+      /* 第二版分皮肤心情：删档也记到当前皮肤账本 */
+      if (PK().skinProfile && PK().skinProfile(skinId)) {
+        const sr = PK().applySkinMood(data.sin, skinId, 'overwrotePlanFile', { source: o.source || '' }, now);
+        if (sr) data.sin = sr.sin;
+      }
+      const coverCtx = {
+        at: now, pointsCut: cutTotal, skin: skinId,
+        energy: data.sin.energy || 0, favor: data.sin.favor || 0,
+        weekRate: 60, lowDays: 0, deserter: !!data.overwrite.deserter,
+        disappointed: false, recentChats: 3,
+        streakDays: Number((data.profile && data.profile.streak) || 0),
+      };
+      cover = (PK().skinProfile && PK().skinProfile(skinId))
+        ? PK().decideSkinCover(data.sin, coverCtx, Math.random)
+        : PK().decideCover(data.sin, coverCtx, Math.random);
+      data.sin = PK().commitCover(data.sin, cover, now);
+      if (PK().commitSkinCover) data.sin = PK().commitSkinCover(data.sin, cover, now);
+      if (PK().recordCover) data.sin = PK().recordCover(data.sin, cover, now);
+      if (cover.covered) {
+        data.sin.energy = Math.max(0, (data.sin.energy || 0) - cover.energyCost);
+        data.sin.favor = (data.sin.favor || 0) - cover.favorDrop;
+      }
+    }
+    const costToApply = (cover && cover.covered) ? Object.assign({}, cost, { points: 0 }) : cost;
+    const planToApply = (cover && cover.covered) ? Object.assign({}, effPlan, { pointsCut: 0 }) : effPlan;
+    data.overwrite = m.commit(data.overwrite, planToApply, diff, ctx, now);
+    const effect = m.penalize(data, planToApply, costToApply);
+    try {
+      data.discipline = data.discipline || {};
+      data.discipline.desert = data.discipline.desert || { count: 0, lastAt: 0 };
+      data.discipline.desert.count = (data.discipline.desert.count || 0) + 1;
+      data.discipline.desert.lastAt = now;
+    } catch (_) {}
+    verdict = m.verdict(effPlan, diff, cost, ctx);
+    pun = { tier: effPlan.tier, count: effPlan.count, pointsCut: effect.pointsCut,
+      pointsCutRaw: cutTotal, covered: !!(cover && cover.covered),
+      expCut: effPlan.expCut, energyCut: effPlan.energyCut, lock: effPlan.lock,
+      lockUntil: data.overwrite.lockUntil, demote: effPlan.demote, deserter: true, tag: m.RULES.TAG,
+      adds: diff.adds, removes: diff.removes, addCost: cost.addCost, delCost: cost.delCost };
+  } else {
+    if (cost.points) setProfilePoints((data.profile.points || 0) - cost.points);
+    verdict = { say: m.fill(m.LINES.merge, { adds: diff.adds, cost: cost.points }),
+      mood: 'sideeye', toast: '合进来了，按新建规矩扣了 ' + cost.points + ' 积分' };
+    pun = { tier: 0, pointsCut: cost.points, adds: diff.adds, removes: 0, addCost: cost.addCost, delCost: 0 };
+  }
+  saveNow(); emitState();
   const scopeName = scope === 'normal' ? '普通计划' : scope === 'contract' ? '契约计划' : '全部内容';
   return {
-    ok: true,
-    message: `${mode === 'replace' ? '覆盖' : '合并'}导入完成（${scopeName}）：新增计划 ${stats.plans} · 合并打卡 ${stats.logs}`,
-    stats,
+    ok: true, applied: true, mode: isReplace ? 'replace' : 'merge',
+    message: `${isReplace ? '覆盖' : '合并'}导入完成（${scopeName}）：新增 ${diff.adds} · 合并打卡 ${stats.logs}` +
+      (isReplace ? ' · 扣 ' + pun.pointsCut + ' 积分' : '') +
+      (isReplace && cover && cover.covered ? '（阿刺自己扛了，实扣 0）' : ''),
+    /* 无论顶不顶罪，台词都随当前心情档变化 */
+    say: verdict.say + (cover && cover.line ? '\n' + cover.line : '') +
+      (cover && cover.moodLine && cover.moodLine !== cover.line ? '\n' + cover.moodLine : ''),
+    mood: (cover && cover.covered) ? 'smirk' : verdict.mood,
+    toast: (cover && cover.covered) ? cover.toast : (verdict.toast || ''),
+    cover: cover ? {
+      covered: cover.covered, reason: cover.reason,
+      systemNotice: PK() ? PK().fill(PK().LINES.systemNotice, { cut: (pun && pun.pointsCutRaw) || (cover && cover.cut) || 0 }) : '',
+      line: cover.line, moodLine: cover.moodLine || '', mood: cover.covered ? 'smirk' : 'sideeye',
+    } : null,
+    punish: pun, vaultPayload: vaultPayload, state: m.publicState(data.overwrite, now),
+    sin: PK() ? PK().publicSin(data.sin, now, skinId) : null, stats,
   };
+}
+
+/* 心情事件（网页 / 安卓）：只上报「发生了什么」，涨不涨、扛不扛由阿刺自己定。
+ * 没有开关、没有 force / request 入口，界面也不摆概率。 */
+if (typeof window !== 'undefined') {
+  window.PQMoodEvent = function (ev, ctx) {
+    const m = PK();
+    if (!m) return null;
+    const now = Date.now(), sk = skinNow();
+    const r = m.applyMood(data.sin, String(ev || ''), ctx || {}, now);
+    data.sin = r.sin;
+    /* 第二版：同步更新分皮肤心情 */
+    const skEvent = SKIN_MOOD_EVENT[ev];
+    if (sk && skEvent && m.skinProfile && m.skinProfile(sk)) {
+      const sr = m.applySkinMood(data.sin, sk, skEvent, ctx || {}, now);
+      if (sr) data.sin = sr.sin;
+    }
+    saveNow();
+    return r;
+  };
+}
+/* 启动结算：连续两天未登录 / 超 48h 不互动 / 凌晨恢复（负值 +1 / 各皮肤独立恢复） */
+function moodBoot() {
+  const m = PK();
+  if (!m) return;
+  const before = JSON.stringify(m.normalizeSin(data.sin));
+  const r = m.bootSettle(data.sin, {}, Date.now());
+  data.sin = r.sin;
+  if (m.skinDailyRecover) {
+    const d = m.skinDailyRecover(data.sin, Date.now());
+    data.sin = d.sin;
+  }
+  if (JSON.stringify(m.normalizeSin(data.sin)) !== before) saveNow();
+}
+
+/* 加密备份索引写回（密文由 api-bridge 用 AES-GCM 存 localStorage） */
+function pushVaultIndex(idx) {
+  const m = PO();
+  if (!m || !idx) return;
+  data.overwrite = m.pushVault(m.normalizeState(data.overwrite), idx);
+  saveNow();
+}
+/* 启动翻旧账：读一次即销账 */
+function overwriteBoot() {
+  const m = PO();
+  if (!m) return { line: '', mood: '', state: null };
+  const b = m.takeBoot(data.overwrite, Math.random);
+  data.overwrite = b.state;
+  if (b.line) saveNow();
+  return { line: b.line, mood: b.mood, entry: b.entry || null, state: m.publicState(data.overwrite, Date.now()) };
 }
 
 function importData(codeText, mode) {
   let incoming;
   try { incoming = decodeSyncCode(codeText); } catch (e) { return { ok: false, message: e.message }; }
-  return importDataObj(incoming, mode);
+  /* 同步码是老通道，不走 .pqplan 覆盖审讯与扣刺 */
+  return importDataObj(incoming, mode, 'all', { legacy: true });
 }
 
 /* ---------------- 计划文件（.pqplan 专用格式） ----------------
@@ -1536,5 +1786,6 @@ loadData();
 bootMinutes = nowMinutes();
 bootMinutes = nowMinutes();
 ensureShopDefaults();
+try { moodBoot(); } catch (_) {}
 setInterval(reminderTick, 30 * 1000);
 setTimeout(reminderTick, 3000);

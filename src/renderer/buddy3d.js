@@ -151,8 +151,10 @@
     var matPot = new T.MeshStandardMaterial({ color: pal.pot.clone(), roughness: 0.92, metalness: 0.0, side: T.DoubleSide });
     var matRim = new T.MeshStandardMaterial({ color: pal.potRim.clone(), roughness: 0.86, metalness: 0.0, side: T.DoubleSide });
     var matSoil = new T.MeshStandardMaterial({ color: pal.soil.clone(), roughness: 1.0, metalness: 0.0 });
-    var matSpine = new T.MeshStandardMaterial({ color: new T.Color('#cfe0a4'), roughness: 0.55, metalness: 0.0 });
+    var matSpine = new T.MeshStandardMaterial({ color: new T.Color('#cfe0a4'), roughness: 0.55, metalness: 0.0, emissive: new T.Color('#000000') });
     var matEyeWhite = new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.28, metalness: 0.0 });
+    /* 上眼皮：跟皮肤同色，压下来就是半睁眼／不耐烦 */
+    var matLid = new T.MeshStandardMaterial({ color: pal.skin.clone(), roughness: 0.7, metalness: 0.0 });
     var matPupil = new T.MeshStandardMaterial({ color: new T.Color('#1b2130'), roughness: 0.18, metalness: 0.1 });
     var matGloss = new T.MeshBasicMaterial({ color: 0xffffff });
     var matBrow = new T.MeshStandardMaterial({ color: new T.Color('#1b2130'), roughness: 0.6, transparent: true, opacity: 0 });
@@ -226,6 +228,8 @@
      */
     var bodyGroup = new T.Group();
     swayGroup.add(bodyGroup);
+    /* 身上这批刺，被戳/被逗时整体抖一下（扎人反馈） */
+    var spikeMeshes = [];
     var matLeaf = new T.MeshStandardMaterial({ color: new T.Color('#3f8a5a'), roughness: 0.72, metalness: 0.0 });
     var BODY = { id: 'cactus', faceY: 1.28, faceZ: 0.289, eyeGap: 0.108, faceScale: 1, mouthDY: 0.185, flowerY: 1.805 };
 
@@ -252,6 +256,7 @@
       });
       inst.instanceMatrix.needsUpdate = true;
       bodyGroup.add(inst);
+      spikeMeshes.push(inst);
     }
     function v3(x, y, z) { return new T.Vector3(x, y, z); }
 
@@ -487,6 +492,7 @@
     };
     function buildBody(id) {
       clearGroup(bodyGroup);
+      spikeMeshes.length = 0;
       (BODY_BUILDERS[id] || buildCactusBody)();
     }
     buildBody('cactus');
@@ -507,6 +513,14 @@
       var gl2 = new T.Mesh(new T.SphereGeometry(0.009, 10, 8), matGloss);
       gl2.position.set(sign * 0.016, -0.015, 0.086);
       g.add(gl2);
+      /* 上眼皮（球冠）：平时藏在眼睛上方，lid 越大压得越低 = 半睁眼 */
+      var lid = new T.Mesh(new T.SphereGeometry(0.0945, 26, 16, 0, Math.PI * 2, 0, Math.PI * 0.62), matLid);
+      lid.position.set(0, 0.118, 0.004);
+      lid.visible = false;
+      g.add(lid);
+      g.userData.pupil = pupil;
+      g.userData.lid = lid;
+      g.userData.sign = sign;
       return g;
     }
     var eyeL = eyeGroup(-1), eyeR = eyeGroup(1);
@@ -658,8 +672,26 @@
       disappointed: { eyeY: 0.5, brow: 0.75, browTilt: -0.9, mouthRot: 0.3, mouthSX: 0.82, mouthSY: 0.6, blush: 0, tint: '#6f7d78', spine: '#8a938c', droop: 0.28, flower: 0.55, glow: 0.04 },
       /* 战斗态：通体泛红、刺竖起、花冠张开、核心高亮 */
       fight:        { eyeY: 1.15, brow: 1, browTilt: -0.6, mouthRot: 0.1, mouthSX: 1.12, mouthSY: 0.95, blush: 0.5, tint: '#e0554f', spine: '#ffd08a', droop: -0.1, flower: 1.2, glow: 0.72 },
+
+      /* ---- 不爽的微表情：形象定死不能换，就得靠这些撑住人设 ---- */
+      /* 半睁眼：眼皮压到一半，嘴角往下挂一点——「又来了」 */
+      annoyed:      { eyeY: 0.92, brow: 0.55, browTilt: -0.5, mouthRot: 2.75, mouthSX: 0.95, mouthSY: 0.8, blush: 0.08, droop: 0.05, glow: 0.16, lid: 0.44, corner: -0.14 },
+      /* 斜眼笑：眼珠往一边瞟 + 一边嘴角翘，嘲讽值拉满 */
+      sideeye:      { eyeY: 0.82, brow: 0.5, browTilt: 0.4, mouthRot: Math.PI - 0.5, mouthSX: 1.0, mouthSY: 0.8, blush: 0.18, droop: 0, glow: 0.26, lid: 0.3, pupilX: 0.03, corner: 0.26, tilt: 0.05 },
+      /* 翻白眼：眼珠往上翻，嘴抿成一条不情愿的横线 */
+      eyeroll:      { eyeY: 0.98, brow: 0.68, browTilt: -0.25, mouthRot: 3.0, mouthSX: 0.85, mouthSY: 0.55, blush: 0.06, droop: 0.03, glow: 0.16, lid: 0.08, pupilY: 0.034, corner: -0.05 },
+      /* 撇嘴：眉头拧着、嘴歪到一边——嫌弃本人 */
+      pout:         { eyeY: 0.95, brow: 0.7, browTilt: -0.85, mouthRot: 2.95, mouthSX: 0.85, mouthSY: 0.6, blush: 0.05, droop: 0.1, glow: 0.12, lid: 0.24, corner: -0.35 },
     };
-    var cur = { eyeY: 1, brow: 0, browTilt: 0, mouthRot: Math.PI, mouthSX: 1, mouthSY: 1, blush: 0, droop: 0, flower: 1, glow: 0.22 };
+    /* 微表情参数缺省：老 mood 不用逐条补 lid/pupil/corner/tilt。
+     * 每个数值字段都必须有缺省——缺一个就会 NaN 污染整条渲染矩阵（黑屏）。 */
+    var MOOD_DEF = {
+      eyeY: 1, brow: 0, browTilt: 0, mouthRot: Math.PI, mouthSX: 1, mouthSY: 1, blush: 0,
+      tint: null, spine: null, droop: 0, flower: 1, glow: 0.22,
+      lid: 0, pupilX: 0, pupilY: 0, corner: 0, tilt: 0,
+    };
+    Object.keys(MOODS).forEach(function (k) { MOODS[k] = Object.assign({}, MOOD_DEF, MOODS[k]); });
+    var cur = { eyeY: 1, brow: 0, browTilt: 0, mouthRot: Math.PI, mouthSX: 1, mouthSY: 1, blush: 0, droop: 0, flower: 1, glow: 0.22, lid: 0, pupilX: 0, pupilY: 0, corner: 0, tilt: 0 };
     var want = MOODS.idle;
     /* 皮肤（头像建模）：基础色/刺色/花瓣色/花冠缩放。
      * 心情的 tint 优先（生气泛红、失望发灰），没心情色时用皮肤底色。 */
@@ -676,6 +708,10 @@
     var mood = 'idle', talkUntil = 0, talkingOn = false;
     var moodUntil = 0;   /* 临时表情多久后自己回到 idle */
     var blink = 0, blinkNext = 2 + Math.random() * 3;
+    /* 微表情：闲着自己翻个白眼／撇个嘴，别当电子盆栽 */
+    var microOn = true, microNext = 5 + Math.random() * 6;
+    /* 扎人反馈：被戳/被逗时刺一抖、身子一缩 */
+    var prickUntil = 0, prickStart = 0;
     var rotY = 0, rotCur = 0, dragging = false, spin = -0.18;
     /* 摇一摇：短促左右甩头 + 原地蹦两下，时间到了自动停 */
     var wiggleUntil = 0;
@@ -693,6 +729,23 @@
       /* 念一段可能好几秒：只要 talkingOn 为 true 就一直张合，talkUntil 只做看门狗 */
       talkUntil = on ? performance.now() + 15000 : 0;
     }
+    /* 眼皮 / 眼珠：微表情的执行层 */
+    function applyEyes() {
+      var l = cur.lid, px = cur.pupilX, py = cur.pupilY;
+      for (var i = 0; i < 2; i++) {
+        var g = i ? eyeR : eyeL;
+        var lidM = g.userData.lid, p = g.userData.pupil;
+        if (lidM) {
+          lidM.visible = l > 0.02;
+          /* 0.118 = 收在眼睛上方看不见；0 = 压过眼睛中线 */
+          lidM.position.y = 0.118 - l * 0.17;
+        }
+        if (p) {
+          p.position.x = g.userData.sign * 0.006 + px;
+          p.position.y = -0.004 + py;
+        }
+      }
+    }
 
     /* ---- 帧循环 ---- */
     var raf = null, last = 0, running = true;
@@ -706,6 +759,7 @@
       frame._t = now;
 
       var t = now / 1000;
+      try {
       /* 平滑趋近目标表情 */
       var k = Math.min(1, dt * 9);
       cur.eyeY += (want.eyeY - cur.eyeY) * k;
@@ -716,6 +770,12 @@
       cur.mouthSY += (want.mouthSY - cur.mouthSY) * k;
       cur.blush += (want.blush - cur.blush) * k;
       cur.droop += (want.droop - cur.droop) * k;
+      /* 微表情参数：眼皮/眼珠/嘴角/歪头 */
+      cur.lid += (want.lid - cur.lid) * k;
+      cur.pupilX += (want.pupilX - cur.pupilX) * k;
+      cur.pupilY += (want.pupilY - cur.pupilY) * k;
+      cur.corner += (want.corner - cur.corner) * k;
+      cur.tilt += (want.tilt - cur.tilt) * k;
       /* 花冠大小只跟皮肤（和等级）走，不随心情变——心情只挂在脸上 */
       cur.flower += (1 - cur.flower) * k;
       cur.glow += (want.glow - cur.glow) * k;
@@ -725,6 +785,7 @@
       matSkin.color.copy(curSkin);
       matSkinDeep.color.copy(curSkin).multiplyScalar(0.62);
       matSpine.color.copy(curSpine);
+      matLid.color.copy(curSkin);   /* 眼皮就是皮肤，半睁眼才不突兀 */
       matCore.emissiveIntensity = cur.glow;
 
       /* 眨眼 */
@@ -734,6 +795,8 @@
       var eyeY = cur.eyeY * (1 - Math.sin(blink * Math.PI) * 0.94);
 
       eyeL.scale.y = eyeY; eyeR.scale.y = eyeY;
+      /* 眼皮压下 / 眼珠斜瞟或上翻（半睁眼、斜眼笑、翻白眼都靠这两个） */
+      applyEyes();
       browL.material.opacity = cur.brow; browR.material.opacity = cur.brow;
       browL.rotation.z = 0.16 + cur.browTilt * 0.42;
       browR.rotation.z = -0.16 - cur.browTilt * 0.42;
@@ -752,7 +815,7 @@
         mouthSY *= 0.72 + 0.5 * open;   /* 张嘴时弧线跟着撑开一点 */
       }
       mouthGroup.scale.set(cur.mouthSX, mouthSY, 1);
-      mouthGroup.rotation.z = cur.mouthRot;
+      mouthGroup.rotation.z = cur.mouthRot + cur.corner;   /* 嘴角一挑/一撇 */
       /* 张开时弧线让位、圆盘长出来，看着就是嘴从一条线变成 O。
        * 弧线要「干净地消失」——留一点残影就变成半张嘴，不是圈。 */
       if (open > 0.34) {
@@ -789,9 +852,34 @@
         var jp = (now - jumpStart) / Math.max(1, jumpUntil - jumpStart);
         hop += Math.abs(Math.sin(jp * Math.PI * 2)) * 0.17;
       }
+      /* 闲着就自己甩个脸色：半睁眼 / 斜眼笑 / 撇嘴 / 翻白眼，7~15 秒随机一次 */
+      if (microOn && !talkingOn && mood === 'idle' && !moodUntil) {
+        microNext -= dt;
+        if (microNext <= 0) {
+          var pool = ['annoyed', 'sideeye', 'pout', 'eyeroll'];
+          setMood(pool[Math.floor(Math.random() * pool.length)]);
+          moodUntil = now + 1000 + Math.random() * 1100;
+          microNext = 7 + Math.random() * 8;
+        }
+      }
       /* 临时表情到点自己收敛，别一直瞪着 / 一直笑 */
       if (moodUntil && now > moodUntil) { moodUntil = 0; setMood('idle'); }
+
+      /* 扎人反馈：刺一抖、身子一缩、刺尖泛光；越到后面越弱 */
+      var prick = 0;
+      if (now < prickUntil) {
+        var prLeft = (prickUntil - now) / Math.max(1, prickUntil - prickStart);
+        prick = Math.max(0, Math.min(1, prLeft * 1.6)) * (0.55 + 0.45 * Math.abs(Math.sin(now / 26)));
+      }
+      var shakeZ = Math.sin(now / 23) * 0.06 * prick;
+      var shakeX = Math.sin(now / 15) * 0.014 * prick;
+      var bristle = 1 + prick * 0.12;
+      for (var sm = 0; sm < spikeMeshes.length; sm++) spikeMeshes[sm].scale.setScalar(bristle);
+      matSpine.emissive.copy(curSpine).multiplyScalar(prick * 0.55);
+
       root.rotation.y = ((baseRot + wag) * Math.PI) / 180;
+      root.rotation.z = cur.tilt + shakeZ;
+      root.position.x = shakeX;
       root.position.y = hop - Math.max(0, cur.droop) * 0.06; // 蔫巴时整体下沉
       /* droop：垂头（前倾）+ 呼吸幅度变小；精神时略仰头 */
       root.rotation.x = Math.sin(t * 0.42) * 0.012 + cur.droop * 0.22;
@@ -805,6 +893,7 @@
       shadow.scale.setScalar(1 + Math.sin(t * 1.15) * 0.01);
 
       renderer.render(scene, camera);
+      } catch (err) { if (!frame._err) { frame._err = 1; console.error('[buddy3d frame] ' + (err && err.message)); } }
     }
     raf = requestAnimationFrame(frame);
 
@@ -820,6 +909,15 @@
       jump: function (ms) { jumpStart = performance.now(); jumpUntil = jumpStart + (Number(ms) || 1000); },
       /* 带时限的表情：过一会儿自己回到 idle */
       moodFor: function (m, ms) { setMood(m); moodUntil = performance.now() + (Number(ms) || 2400); },
+      /* 扎人反馈：抖刺 + 缩身（被戳、被逗、被拒绝时用），默认 0.7 秒 */
+      prick: function (ms) {
+        var d = Number(ms) || 700;
+        prickStart = performance.now();
+        prickUntil = prickStart + d;
+      },
+      /* 闲时微表情开关（安静/自习时想让它别乱动就关掉） */
+      setMicro: function (on) { microOn = !!on; },
+      isPricking: function () { return performance.now() < prickUntil; },
       /* 战友状态 → 建模：失望时强制蔫巴灰暗造型；战斗时泛红竖刺；否则按心情。
        * 等级越高花冠略大，体现「成长」。 */
       setCompanionState: function (state) {

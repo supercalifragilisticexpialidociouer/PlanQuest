@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8" /><title>五种皮肤 × 冷漠表情</title>
+<style>
+  body{margin:0;background:#0e1020;color:#e9e8ff;font-family:"Microsoft YaHei",sans-serif}
+  #wrap{padding:10px}
+  .row{display:flex;gap:6px;margin-bottom:6px}
+  .cell{width:158px;height:232px;border:1px solid rgba(255,255,255,.12);border-radius:10px;
+        display:flex;flex-direction:column;align-items:center;background:rgba(255,255,255,.03)}
+  .cell canvas{width:158px;height:196px;display:block}
+  .nm{font-size:11px;color:#17cda8;padding:1px 0 5px}
+</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script src="../web/vendor/three.min.js"></script>
+<script src="../web/aci-skin.js"></script>
+<script src="../web/buddy3d.js"></script>
+<script>
+  var EXPR = [['annoyed', '半睁眼'], ['eyeroll', '翻白眼'], ['pout', '撇嘴']];
+  var wrap = document.getElementById('wrap');
+  window.__insts = [];
+  setTimeout(function () {
+    PQSkin.SKINS.forEach(function (sk) {
+      var row = document.createElement('div');
+      row.className = 'row';
+      EXPR.forEach(function (e) { row.appendChild(cell(sk, e)); });
+      wrap.appendChild(row);
+    });
+    document.querySelectorAll('.cell').forEach(function (c) {
+      var g = PQBuddy3D.create(c.querySelector('canvas'));
+      if (!g) return;
+      g.setRotY(-8);
+      if (g.setMicro) g.setMicro(false);
+      g.setCompanionState({ skin: Object.assign({ id: c.dataset.skin }, PQSkin.get(c.dataset.skin).look), mood: c.dataset.mood });
+      window.__insts.push(g);
+    });
+  }, 120);
+  function cell(sk, e) {
+    var d = document.createElement('div');
+    d.className = 'cell';
+    d.dataset.skin = sk.id;
+    d.dataset.mood = e[0];
+    d.innerHTML = '<canvas></canvas><div class="nm">' + sk.emoji + ' ' + sk.name + ' · ' + e[1] + '</div>';
+    return d;
+  }
+</script>
+</body>
+</html>

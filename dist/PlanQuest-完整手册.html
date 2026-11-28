@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PlanQuest · 完整手册</title>
+<style>
+  :root{
+    --ink:#1b1f33; --ink2:#4b5473; --ink3:#7b84a3;
+    --line:#e5e8f2; --bg:#f2f4fa; --card:#ffffff;
+    --brand:#5b4de0; --brand-2:#0fa98c; --warm:#e8833a; --danger:#d94f4f;
+    --soft-brand:#eeecfe; --soft-2:#e6f7f3; --soft-warm:#fdf1e6;
+    --shadow-sm:0 2px 10px rgba(27,31,51,.05);
+    --shadow-md:0 10px 30px rgba(27,31,51,.08);
+    --shadow-lg:0 24px 60px rgba(43,35,97,.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scroll-padding-top:64px}
+  body{
+    font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,-apple-system,sans-serif;
+    color:var(--ink); background:var(--bg); line-height:1.75; -webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:960px;margin:0 auto;padding:0 28px 80px}
+
+
+  /* ---------- 三份文档导航 ---------- */
+  .doc-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:26px 0 8px;position:relative;z-index:2}
+  .doc-nav a{display:block;padding:14px 16px;border-radius:14px;text-decoration:none;
+    background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);color:#fff;
+    transition:background .18s,border-color .18s,transform .12s;}
+  .doc-nav a:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45);transform:translateY(-1px)}
+  .doc-nav a.on{background:rgba(255,255,255,.94);border-color:#fff;color:#241a52}
+  .doc-nav a b{display:block;font-size:15px;letter-spacing:.3px}
+  .doc-nav a span{display:block;font-size:12px;opacity:.78;margin-top:3px;line-height:1.5}
+  @media(max-width:700px){.doc-nav{grid-template-columns:1fr}}
+
+  /* ---------- 封面：极光渐变 + 光斑 ---------- */
+  .hero{
+    margin:0 -28px 40px; padding:70px 56px 58px;
+    background:linear-gradient(132deg,#221a52 0%,#4a3fbf 44%,#0e7a6e 78%,#0fa98c 100%);
+    color:#fff; border-radius:0 0 36px 36px;
+    box-shadow:var(--shadow-lg);
+    position:relative; overflow:hidden;
+  }
+  .hero::before{
+    content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(560px 300px at 88% -8%, rgba(23,205,168,.32), transparent 62%),
+      radial-gradient(420px 260px at -6% 108%, rgba(124,108,255,.38), transparent 60%);
+    pointer-events:none;
+  }
+  .hero::after{
+    content:"🌵"; position:absolute; right:44px; bottom:30px; font-size:64px;
+    opacity:.9; transform:rotate(-6deg); filter:drop-shadow(0 10px 18px rgba(0,0,0,.30));
+  }
+  .logo{
+    display:inline-flex; align-items:center; gap:12px;
+    background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.30);
+    backdrop-filter:blur(6px);
+    padding:7px 16px 7px 9px; border-radius:99px; font-size:13px; font-weight:700; letter-spacing:.4px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
+  }
+  .logo .mark{
+    width:26px;height:26px;border-radius:9px;background:#fff;color:#4a3fbf;
+    display:grid;place-items:center;font-weight:900;font-size:15px;
+    box-shadow:0 4px 10px rgba(0,0,0,.22);
+  }
+  h1{font-size:44px;line-height:1.18;margin:24px 0 14px;font-weight:800;letter-spacing:-.6px;
+     text-shadow:0 2px 24px rgba(0,0,0,.25)}
+  .sub{font-size:16px;color:rgba(255,255,255,.92);max-width:660px;position:relative;z-index:1}
+  .hero-facts{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
+  .fact{
+    background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.24);
+    border-radius:16px; padding:12px 20px; min-width:132px;
+    backdrop-filter:blur(6px); box-shadow:inset 0 1px 0 rgba(255,255,255,.2);
+  }
+  .fact b{display:block;font-size:23px;font-weight:800;letter-spacing:-.3px}
+  .fact span{font-size:12px;color:rgba(255,255,255,.80)}
+
+  /* ---------- 悬浮目录 ---------- */
+  .toc{
+    position:sticky; top:0; z-index:50;
+    margin:0 -28px 34px; padding:10px 28px;
+    background:rgba(246,247,251,.88); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+    display:flex; flex-wrap:wrap; gap:7px;
+  }
+  .toc a{
+    font-size:12.5px; font-weight:700; color:var(--ink2); text-decoration:none;
+    background:var(--card); border:1px solid var(--line); border-radius:99px; padding:5px 12px;
+    transition:all .15s;
+  }
+  .toc a:hover{color:#fff;background:var(--brand);border-color:var(--brand);transform:translateY(-1px);
+    box-shadow:0 6px 14px rgba(91,77,224,.30)}
+
+  /* ---------- 章节 ---------- */
+  section{margin-bottom:48px}
+  h2{
+    font-size:23px;font-weight:800;letter-spacing:-.2px;
+    display:flex;align-items:center;gap:12px;margin-bottom:6px;
+  }
+  h2 .num{
+    flex:none;width:36px;height:36px;border-radius:12px;color:#fff;
+    background:linear-gradient(135deg,var(--brand),#7c6cff);
+    display:grid;place-items:center;font-size:15px;font-weight:800;
+    box-shadow:0 8px 18px rgba(91,77,224,.30);
+  }
+  .lead{color:var(--ink2);font-size:14.5px;margin:0 0 20px 48px}
+  h3{font-size:16px;font-weight:800;margin:24px 0 8px;color:var(--ink)}
+  p{font-size:14.5px;color:var(--ink2);margin-bottom:12px}
+  strong{color:var(--ink);font-weight:700}
+
+  /* ---------- 卡片 ---------- */
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:22px 24px;box-shadow:var(--shadow-sm);
+    transition:box-shadow .18s,transform .18s;
+  }
+  .card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+
+  .feat{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;
+    box-shadow:var(--shadow-sm); transition:all .18s;
+  }
+  .feat:hover{border-color:color-mix(in srgb,var(--brand) 45%,var(--line));
+    box-shadow:0 12px 28px rgba(91,77,224,.14);transform:translateY(-2px)}
+  .feat h4{font-size:14.5px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .feat p{font-size:13.2px;margin:0;color:var(--ink2);line-height:1.65}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);flex:none;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 18%,transparent)}
+  .dot.g{background:var(--brand-2);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-2) 18%,transparent)}
+  .dot.w{background:var(--warm);box-shadow:0 0 0 3px color-mix(in srgb,var(--warm) 18%,transparent)}
+
+  /* ---------- 表格 ---------- */
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;background:var(--card);
+        border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm)}
+  th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:linear-gradient(180deg,#f5f6fc,#f0f1f9);font-weight:800;font-size:12.5px;color:var(--ink2);letter-spacing:.3px}
+  tr:last-child td{border-bottom:0}
+  tbody tr{transition:background .12s}
+  tbody tr:hover{background:var(--soft-brand)}
+  td:first-child{font-weight:700;color:var(--ink);white-space:nowrap}
+  code{
+    font-family:"Cascadia Mono",Consolas,monospace;font-size:12.5px;
+    background:#f1f2f8;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:#3b3566;
+  }
+
+  /* ---------- 提示条 ---------- */
+  .note{
+    border-left:4px solid var(--brand);background:var(--soft-brand);
+    border-radius:0 14px 14px 0;padding:14px 18px;font-size:13.5px;color:#39316f;margin:14px 0;
+    box-shadow:var(--shadow-sm);
+  }
+  .note.warn{border-color:var(--warm);background:var(--soft-warm);color:#7a4a1c}
+  .note.ok{border-color:var(--brand-2);background:var(--soft-2);color:#12604f}
+
+  /* ---------- 徽章 ---------- */
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;
+    background:#f4f5fb;border:1px solid var(--line);border-radius:99px;padding:5px 12px;color:var(--ink2);
+    transition:all .15s;
+  }
+  .badge:hover{border-color:var(--brand-2);color:var(--brand-2);background:var(--soft-2)}
+
+  /* ---------- 流程 ---------- */
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 4px}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:8px 14px;
+        font-size:13px;font-weight:700;color:var(--ink);box-shadow:var(--shadow-sm)}
+  .arrow{color:var(--brand);font-weight:800}
+
+  ul{margin:6px 0 12px 20px}
+  li{font-size:14.2px;color:var(--ink2);margin-bottom:6px}
+  li b{color:var(--ink)}
+
+  .foot{margin-top:56px;padding:26px 20px;border-top:1px solid var(--line);color:var(--ink3);
+        font-size:12.5px;text-align:center;background:var(--card);border-radius:16px 16px 0 0}
+
+  /* 返回顶部 */
+  .top-btn{
+    position:fixed;right:22px;bottom:22px;z-index:60;width:42px;height:42px;border-radius:50%;
+    background:var(--brand);color:#fff;display:grid;place-items:center;font-size:18px;font-weight:800;
+    text-decoration:none;box-shadow:0 10px 24px rgba(91,77,224,.35);opacity:0;pointer-events:none;
+    transition:opacity .2s,transform .2s;transform:translateY(8px);
+  }
+  .top-btn.show{opacity:1;pointer-events:auto;transform:none}
+  .top-btn:hover{background:#4a3fbf}
+
+  @media print{
+    body{background:#fff}
+    .hero{border-radius:0;box-shadow:none;page-break-after:avoid}
+    .hero::after{font-size:52px}
+    section{page-break-inside:avoid}
+    .card,table,.feat{box-shadow:none}
+    .toc,.top-btn{display:none !important}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ============ 封面 ============ -->
+  <header class="hero">
+    <div class="logo"><span class="mark">P</span>PlanQuest · v2.9</div>
+    <h1>把计划变成奖励，<br />把自律变成一条能看见的曲线</h1>
+    <p class="sub">
+      PlanQuest 是一款「计划打卡 + 自律约束」工具，电脑、网页、手机三端通用：事先排好计划，到点弹窗提醒，
+      完成就打卡拿积分，积分可以兑换自己给自己准备的奖励；不完成则会被提醒、扣分，甚至被强制关掉正在摸鱼的软件。
+      这份《完整手册》按模块讲清每个功能怎么用、数值怎么算、边界在哪——想用透的人才需要它。
+      <strong style="color:#fff">只要三分钟？看《快速上手》；只想看哪个版本改了什么？看《更新日志》。</strong>
+    </p>
+
+    <div class="doc-nav">
+      <a href="PlanQuest-快速上手.html"><b>快速上手</b><span>3 分钟装好、建成第一条计划</span></a>
+      <a href="PlanQuest-完整手册.html" class="on"><b>完整手册</b><span>每个模块怎么用、数值怎么算</span></a>
+      <a href="PlanQuest-更新日志.html"><b>更新日志</b><span>每个版本改了什么</span></a>
+    </div>
+    <div class="hero-facts">
+      <div class="fact"><b>3 端</b><span>Windows / 网页 / 安卓</span></div>
+      <div class="fact"><b>3 个</b><span>本地 AI 模型</span></div>
+      <div class="fact"><b>12</b><span>成就徽章</span></div>
+      <div class="fact"><b>0</b><span>AI 推理联网 / 上传画面</span></div>
+    </div>
+  </header>
+
+  <!-- ============ 1 定位 ============ -->
+  <section>
+    <h2><span class="num">1</span>它到底解决什么问题</h2>
+    <p class="lead">大多数计划软件失败的原因不是功能不够，而是“约束太软”——你随时可以关掉它。</p>
+
+    <p>市面上常见的待办清单，本质是一张“可以随时忽略的纸”。PlanQuest 的设计思路相反：它假设
+      <strong>你的意志力在关键时刻会掉线</strong>，所以把约束做进系统里，用三层机制把人“绑”在计划上：</p>
+
+    <div class="grid g3">
+      <div class="feat">
+        <h4><span class="dot"></span>事前：让计划无法偷偷修改</h4>
+        <p>改计划要输密码，还要扣积分。临时觉得“这个目标太难”想改的时候，成本被明确标价了。</p>
+      </div>
+      <div class="feat">
+        <h4><span class="dot g"></span>事中：让摸鱼有阻力</h4>
+        <p>到点弹窗；忽略就计数，累计扣分；开强制模式后，名单外的软件会被直接关掉。</p>
+      </div>
+      <div class="feat">
+        <h4><span class="dot w"></span>事后：让坚持有回报</h4>
+        <p>打卡给积分、连续打卡加成、全勤额外奖励；积分能兑换真实的放松时间，形成正循环。</p>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>一句话总结：</strong>它不是一个“记事情”的工具，而是一个“帮你把事情做完”的装置——
+      用密码、积分、弹窗和强制关闭，把“明天的我”和“今天的我”签一份带违约金的合同。
+    </div>
+    <div class="note">
+      <strong>版本变化去哪了？</strong>从 v1.1 到 v2.9.4 的逐版说明已经单独成册，请看
+      《<a href="PlanQuest-更新日志.html">PlanQuest-更新日志</a>》。这份手册只讲「现在这个版本怎么用」，
+      不再按版本讲历史——那样每加一个功能就得往前翻半年。
+    </div>
+
+  </section>
+
+  <!-- ============ 2 功能全景 ============ -->
+  <section>
+    <h2><span class="num">2</span>功能全景</h2>
+    <p class="lead">主界面按使用场景分为 8 个页面，覆盖“排计划 → 执行 → 记录 → 复盘 → 奖励”的完整闭环。</p>
+
+    <table>
+      <tr><th style="width:130px">页面</th><th>作用</th><th style="width:240px">关键能力</th></tr>
+      <tr><td>今日</td><td>执行主场：今天该做什么、做到哪一步</td><td>计划打卡 · <b>普通任务 / 契约任务双栏目</b> · 昨日应扣横幅 · 今日三件事 · 番茄钟 · 连续天数</td></tr>
+      <tr><td>计划</td><td>排班表：每周 / 每月哪些天要做哪些事</td><td>重复规则（星期多选开关）· 定时提醒 · 分值设置 · 需密码确认 · 计划内放行软件 · 编辑/关闭均扣分</td></tr>
+      <tr><td>目标</td><td>长期方向：一个目标拆成若干里程碑</td><td>环形进度 · 里程碑勾选 · 截止日 · <b>契约项目（时长/罚金/子任务/独立热度图/每日结算）</b></td></tr>
+      <tr><td>自习</td><td>社交监督：和朋友开一间房一起学，同屋或异地都行</td><td>局域网房间码 · 异地连接码（零服务器）· 会议式语音 · 聊天 · 摄像头测心率 / 自愿共享画面 · 屏幕共享 · 娱乐房</td></tr>
+      <tr><td>军团</td><td>同路人之间搭把手：每几小时一次的匿名考勤互换 + 跨军团 PK</td><td><b>双通道：局域网 / 异地点对点（都不经服务器）</b> · 四态白名单摘要 · 未加入不发包 · 士气三格与热度 · 个人位置仅自己可见 · 翻车救援（点灯 −5 / 领灯 +5）· 军团日志与熔断 · <b>军团 PK：周一自动配对、每日匿名战报、周日结算、徽章收集、赛季制</b></td></tr>
+      <tr><td>守护</td><td>强制模式：管住不该用的软件</td><td>三色名单 · 负分升级 · 密码保护 · 提权 · 整树查杀 · 名单外提醒</td></tr>
+      <tr><td>统计</td><td>把坚持变成看得见的东西</td><td>热力图 · 30 天曲线 · 徽章 · 等级 · 明细导出 · <b>分享海报（微信 / 朋友圈）</b></td></tr>
+      <tr><td>设置</td><td>系统与个性化</td><td>主题 · 自启 · 托盘 · 声音 · 专注模式 · 护眼模式 · 积分商城 · <b>计划文件（.pqplan）</b> · <b>AI 自训练</b> · <b>云同步</b></td></tr>
+      <tr><td>标题栏（常驻）</td><td>任何页面都能用的文件入口</td><td><b>新建</b>空白计划文件 · <b>导入</b>计划文件（合并 / 覆盖）· <b>导出</b>计划文件</td></tr>
+      <tr><td>AI（房间内 / 设置）</td><td>把「是否在摸鱼」变成可判定、可纠正、可训练的本地模型</td><td>闲聊雷达（文字 + 语音转写）· AI 盯学（画面）· 点击徽章纠正 · 一句话训出自己的模型</td></tr>
+      <tr><td>云（设置 → 云同步）</td><td>可选：让打卡数据跟着账号走</td><td>手机号验证码 / WorkBuddy 授权登录 · 本地优先 · 多端自动同步 · 训练集可选上云</td></tr>
+    </table>
+  </section>
+
+  <!-- ============ 3 核心功能 ============ -->
+  <section>
+    <h2><span class="num">3</span>核心功能逐个讲</h2>
+    <p class="lead">下面每个模块都写清了“怎么用”和“背后按什么规则算”，看完就知道数值从哪来。</p>
+
+    <h3>3.1 计划与定时提醒</h3>
+    <p>一个计划包含：标题、图标、重复规则（每天 / 指定星期 / 每月某日）、提醒时间、分值。
+      到点后弹出置顶提醒窗口，按钮有三个：<strong>完成打卡 / 稍后 / 跳过</strong>。</p>
+    <ul>
+      <li><b>稍后：</b>推迟默认 10 分钟（可在设置里改），不扣分。</li>
+      <li><b>忽略：</b>弹窗 60 秒内没处理，记 1 次忽略；某计划累计 <b>5 次</b>忽略，扣 <b>15 积分</b>并清零计数。</li>
+      <li><b>连续提醒：</b>当天没完成的计划，之后每 2 小时再弹一次，避免“早上错过就彻底忘了”。</li>
+      <li><b>防篡改：</b>编辑已经存在的计划需要守护密码，并扣 10 积分；新建计划不扣分。</li>
+      <li><b>星期多选开关：</b>重复日期里每个星期选项都是独立开关——点一次点亮、再点一次熄灭，任意组合。</li>
+      <li><b>暂停也要付代价：</b>关闭计划扣 <b>10 积分</b>，<b>重新启用同样扣 10 积分</b>——
+        否则“关掉再打开”就能白赚一次暂停，等于给自律留了个后门。两次操作都有确认框，余额不足时只扣到 0，不会变负。</li>
+      <li><b>计划内放行软件：</b>每个计划可以附加一组“需要用的软件”，计划时段内放行，但有 <b>1 小时</b>累计额度（见 3.12）。</li>
+    </ul>
+
+    <h3>3.2 打卡积分体系</h3>
+    <p>打卡不是简单 +1，而是带“连续加成”和“全勤奖励”的：</p>
+    <table>
+      <tr><th style="width:180px">来源</th><th>规则</th><th style="width:170px">数值</th></tr>
+      <tr><td>初始积分</td><td>新装或重置数据后自带，不需要打卡就能先去商城兑换</td><td><b>100</b></td></tr>
+      <tr><td>基础分</td><td>计划自身设定的分值（默认 20）</td><td>10 / 20 / 30 可选</td></tr>
+      <tr><td>连续加成</td><td>按当前连续天数 × 2，最高按 10 天封顶</td><td>最多 +20</td></tr>
+      <tr><td>全勤奖励</td><td>当天所有计划全部完成，额外一次性奖励</td><td>+30</td></tr>
+      <tr><td>番茄专注</td><td>每专注 1 分钟折算（不受连续加成影响）</td><td>0.8 分 / 分钟</td></tr>
+      <tr><td>补卡</td><td>补打卡只给一半积分</td><td>基础分 ÷ 2</td></tr>
+      <tr><td>惩罚</td><td>忽略弹窗 / 未授权软件提醒满 5 次</td><td>−15 / 次</td></tr>
+    </table>
+    <div class="note">
+      <strong>🔒 需密码确认的计划：</strong>编辑计划时可以给任意计划勾选「需密码确认」。这类计划点「打卡」后
+      先记为 <b>已打卡 · 待验证</b>（打卡窗口立即关闭，此时尚不发放积分），需要再点旁边的
+      <b>验证</b> 按钮并输入守护密码，通过后才真正完成、发放积分；密码不对则保持待验证状态。
+      待验证状态随时可以撤销，不损失积分——防止「顺手点掉」别人代打。
+    </div>
+
+    <div class="note">
+      <strong>🖼️ 分享海报 = 邀请函，不是成绩单：</strong>「成就」页和设置页都能生成。
+      海报只写<strong>「你做了什么」</strong>：连续专注多少天、本周帮过几个战友、完成几个挑战、最长一次坐了多久、
+      今天在做的事——这五项默认<b>全部关闭</b>，逐项勾选才画进图片，没勾的数据根本不参与绘制（不是打码遮盖），
+      计划名还能选「打码」只留首字。<br/>
+      <b>不写「你多牛」：</b>信誉等级、具体分数、排名、可借额度这四类一律不出现，不是遮起来，
+      是这些数据<strong>根本不会传进绘制代码</strong>。<br/>
+      <b>底部是邀请：</b>「扫码加入我的自习室」+ 二维码，码里带邀请码与过期时间，<b>24 小时有效</b>；
+      过期后再扫会直接告诉你「邀请已过期」。海报上的署名可以单独填<b>别名</b>（存本机），跟账号昵称没关系。<br/>
+      安卓 App 里可分享给微信好友或朋友圈，电脑版会复制邀请链接并保存海报图片。
+    </div>
+
+    <h3>3.2.1 信誉分：刷不出来的「人品分」</h3>
+    <p>积分能靠打卡挣，信誉分不行。它和<strong>积分借贷共用同一个分数</strong>（默认 100，范围 0～160），
+      只认<strong>事后能验证的行为</strong>，每天同类事件还有绝对上限——想靠反复操作刷分，刷不动。</p>
+    <p><b>三支柱</b>（成就页「信誉分」卡片里实时显示近 30 天增减）：诚实度 / 联盟贡献 / 成长。</p>
+    <table>
+      <tr><th style="width:120px">维度</th><th>加分（需验证）</th><th style="width:200px">扣分</th></tr>
+      <tr><td><b>① 翻案诚实</b></td>
+        <td>翻案经<strong>房间同学认可</strong>、相似佐证或冷静期复核成立 → <b>+3</b></td>
+        <td>被房间多数否决、或翻案后 10 分钟内又被判 3 条闲聊（行为回溯打脸）→ <b>-8</b></td></tr>
+      <tr><td><b>② 举报精准</b></td>
+        <td>举报经房内 <strong>≥3 位不同同学</strong>同时举报并核实 → 举报者 <b>+4</b></td>
+        <td>7 天内 5 次举报 0 次核实 → 标记<strong>恶意举报者</strong>，<b>-10</b>，举报权重降为 0；被核实违规者 <b>-2 起</b></td></tr>
+      <tr><td><b>③ 贷款守约</b></td>
+        <td>按时连本带利还清 → <b>+10</b>，额度翻倍、利率下调</td>
+        <td>逾期 → <b>-30</b>、额度腰斩、30 天不能借；分数掉到 0 → 直接进<strong>失信期（24 小时）</strong>，不能借分也不能翻案</td></tr>
+      <tr><td><b>④ 联机诚信</b></td>
+        <td>房间里被别人点「🙏 感谢」（对方确认才算）→ <b>+2/次</b>；连续稳定在线 30 分钟 → <b>+1</b></td>
+        <td>被房内 3 人举报并核实（挂机 / 假装专注 / 骚扰）→ <b>-2 起</b></td></tr>
+      <tr><td><b>⑤ 成长突破</b></td>
+        <td>当天全部计划完成（全勤）→ <b>+1</b>；单日专注刷新个人纪录 → <b>+2</b>；从负分爬回正分同样计入</td>
+        <td>—（成长不做惩罚，只奖励真实进步）</td></tr>
+    </table>
+    <p class="muted" style="font-size:13px">防互刷：感谢同一人每天只记一次、每天最多计 3 次；
+      举报必须 3 个不同的人；翻案、举报都要经过房间/行为复核才记分。数据反馈类（问卷、标签准确性）目前只做记录，不参与计分。</p>
+    <p class="muted" style="font-size:13px">信誉分为什么要卡「翻案」这一项？因为翻案是 AI 训练集唯一的人工入口——
+      分数高低决定你的纠正能不能直接进样本。完整链路见 <b>4.5.1 翻案和训练是什么关系</b>。</p>
+
+    <h3>3.2.1b 三档特权：L1 基础 / L2 社交 / L3 荣耀</h3>
+    <p>信誉分不是一个「好看的分数」，它决定你<strong>能做什么</strong>。三档写死在代码里，成就页 · 信誉分卡片里能看到自己
+      已具备哪档、还差多少分：</p>
+    <table>
+      <tr><th style="width:110px">档位</th><th style="width:90px">分数</th><th>已生效的特权</th></tr>
+      <tr><td><b>L1 基础</b></td><td>≥ 80</td>
+        <td><b>翻案权重</b>（分越高越容易被直接采信，不用等别人交叉验证）· <b>每日翻案次数</b>（受限 2 / 普通 5 / 良好 10 / 可信 20）· <b>借分额度</b>（受限 30 / 普通 50 / 良好 80 / 可信 120）</td></tr>
+      <tr><td><b>L2 社交</b></td><td>≥ 100</td>
+        <td><b>自己开军团</b>（低于 100 分只能加入别人的）· <b>争议裁定候选</b>（能被推选为纪律官 / 仲裁员，去裁定别人的争议）</td></tr>
+      <tr><td><b>L3 荣耀</b></td><td>≥ 120</td>
+        <td><b>守约者星标</b>（军团名册里挂 ✦ 与「守约者」称号）</td></tr>
+    </table>
+    <ul>
+      <li><b>额度不是写死的 50：</b>借分额度 = 档位基数 × 还钱记录系数。按时还清 ×2（上限 2.5 倍），逾期 ×0.5，区间 10～200。分数掉档，额度当场跟着降，不用等下次点借分才发现。</li>
+      <li><b>分数掉到 100 以下会失去建团资格，</b>但已建好的军团不会被解散——不搞连坐，成员还在，只是暂时不能新开一个。</li>
+      <li><b>两项还标着「规划中」：</b>自习房优先匹配、抢先体验。没实现就是没实现，界面上写清楚，不冒充已生效。</li>
+      <li><b>分数不能买：</b>商城不卖信誉分，也不用积分兑换。只能靠打卡、守约、帮人、被核实，一点点攒。</li>
+    </ul>
+
+    <h3>3.2.2 新手保护罩：梯度递减，不是开关</h3>
+    <p>「前 7 天全免、第 8 天全责」是断崖：前 7 天养坏习惯，第 8 天一次崩。v2.5 改成<b>逐级收窄的保护罩</b>——只作用于扣分，加分从不打折。</p>
+    <table>
+      <tr><th style="width:130px">天数</th><th style="width:150px">违规容忍度</th><th>说明</th></tr>
+      <tr><td>第 1 天</td><td>完全保护</td><td>只提醒、不扣分。提醒写清楚：「这条规则是为了保护你的专注力，下次再犯就会扣分了。」</td></tr>
+      <tr><td>第 2–3 天</td><td>轻度保护</td><td>扣分按正常值的 <b>50%</b> 计，并在违规后提示「下次将全额扣分」。</td></tr>
+      <tr><td>第 4–7 天</td><td>过渡期</td><td>全额扣分，但<b>信誉分下限为 0</b>——最多扣到 0，不会变负。</td></tr>
+      <tr><td>第 8 天起</td><td>正常规则</td><td>全额扣分，信誉分可为负，进入负分缓冲机制（分级惩罚 + 救赎券）。</td></tr>
+    </table>
+    <ul>
+      <li><b>为什么不用开关：</b>保护罩的目的是「防误伤」，不是「防成长」。梯度让用户每天都比昨天多懂一点规则，而不是在第 8 天被突然清算。</li>
+      <li><b>账本可查：</b>每次扣分都会在信誉账本里标注 <code>shield</code>（full / half / soft / normal），扣没扣、扣了几成，一目了然。</li>
+      <li><b>不做「免罪金牌」：</b>保护罩只减轻惩罚，不会把违规记录抹掉；累犯照样进小黑屋、照样影响军团发言资格。</li>
+    </ul>
+
+    <h3>3.3 番茄钟与「今日三件事」</h3>
+    <p>番茄钟支持自定义专注时长与休息时长，结束后自动把专注分钟计入当日统计并结算积分。
+      页面上的「今日三件事」是每天最重要的三件小事，可以随时勾选、删除，只影响当天，不进入计划体系——
+      用来承接那些“不值得排进日程但今天必须做掉”的事。</p>
+
+    <h3>3.4 目标系统（里程碑拆解）</h3>
+    <p>计划解决“今天做什么”，目标解决“三个月后想成为什么样的人”。一个目标 = 标题 + 总里程碑数 + 截止日，
+      每个里程碑可以单独勾选完成，页面上用<strong>环形进度条</strong>显示完成比例。适合“读完 12 本书”
+      “跑完 100 公里”这类需要长期累积的方向。</p>
+
+    <h3>3.5 契约模式（带押金的自律挑战）</h3>
+    <p>给自己定一个挑战：周期（比如 21 天）、押金金额、见证人（家人或朋友）。
+      每天打卡成功就记录一次；漏了就记一笔该付的钱。它把“对自己负责”升级成“对别人负责”——
+      被人盯着的承诺，完成率会明显更高。（v2.1 起契约模式改为「契约项目」，见 3.21；
+      v2.2 起旧版「邀请见证人发红包」的入口已移除，只保留项目制玩法。）</p>
+
+    <h3>3.6 补卡、小结与复盘</h3>
+    <div class="grid g3">
+      <div class="feat"><h4><span class="dot"></span>补卡</h4><p>每月限 <b>3 次</b>，需要填理由，只给一半积分。承认人会失误，但不允许随意洗白。</p></div>
+      <div class="feat"><h4><span class="dot g"></span>每日小结</h4><p>记录当天心情与一段文字，形成个人日记流，回看时能看出情绪与执行力的关系。</p></div>
+      <div class="feat"><h4><span class="dot w"></span>每周复盘</h4><p>按周给整体打分，并列出下周要改进的 2～3 条具体动作，避免“原地努力”。</p></div>
+    </div>
+
+    <h3>3.7 数据可视化与导出</h3>
+    <ul>
+      <li><b>月度热力图：</b>像 GitHub 贡献图一样，用颜色深浅显示每天完成度，坚持与否一目了然。</li>
+      <li><b>30 天折线图：</b>看完成率的趋势，而不是只看某一天。</li>
+      <li><b>打印日历：</b>导出可打印的月度日历，勾选框留在纸上，保留“纸质打勾”的手感。</li>
+      <li><b>CSV 导出：</b>打卡明细可直接用 Excel 打开做二次分析；另支持完整数据导出。</li>
+    </ul>
+
+    <h3>3.8 徽章与等级</h3>
+    <p>共 12 枚徽章，覆盖“第一次 / 连续 / 全勤 / 积分 / 累计次数 / 早起”几个维度：</p>
+    <div class="badges">
+      <span class="badge">🌱 第一步</span>
+      <span class="badge">🔥 三日之火</span>
+      <span class="badge">⚡ 一周不断</span>
+      <span class="badge">👑 月度王者</span>
+      <span class="badge">🎯 全勤日</span>
+      <span class="badge">🏅 全勤达人</span>
+      <span class="badge">💎 积分新星</span>
+      <span class="badge">🚀 积分大师</span>
+      <span class="badge">🏆 五十次</span>
+      <span class="badge">🌟 初出茅庐</span>
+      <span class="badge">🥋 自律达人</span>
+      <span class="badge">🌅 晨型人</span>
+    </div>
+    <p style="margin-top:12px">等级按积分累计递进：升到下一级所需的积分逐级放大（<code>需求 = 上一级 × 1.28</code>），
+      所以越往后越难，也越值钱。等级只升不降，不会因为某天没打卡被“打回原形”。</p>
+
+    <h3>3.9 积分商城（把积分花出去）</h3>
+    <p>积分如果只能攒不能花，激励会失效。商城里可以自定义奖励：游戏时间、看剧时间、零食、睡懒觉……
+      其中「时长类」奖励兑换后会给一张<strong>娱乐券</strong>，在有效期内自动放行灰名单软件——
+      也就是“用自律换来的放松，理直气壮”。</p>
+    <div class="note">
+      <b>奖励定价规则：</b>普通奖励 <b>≥ 10 积分</b>起步；娱乐券（放行灰名单的时长类奖励）含金量更高，
+      <b>≥ 50 积分</b>起步。同时<strong>添加和删除奖励都需要验证守护密码</strong>——
+      防止半途把贵价奖励改成便宜货，或把“刑具”悄悄下架。
+    </div>
+
+    <h3>3.10 自习房与娱乐房（局域网多人）</h3>
+    <p>同一局域网内不需要服务器，也不用登录：一个人开房拿到 4 位房间码，其他人输入房间码或直接从
+      自动发现的房间列表里加入。</p>
+    <ul>
+      <li><b>自习房：</b>显示每位成员的专注状态与今日专注分钟数，可以发消息互相打气。</li>
+      <li><b>摄像头测心率：</b>用摄像头做非接触式心率检测（rPPG），测到的 BPM 与信号质量会同步给同房间的人看，
+        但<strong>画面不会离开你的电脑</strong>。</li>
+      <li><b>摄像头自愿分享：</b>想给别人看画面的话，可以自己在房间里点「开摄像头」——
+        画面以低分辨率、低帧率的缩略图形式经房主中继发给房间成员，成员卡片下方会出现你的小画面条；
+        随时可以关掉，别人无法未经你同意看到画面。</li>
+      <li><b>屏幕自愿共享：</b>点「共享屏幕给房间」会先弹出画面源选择器（整个屏幕，或某一个窗口，带实时缩略图），
+        选定后以<strong>约 1 帧/秒、宽 800 的低清画面</strong>经房主中继发给房间成员。
+        <ul style="margin-top:6px">
+          <li>只有你主动选择并授权后才会共享；不点按钮，任何人都看不到你的屏幕；</li>
+          <li>本应用自己的窗口不会出现在候选列表里，避免"自己看自己"的套娃画面；</li>
+          <li>随时点「停止共享屏幕」立即中断，用系统自带的停止共享按钮也能同步收尾；</li>
+          <li>退出房间、娱乐房时间到、房间关闭时自动停止，不会残留后台抓屏。</li>
+        </ul>
+      </li>
+      <li><b>发言管理：</b>房主可以禁言/解禁成员；系统也会自动检测违规词、刷屏、重复发言并临时禁言。</li>
+      <li><b>娱乐房：</b>用积分兑换时长（单次最长 2 小时），可以拉人进来一起玩；娱乐房期间灰名单自动放行，
+        时间到自动结束。加入娱乐房同样需要消耗积分，避免“免费摸鱼”。</li>
+    </ul>
+
+    <h3>3.11 异地联机：直连（WebRTC）还是中转（服务器），你自己选</h3>
+    <p>不在同一个 WiFi 下的人要连起来，数据只有两条路可走：<b>两个人之间直接传</b>（WebRTC 点对点），
+      或者<b>经一台服务器转发</b>（TURN 中继）。软件两条都支持，界面一样、连接码一样，
+      差别只在「数据走哪条路」——而这条路的取舍，决定了延迟、连通率和隐私。</p>
+    <table>
+      <tr><th style="width:150px">对比项</th><th>WebRTC 直连（P2P）</th><th>服务器中转（TURN）</th></tr>
+      <tr><td><b>数据怎么走</b></td><td>双方之间点对点直传，中间没有第三方</td><td>先进中继服务器，再由它转给对方</td></tr>
+      <tr><td><b>延迟</b></td><td>最低，物理上少一跳</td><td>多一跳，通常多 20–80 毫秒；中继在国外会更久</td></tr>
+      <tr><td><b>连通率</b></td><td>普通家庭宽带基本都行；公司 / 学校 / 部分移动网络的严格 NAT 下可能打不通</td><td>只要服务器连得上就能通，再严的防火墙也不怕</td></tr>
+      <tr><td><b>对方能看到什么</b></td><td>能看到你的公网 IP（属于「暴露身份」级别的信息）</td><td>只看到中继地址；你的 IP 藏在中继后面</td></tr>
+      <tr><td><b>服务器能看到什么</b></td><td>没有服务器，没人看</td><td>知道「谁在跟谁连、传了多大流量」；<b>内容仍是密文</b>，解不开</td></tr>
+      <tr><td><b>成本</b></td><td>零成本，不依赖任何服务</td><td>内置公共中继免费但不保证稳定；自建要一台小机器 + 带宽</td></tr>
+      <tr><td><b>适合谁</b></td><td>熟人之间、家里网络、追求最快和最干净</td><td>公司 / 学校网络、移动网络、给不熟的人开门</td></tr>
+    </table>
+    <ul>
+      <li><b>默认是「直连优先」：</b>先试着打洞直连，8 秒没打通就自动落到中继（12 秒内完成）。
+        用户什么都不用点，能直连就直连，直连不了也能进房间。</li>
+      <li><b>也可以强制纯中继：</b>设置 →「联机异地设置」里选<b>纯中继</b>，所有流量都走服务器。
+        适合「我不想让任何人看到我的 IP」或「公司网络怎么都打不通」的情况；代价是多一跳延迟。</li>
+      <li><b>中继服务器可以换成自己的：</b>留空用内置公共中继；自建 coturn 就填自己的地址和凭据，
+        凭据只存本机。介意「流量经过别人的机器」的人，这条是唯一的彻底解法。</li>
+      <li><b>切换后要重新配对一次：</b>连接码里装的是打洞所需的信息，换了路，码也就换了。</li>
+    </ul>
+    <div class="flow">
+      <span class="step">房主建房（6 位房间号）</span><span class="arrow">→</span>
+      <span class="step">生成邀请码 → 微信发出</span><span class="arrow">→</span>
+      <span class="step">朋友粘贴 → 回传回执码</span><span class="arrow">→</span>
+      <span class="step">房主粘贴 → 连上 → 进入房间</span>
+    </div>
+    <ul>
+      <li><b>连接码里装的是什么：</b>WebRTC 的 offer / answer（gzip 压缩 + base64，约 1.4k 字符）。
+        编解码全部在本机完成，<strong>生成和粘贴的过程中一个字节都不上网</strong>。</li>
+      <li><b>星型拓扑：</b>房主做中心，每个成员只连房主；成员之间要说话，由房主转发。
+        直连模式下房主就是「服务器」，中继模式下房主仍然负责转发，只是链路多绕了一跳。</li>
+      <li><b>STUN 可以关：</b>关掉就完全不问公网，「我的地址是什么」这一步也不发出去；
+        但严格网络下更难直连，这时候靠中继兜底。</li>
+      <li><b>「连上」不等于「进房间」：</b>连上后停在「第二步 · 进入房间」，点一下才进会议界面。
+        房主创建成功后会自动问<strong>「是否现在进入房间」</strong>；也可以先独自进房间等人。</li>
+      <li><b>娱乐房同样支持异地：</b>流程一样，创建时扣积分并放行灰名单，倒计时结束全房间自动退出。</li>
+    </ul>
+    <div class="note ok">
+      <strong>两条路的加密是一样的：</strong>WebRTC 的 DataChannel 与音视频强制加密（DTLS-SRTP），
+      军团通道额外用 AES-GCM 端到端加密、密钥随邀请码由你自己发给对方。
+      也就是说：<b>中继服务器看得到「有流量」，看不到「聊了什么」；直连则是根本没人有机会看。</b>
+      第一次连接大约 30 秒，换来的是不注册、不登录、不依赖任何账号体系。
+    </div>
+    <div class="note warn">
+      <strong>怎么选，一句话：</strong>给自己人用、网络正常 → 直连优先（默认，别动）；
+      给不熟的人开门，或在公司 / 学校网络 → 纯中继；
+      「连不上又必须连」→ 先开 STUN，再不行切纯中继；
+      「流量一点都不能经过第三方」→ 自建 coturn，或干脆只用局域网模式。
+    </div>
+
+    <h3>3.11b 军团（同路人互相撑住 · 含跨军团 PK）</h3>
+    <p>军团是给「想一起撑住的人」用的：不是排行榜，没有点名，只有全团共享的士气和几条互相接住的规矩。
+      服务器就是军团主的电脑——<b>局域网走 TCP 行协议，跨网络走 WebRTC 点对点</b>，与自习房异地联机同一套技术，不经任何第三方。</p>
+    <ul>
+      <li><b>两种通道：</b>同一个 WiFi 里房主发 IP + 军团码即可加入；不同网络由房主生成「邀请码」（微信可发），成员回一段「回执码」即配对成功。关过软件要重新配对一次。</li>
+      <li><b>连接方式（设置 → 联机异地设置，二选一）：</b>同时作用于军团异地和自习房/娱乐房的「异地联机」。直连优先——点对点直传，最快、不经任何第三方，严格防火墙下可能连不上；纯中继——全部流量经 TURN 服务器转发，防火墙再严也能连上，多一跳延迟。留空用内置公共中继，自建 coturn 可填自己的，凭据只存本机。切换后需重新配对一次。</li>
+      <li><b>P2P 风险与免责：</b>直连模式靠 NAT 打洞在防火墙上开出通往你电脑的直连通道，外部设备有可能借此发送恶意数据包——软件已做两层防护（WebRTC 强制 DTLS 加密 + 消息白名单，非本协议的数据包一律丢弃），但不能替代杀毒软件和系统防火墙；直连模式下双方 IP 互相可见（纯中继模式下对端 IP 藏在 TURN 之后，但中继服务器可见）；只和信任的人配对，连接码不要发到公开场合，怀疑泄露立刻重新配对；军团为 AES-GCM 端到端加密、房间为 DTLS 加密，但对方设备上的数据本软件无法保护；公共 STUN/TURN 由第三方提供，介意者可自建中继。使用异地联机/军团功能产生的任何数据泄露、损失或纠纷由使用者自行承担，未成年人请在监护人指导下使用。</li>
+      <li><b>端到端加密：</b>异地通道上所有消息用 AES-GCM 加密，256 位密钥随邀请码由你自己发给对方（不经网络）——中继或中间人即使看到流量也读不到内容；未加密或密钥不匹配的数据一律拒收。</li>
+      <li><b>同步节奏：</b>不是实时——每隔几小时（默认 4 小时，可改 2/4/8/12）自动上报一次；关机期间攒下的开机自动补。</li>
+      <li><b>同步粒度（隐私红线）：</b>只有四种 0/1 状态——今日已打卡 / 未打卡 / 强制模式中 / 负分挣扎中。计划内容、具体时长、积分余额、契约金额、摄像头画面，一个字段都不在协议里；主进程还有第二道白名单裁剪。</li>
+      <li><b>军团士气（图形化）：</b>军团热度条（0–100）+ 士气三格——出操率档位（零星 / 过半 / 全员）、连击达标周数、救援值。全团共享，绝不指向个人。</li>
+      <li><b>你的位置只有你看得见：</b>前列 / 中上 / 中段 / 靠后，只回给本人，不广播、不公开。</li>
+      <li><b>集体挑战只奖不罚：</b>本周全团累计打卡达标就发集体徽章，次日打卡积分双倍；没凑够当没发生过。熔断开关随时可关。</li>
+      <li><b>翻车救援：</b>点一盏灯 = 自己掏 5 分（每天最多 3 盏），救援值 +1；正在负分的人每天可从救援池领一盏（+5 分）。谁点的、点给谁，系统也不知道。</li>
+      <li><b>军团日志：</b>只记事件不记人名。</li>
+      <li><b>换设备接着打（.pqplan 军团段）：</b>导出选项里「军团元数据」与普通计划、契约计划<b>并列可选</b>——可以选「全部内容 + 军团元数据」一个文件带走，也可以只导出「仅军团元数据」的小文件专门搬身份。元数据只含军团码 / 我的代号 / 上报节奏等身份字段，不带任何打卡明细；导入后选择「恢复军团身份」，不用重新建团或申请加入：局域网直接连接即可，异地连接仍需重新配对一次。带元数据的文件等于你的军团身份，只用于自己的备份。</li>
+      <li><b>军团 PK（电脑版）：</b>军团主点「报名参赛」后一切自动。布告栏是免费文件托管平台，上传的只有军团码、人数和每日出操率——没有名字、没有计划、没有积分。<ul>
+        <li><b>匹配：</b>每周一自动开始，按出操率相近配对，不可拒绝、不能手动挑战；单数末位轮空不奖不罚。</li>
+        <li><b>指标只有一个：</b>出操率（当日打卡人数 ÷ 总人数）——比「有多少人在坚持」，不比谁更卷。</li>
+        <li><b>每日战报：</b>每天一条匿名战报，只说我方和敌方，不点名、不甩锅。</li>
+        <li><b>周日结算：</b>七日总出操率高者胜，差距折合每天不足 1% 算平局。</li>
+        <li><b>奖惩（差距很小）：</b>赢家挂胜利旗帜 24 小时 + 战役胜利徽章 + 下周全团积分效率 +5%；输家挂再接再厉横幅 + 钢铁意志徽章 + 3% 安慰奖；平局双方各得「旗鼓相当」徽章。徽章可收集。</li>
+        <li><b>熔断：</b>PK 期间军团内部举报异常（一周禁言 ≥3 次）→ 本场自动判负并冻结两周，冻结者不会被匹配到。</li>
+        <li><b>赛季：</b>每季度一个赛季，赛季结束 PK 记录清零，徽章保留。</li>
+        <li><b>防崩坏：</b>对手永远只是一个代号，看不到对面具体是谁；跨军团没有私聊功能；胜利加成与安慰奖只差 2 个百分点，不制造阶级分化。</li>
+      </ul></li>
+    </ul>
+
+    <h3>3.11b.1 军团网络结构：主电脑只管「谁跟谁连」</h3>
+    <p>v2.5 把军团从「星型」改成「信令与数据面分开」：主电脑（房主）<b>只跑信令</b>——谁在房里、谁跟谁连、谁该接管；聊天、摘要、摄像头这些<b>数据走成员之间的直连</b>，不经过房主。</p>
+    <table>
+      <tr><th style="width:130px">角色</th><th>它做什么</th><th style="width:220px">它看不到什么</th></tr>
+      <tr><td>房主（信令节点）</td><td>维护名册、转发 offer/answer 与公钥、广播「谁该接管」</td><td>聊天内容、摘要内容、任何一对成员的密钥</td></tr>
+      <tr><td>成员之间</td><td>各自 WebRTC 直连，数据点对点直传</td><td>——</td></tr>
+      <tr><td>备选节点（副主）</td><td>房主掉线 45 秒后，按信誉分接管信令</td><td>同上</td></tr>
+    </table>
+    <ul>
+      <li><b>连接阶梯：</b>先只靠 STUN 打洞（8 秒）——最快、不经第三方；打不通才挂 TURN 重来一遍（12 秒）。手动选「纯中继」则直接从第二级开始。界面上每条连接会标 <b>直连 / 组网 / 中继 / 未连通</b>。</li>
+      <li><b>组网兜底：</b>两边 NAT 都太严时，装 Tailscale / ZeroTier 组一张虚拟局域网即可——WebRTC 会把它当普通网卡，界面上显示「组网」，数据仍然直传、不经公网中继。</li>
+      <li><b>每对一把密钥：</b>成员两两用 ECDH（P-256）现场协商，再经 HKDF 派生 AES-GCM 密钥。<b>公钥可以公开，私钥不出本机</b>——房主转发了公钥也解不开任何内容。30 分钟自动轮换一次；有人进/出立刻换，走了的人解不开新消息。</li>
+      <li><b>副主选举：</b>房主每 10 秒一次心跳，成员 45 秒收不到就判定掉线，按「信誉分高 → 入团早 → uid 字典序」选出副主接管信令。已建立的直连不受影响，只是新成员改向副主拿邀请码；<b>房主从单点变成「创建者仪式感」</b>。</li>
+      <li><b>算账不再依赖房主：</b>每个成员各自收齐摘要，用同一份 <code>computeAgg</code> 算聚合，结果自然一致。房主挂了，军团照常运转。</li>
+    </ul>
+
+    <h3>3.11b.2 军团 PK 布告栏：私有仓库 · 一军团一文件 · 签名防改</h3>
+    <p>旧方案（公共暂存盘上一个共享 JSON）有个硬伤：50 个军团在第 59 秒同时上报，大家都在「读整份 → 改自己那段 → 写回」，<b>最后写的人会把前面 49 个人的更新覆盖掉</b>。v2.5 换成私有 GitHub 仓库，并且一个军团一个文件。</p>
+    <table>
+      <tr><th style="width:210px">问题</th><th>做法</th></tr>
+      <tr><td>50 个军团同时写</td><td><code>legions/&lt;军团码&gt;.json</code> 各写各的，物理上不冲突；写回带 sha 乐观锁，被抢先改过就重读再写</td></tr>
+      <tr><td>内容被偷改</td><td>Ed25519 签名：上报时对规范化 JSON 签名，读取时验签；公钥首次见到就固定（TOFU），<b>换了钥匙但签名有效</b>会单独告警</td></tr>
+      <tr><td>单边篡改没被发现</td><td>主仓 + 备仓双写，读取时两边对比；不一致按主仓为准并记告警</td></tr>
+      <tr><td>改坏了回不去</td><td>每小时快照到 <code>snapshots/&lt;小时&gt;/</code>，保留 48 小时；仓库本身的 git 历史也是一层</td></tr>
+      <tr><td>脏数据污染匹配</td><td>Actions 每次匹配前先校验：出操率 0–100、人数 1–500、<b>专注 ≤1440 分钟</b>、<b>信誉分 ≤160</b>；越界回退到上一次合法值并记告警，连续异常标记为待核</td></tr>
+    </table>
+    <ul>
+      <li><b>配置在哪：</b>设置 → 军团 PK 布告栏，填 owner / repo / branch（私有仓库，只在军团主电脑上填），再点「用 GitHub 登录」走官方授权（Device Flow，一次性配好 Client ID 即可，见 3.27）。<b>不需要生成或粘贴 token</b>：授权结果只留本机，界面只显示来源与掩码，导出的备份文件里也不带。</li>
+      <li><b>Actions 做什么：</b>每小时跑一次——验签 → 校验修复 → 按近 7 天出操率相邻配对 → 写 <code>results/&lt;周一&gt;/pairing.json</code> → 追加 <code>logs/</code> → 快照。脚本与 workflow 模板随软件附带（<code>tools/github/</code>），复制进你的仓库即可。</li>
+      <li><b>没有 Actions 也能用：</b>客户端读不到配对表时，会退回本地「按出操率相邻配对」的老逻辑，不至于卡死。</li>
+    </ul>
+
+    <h3>3.11b.3 军团频道秩序：先提醒，再降速，最后禁言</h3>
+    <p>频道里只处理<b>看得见的行为</b>，不猜动机：</p>
+    <table>
+      <tr><th style="width:150px">行为</th><th>判定</th><th style="width:150px">处理</th></tr>
+      <tr><td>刷屏</td><td>10 秒内超过 5 条</td><td>禁言 3 分钟</td></tr>
+      <tr><td>复读</td><td>同一句 30 秒内出现 3 次</td><td>禁言 3 分钟</td></tr>
+      <tr><td>骂人</td><td>命中脏词（含常见分隔变体）</td><td>禁言 5 分钟</td></tr>
+      <tr><td>喊话 / 群 @</td><td>大写或感叹号过多、一次 @ 超过 4 人</td><td>先提醒，不改判</td></tr>
+      <tr><td>累犯</td><td>同一人被禁言 3 次以上</td><td>单人小黑屋：消息只有他自己看得见</td></tr>
+      <tr><td>信誉分低于 60</td><td>不是禁言，是「没有发言资格」</td><td>打卡与助人可以把分挣回来</td></tr>
+    </table>
+    <p><b>「小黑屋」为什么不封号：</b>职业杠精的快乐来自你的反应。不给他任何反馈、也不赶他走，他的发言只有他自己看得见——没有观众，抬杠就没有收益。</p>
+    <p><b>三类人，三种力度：</b></p>
+    <table>
+      <tr><th style="width:170px">人群</th><th>约束方式</th><th style="width:200px">效果</th></tr>
+      <tr><td>可被约束的<br>（逃兵 / 刷分 / 喷子 / 鸽子 / 外挂）</td><td>强制模式锁屏 · 行为一致性检测 · 举报与信誉分 · 契约见证人 · 翻案的逆向运用</td><td>逃一次扣分，逃多了冻结军团参与资格；刷分本次不计分；信誉分低于阈值自动失去发言与 PK 资格；坐实外挂信誉分清零并永久封禁军团功能</td></tr>
+      <tr><td>很难约束的<br>（三分钟热度 / 花钱买分 / 职业杠精）</td><td>不硬管：落地页先给真实成果 · 信誉分不可购买 · 冷处理小黑屋</td><td>让他看到长期价值；钱买不到军团地位、翻案权重与 PK 荣誉；抬杠没有观众就自己走</td></tr>
+      <tr><td>不该约束的<br>（偶尔偷懒 / 新手 / 努力的普通人）</td><td>负分缓冲与救赎券 · 梯度新手保护罩 · 微目标</td><td>留一条回头路；前 7 天犯错不至于被劝退；每天专注 15 分钟也算进步</td></tr>
+    </table>
+
+    <h3>3.11b.4 五类人怎么落地：判定信号、处理、恢复路径</h3>
+    <p>上面那张表是「原则」，这一节是「实现」。每条都写清三件事：<b>看什么信号</b>、<b>怎么处理</b>、<b>怎么恢复</b>——处罚如果不能说明白，就只是惹人烦。</p>
+    <table>
+      <tr><th style="width:110px">人群</th><th>判定信号</th><th style="width:220px">处理</th><th style="width:190px">恢复路径</th></tr>
+      <tr>
+        <td><b>逃兵</b><br><span class="muted">开着专注却切出去</span></td>
+        <td>专注期累计失焦时长 ≥90 秒，或切出去 ≥2 次，或进程守护命中干扰进程 ≥2 次（少于 5 分钟的片段不判，避免误触）</td>
+        <td>本次扣 3 分，逃得越久按倍数递增（封顶 3 倍）；<b>信誉分到 -10 冻结军团参与资格</b></td>
+        <td>连续打卡 3 天可一键解冻；冻结期间打卡、个人计划不受影响</td>
+      </tr>
+      <tr>
+        <td><b>刷分狗</b><br><span class="muted">挂机刷时长</span></td>
+        <td>按 5 分钟切桶统计输入：<b>连续 3 个空桶（15 分钟零操作）</b>，或前台占比低于 50%</td>
+        <td>本次<b>不计分</b>（第 1 次只作废）；第 2 次起每次扣 4 分</td>
+        <td>正常用就行：翻页、敲键盘都会计入；只记次数不记内容</td>
+      </tr>
+      <tr>
+        <td><b>喷子 / 杠精</b><br><span class="muted">频道引战</span></td>
+        <td>刷屏 / 复读 / 脏词由频道秩序判定；举报需 3 个不同的人核实</td>
+        <td>禁言 3–5 分钟；三次进单人小黑屋；<b>信誉分 &lt;60 无发言权，&lt;40 无 PK 资格</b></td>
+        <td>打卡与助人加分，分回来了权限自动恢复</td>
+      </tr>
+      <tr>
+        <td><b>鸽子精</b><br><span class="muted">接了任务不做</span></td>
+        <td>契约必须有<b>见证人</b>（不能是自己）+ <b>押金</b>（10–100 分，先托管扣走）</td>
+        <td>到期后给 12 小时宽限；过宽限判违约：<b>押金没收 + 扣 6 分</b></td>
+        <td>按时完成原额退回押金；押金上限 100 分，防止一把梭</td>
+      </tr>
+      <tr>
+        <td><b>外挂</b><br><span class="muted">改数据 / 模拟点击</span></td>
+        <td>单日专注 &gt;1440 分钟、积分单次跳变 &gt;5000、系统时间回拨、点击间隔恒定 &lt;8ms、信誉分越界</td>
+        <td>先<b>标记待人工确认</b>，不直接扣分；坐实才清零信誉分 + 永久封禁军团功能</td>
+        <td>误判点「撤销」即可，不留记录、不扣分；永久封禁只封军团，打卡与个人计划照常</td>
+      </tr>
+    </table>
+    <p><b>为什么外挂要「先标记、后确认」：</b>自动判定一定会误伤——换台电脑、系统时间同步、远程桌面都可能触发。所以系统只负责<b>把可疑的地方指出来</b>，把「坐实」这一步留给人；误判撤销不扣分，是这套机制能被信任的前提。</p>
+    <p><b>信誉分为什么买不到：</b>积分能买，信誉分不能。信誉分只由三类事件改变——<b>被证实的翻案、被核实的举报、按约还清借款</b>，加上纪律记录；商城、兑换、赠予都没有任何入口能加信誉分。钱可以买到奖励，买不到军团地位、翻案权重和 PK 荣誉。</p>
+
+    <h3>3.11b.5 团内治理：人员目录 · 信誉等级 · 投票选职务</h3>
+    <p>军团不是「一群人挂个名」，而是一个需要有人管事的小组织。这一版把「管事」做成了三条不靠人品的机制：
+      <b>看得到谁在</b>、<b>说不清的事投票定</b>、<b>被选出来的人只拿权限不拿分</b>。</p>
+
+    <table style="margin-top:10px">
+      <tr><th style="width:150px">能力</th><th>怎么运作</th><th style="width:170px">防的是什么</th></tr>
+      <tr>
+        <td><b>人员目录</b></td>
+        <td>军团页显示每位成员的昵称、<b>信誉等级</b>（受限 / 普通 / 良好 / 可信；普通及以上在后面并排标 L1 / L2 / L3，受限没有等级）、
+          当前职务、在线状态；信誉 ≥120 的人名旁挂 ✦ 守约者星标</td>
+        <td>只看等级、<b>看不到具体分数</b>——避免把人按分数排成三六九等</td>
+      </tr>
+      <tr>
+        <td><b>发言审核投票</b></td>
+        <td>某条发言被 AI 判了「闲聊」或有人觉得判错，可在团内发起投票：这条到底算摸鱼还是正经事。
+          投票通过才改判，并同步修正训练样本</td>
+        <td>不让一个人的手感决定另一个人的标签</td>
+      </tr>
+      <tr>
+        <td><b>选职务投票</b></td>
+        <td>只有<b>团长</b>和<b>副团长</b>能发起（副团长靠「提议任命职务」权限）；候选人按信誉等级排出（等级高的在前），已有职务的人不在名单里；通过后自动任命</td>
+        <td><b>任命只走投票，团长也没有直接任命权；一人一职</b>，换职务得先投撤销</td>
+      </tr>
+      <tr>
+        <td><b>其他事项投票</b></td>
+        <td>任何「普通」及以上成员都能发起：改集合时间、换 PK 项目、加一条团规</td>
+        <td>发起有成本：每日 2/3/4 次、同时最多 2 个未结束</td>
+      </tr>
+      <tr>
+        <td><b>举报乱发</b></td>
+        <td>一个投票被 <b>3 个不同的人</b>举报 → 直接作废，发起人禁发起 <b>24 小时</b>并扣信誉分</td>
+        <td>用投票刷屏、拿投票整人</td>
+      </tr>
+      <tr>
+        <td><b>职务权限</b></td>
+        <td>副团长 / 纪律官 / 仲裁员 / 记录官，分别能发起投票、禁言、裁定争议、审核发言、看审计</td>
+        <td>职务<b>不能换信誉分</b>，也不能改别人的分——只做流程上的事</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:14px"><b>投票怎么算（任何人算出的结果都一样）：</b></p>
+    <ul>
+      <li><b>有效期 10 分钟</b>；这期间可以改票，只留最后一次。</li>
+      <li><b>法定人数：</b>在线成员<b>过半</b>参与才算数，且至少 <b>2 人</b>。人数不够即使全票同意也判「未通过」。</li>
+      <li><b>通过条件：</b>同意率 <b>≥ 60%</b> 且同意多于反对。</li>
+      <li><b>自己不能投自己的投票</b>，也不能举报自己发的投票——这两条堵掉了「自导自演」。</li>
+      <li><b>任命只走投票：</b>谁都不能直接任命职务——团长也不行。职务投票由<b>团长</b>或拿到「提议任命职务」权限的<b>副团长</b>发起，其他人不能发起；乱发投票被禁发起的人同样不能发起职务投票。</li>
+      <li><b>一人一职：</b>每人同时最多一个职务；已经有职务的人不出现在候选人里，想换职务得先投票撤销旧的。</li>
+    </ul>
+
+    <p style="margin-top:14px"><b>我在团里的信誉位置（v2.9.6 起）：</b>团内治理面板顶部有一张自己的卡——
+      <b>第 X / N 位</b>、<b>高于团里百分之多少的人</b>、自己的等级徽章，还有一条位置条。</p>
+    <ul>
+      <li><b>只给自己的名次：</b>这张卡只回答「我第几」，不回答「别人多少分」。名次由「已同步到等级」的成员算，没同步的不猜。</li>
+      <li><b>不显示他人分数：</b>名册里永远只有等级；排名也不对外广播。</li>
+      <li><b>拿排名干什么：</b>知道自己离「能被推去做仲裁员」还差多少，比自己闷头攒分有方向。</li>
+    </ul>
+
+    <div class="note">
+      <strong>为什么职务只给权限、不给分数：</strong>如果当选能加分，投票就会变成拉票生意；
+      如果职务能改别人的分，纪律就成了私刑。所以职务只做三件事：<b>发起流程、维持秩序、留下记录</b>。
+      分数只认行为，不认头衔。
+    </div>
+
+    <h3>3.11b.6 军团频道：自己的频道 · 团长定的规则 · 转发软件里的东西</h3>
+    <p>以前军团里说话只能借自习房的聊天框——进了房间才能说，规则还是房主临场定的。
+      这一版把频道拆出来：<b>军团有自己的频道</b>，不进房间也能说；<b>规则写在频道顶部</b>，团长可调，改完全团立即生效。
+      底子没有另起一套：<b>和房间联机是同一套传输</b>——同一个 WiFi 走裸 TCP + JSON 行协议，异地走同一条 WebRTC DataChannel，
+      所以频道能做的事，房间也能做；房间里的链接，频道里也能点。</p>
+
+    <table style="margin-top:10px">
+      <tr><th style="width:130px">团长可调</th><th>四样东西</th><th style="width:190px">默认 / 范围</th></tr>
+      <tr>
+        <td><b>开关</b></td>
+        <td>关掉之后频道只读：历史还在，谁也不能发。吵架时先关频道，比踢人温和</td>
+        <td>默认开</td>
+      </tr>
+      <tr>
+        <td><b>严格度</b></td>
+        <td>宽松 / 标准 / 严格，决定「几条算刷屏」「几句算复读」，也决定发言需要的信誉分</td>
+        <td>标准：10 秒 5 条 · 信誉 ≥60</td>
+      </tr>
+      <tr>
+        <td><b>禁言时长</b></td>
+        <td>违规一次关多久，可选「跟随档位」或 3 / 5 / 10 / 20 / 30 分钟</td>
+        <td>默认跟随档位（3 / 5 / 10）</td>
+      </tr>
+      <tr>
+        <td><b>自定义词</b></td>
+        <td>团长自己加的敏感词，每行一个或用逗号隔开，最多 20 个（每个 2–8 字）；内置词表一直在</td>
+        <td>最多 20 个</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:14px"><b>判定只认行为，不猜动机：</b>辱骂（命中词表）、刷屏（时间窗内条数超阈值）、
+      复读（同一句重复次数超阈值）直接禁言；一次 @ 太多人、感叹号/大写太多只提醒不罚。
+      禁言<b>不写进信誉分账本</b>——它只是「这个房间暂时不让你说话」，真正扣分走纪律与举报。
+      判定用同一份纯函数，<b>团长和成员算出的是同一个结果</b>，不存在「团长凭印象放行」。</p>
+
+    <p><b>@ 人：</b>输入 <code>@</code> 就列出团里的人，点一下补全；被 @ 的消息高亮，频道标题上出现未读数，
+      点开消息区就算已读。<b>不回「已读」回执</b>——不让别人知道你看没看。</p>
+
+    <p><b>转发软件里的东西（三个都走同一条消息通道）：</b></p>
+    <ul>
+      <li><b>打卡计划（.pqplan）：</b>点 📎 →「我的全部计划 / 普通计划 / 契约计划」→ 会把整份计划信封装进消息附件。
+        发送前<b>再确认一次</b>，因为<b>备注会一起发出去</b>；对方点「合并导入」，<b>只合并不覆盖</b>，他的本机数据不受影响。超过 60KB 会提示改用导出文件。</li>
+      <li><b>房间链接：</b><code>pq://room?ip=…&amp;port=…&amp;code=…</code>，点了就是「进入房间」——和房间联机填的是同一组参数。
+        正在开房的房主可以直接点「邀进房间」把邀请发到频道。</li>
+      <li><b>军团链接：</b><code>pq://legion?net=lan&amp;…</code> 或 <code>pq://legion?net=p2p&amp;invite=…</code>。
+        局域网链接点开即加入；异地把邀请码装进链接，对方点开生成回执码，发回团长即可。已经在军团里的人会被提醒「先退出再加入」。</li>
+    </ul>
+
+    <div class="note">
+      <strong>为什么链接是 <code>pq://</code> 文本而不是一个内部消息类型：</strong>文本能活在任何地方——
+      军团频道、自习房聊天、微信。认得它的客户端渲染成按钮，不认得的就是一行字，不会变成乱码。
+      计划文件太大，走不了文本，所以单独做成附件；两类东西共用同一条消息、同一套禁言规则。
+    </div>
+
+    <h3>3.11c 阿刺 Pro：五副外形，各有各的脾气（3D · 心情 · 顶罪 · 语音 · 会动手）</h3>
+    <p>左下角那颗就是你选的阿刺。它一开始只会查表答话，<b>接上模型之后能替你回消息、排计划、给改计划的建议</b>；没接模型时也照样能干活——<b>该用模型的地方用模型，不该用的地方绝不绕远路</b>。它最特别的地方是：<b>你选的外形，决定它是谁</b>——不只是换个名字换种颜色，而是整套建模、性子、心情、顶罪习惯都跟着换。<b>各项开关在哪、怎么用、出问题怎么查，看第 4 章「阿刺 Pro 完全手册」</b>；本节只讲它为什么这么设计。</p>
+    <ul>
+      <li><b>五副外形，五个人：</b>不是贴图，也不是 CSS 拼的——<b>Three.js 在本机 GPU 上现场建模</b>：主干的棱数、弯臂的弧度、小刺的密度、花瓣比例、配色全部随皮肤重做，配三灯布光与软阴影，跟随明暗主题换配色。纯本地渲染，不联网、不加载任何外部模型文件。可拖动旋转，会眨眼、说话时嘴一张一合；情绪写在脸上：被夸了脸红、被骂了翻脸挑眉、摆烂谈话时发愁、要求安静时闭眼挂机。
+        <table style="margin-top:8px">
+          <tr><th style="width:110px">外形</th><th>性子</th><th style="width:190px">好处 / 代价</th></tr>
+          <tr><td>🌵 仙人掌</td><td>毒舌有分寸 · 认死理 · 老兵脾气</td><td>经验稳、关卡宽松；话最冲</td></tr>
+          <tr><td>🌹 玫瑰</td><td>优雅地刻薄 · 花式阴阳 · 记仇也记好</td><td>分享收益高、暴击经验；记小本本，覆盖扣得狠</td></tr>
+          <tr><td>🦔 刺猬</td><td>先说狠话 · 再偷偷心软 · 熟了很黏</td><td>带路快、竞技场加成；生人期吝啬，得先处熟</td></tr>
+          <tr><td>🌰 板栗</td><td>不绕弯 · 爱算账 · 说到做到</td><td>耗水省、能量上限高；有三天摆烂锁</td></tr>
+          <tr><td>🐗 豪猪</td><td>不哄人 · 话短 · 怼得最狠</td><td>竞技场最猛、覆盖扣分减免；覆盖一次直接掉级</td></tr>
+        </table>
+      </li>
+      <li><b>改名、换皮都要跟它商量：</b>你得在聊天里开口请求，不是点一下设置就改。<b>它会傲娇，不一定答应</b>——语气、是否会松口，全看当时那副外形的脾气。想清楚了再说，别指望它每次都给面子。</li>
+      <li><b>心情是数值，不是摆设：</b>五副外形各有自己的心情起点（仙人掌 55 / 玫瑰 45 / 刺猬 40 / 板栗 50 / 豪猪 35）和升降规则。全部当天计划做完、连续打卡、被夸、真诚道歉会涨；漏掉核心任务、覆盖计划文件、顶嘴、冷落会跌。每天凌晨缓慢回一点，但豪猪回得极慢、玫瑰回得很克制。<b>你跟哪一只处得久，它就越来越不像刚见面时那样</b>——刺猬会记住你陪了几天，玫瑰记仇也记好。</li>
+      <li><b>「顶罪」是它自作主张，你不能点名：</b>扣分事件发生时，它可能站出来把这部分扣分扛到自己头上——扣的是它的能量、掉的是它对你的好感。<b>冷却、每日上限、概率全由它自己的脾气和当前心情决定</b>，界面上没有任何开关、聊天里求它扛也只会被怼回来。各外形差别很大：仙人掌闷声扛完继续毒舌；玫瑰阴阳怪气地邀功；刺猬嘴上不承认、偷偷做了；板栗帮你扛了要你未来三天打卡；豪猪顶完一声不吭，你自己发现能量少了。<b>次数有限，心情差时它多半不管你。</b></li>
+      <li><b>提示词跟着外形和心境走：</b>接上模型后，喂给模型的系统提示词会按当前外形注入那段性格，再叠一句此刻心境（比如「扎手——记着仇呢，说话带刺也正常」）。<b>表情负责娇，文案负责傲到天上</b>——它再怎么心软，嘴上也不会承认。</li>
+      <li><b>三件正事，各有分寸：</b>
+        <ul>
+          <li><b>替你接消息</b>——好友区和军团频道里堆着的消息，它能按你的口气起草回复。起草结果只做成一张提议卡片，<b>你点「就这么办」才真发</b>，不点等于没发生。</li>
+          <li><b>替你排计划</b>——你得先说要干什么（「晨读 20 页、跑步 3 公里」），它才按你说的排，不自己加戏；<b>只给一个主题也行</b>（「帮我定个减肥计划」），它会拆成今天就能动手的 3~5 条，每条具体到「做什么、做多少」（快走 30 分钟 / 晚餐主食减半），不会给你「多运动」「少吃饭」这种空话。</li>
+          <li><b>替你改计划</b>——改时间、改积分、停用某条，<b>这类事根本不叫模型</b>：本地正则当场解析「把晨读改到 20:00」「积分改成 35」「停用跑步」，直接出卡片。快、离线、不花 token，说错了也看得见改的是哪条。</li>
+        </ul>
+      </li>
+      <li><b>模型只能提议，不能动手：</b>它输出的是结构化提议（排 / 改 / 停用 / 回消息），进白名单校验、再对着你<b>真实存在的计划 id 和好友 uid</b> 核一遍，编出来的、越界的一律作废；一次最多 8 步、6 条计划，标题 24 字、说明 60 字，防止它一口气给你排满一年。卡片上写着「我要这么做（N 步）· 你点头我才动手」，逐条列出改哪条、改成什么，<b>勾选后点「就这么办」才落地</b>，点「算了」零副作用。删除不会被真的删除，只会被<b>停用</b>——历史记录和连击都还在，随时能开回来。</li>
+      <li><b>会催你，但不烦你：</b>到点没打勾，它主动来找你，<b>指名道姓</b>说哪条欠着、欠了多久（「晨读 20 页，说好 7:30，这会儿 9:10 了」）。催办有节制：同一条最多催 2 次、一天最多 6 次、两次之间至少隔 45 分钟——宁可少催，也不做成骚扰。</li>
+      <li><b>会念出来（MeloTTS-ZH）：</b>官方只提供 Python 库、没有 HTTP 接口，所以项目自带一层本地朗读服务（<code>tools/melo-tts-server.py</code>，只监听 <code>127.0.0.1:8899</code>，协议是本项目自定的 <code>GET /health</code> + <code>POST /tts</code>）。<b>服务起着就用 MeloTTS 的音色，起不来自动回落系统中文语音，两样都不行就安静待着</b>——绝不弹个错框打断对话。设置页「朗读」里可开关、填地址、调语速、点「检测」、点「试念一句」。探活结果缓存：通了记 5 分钟，没通只记 20 秒，你边看说明书边起服务不用干等。
+        <ul>
+          <li><b>点哪段念哪段：</b>回答有换行就按段拆开，每段都能单独点；正在念的那段会亮起来，<b>再点同一段就是停</b>。段与段之间补回了换行符，所以整段复制出去、程序读到的文字跟原来一字不差。</li>
+          <li><b>每条回答底下一排小动作：</b><code>朗读 / 复制 / 重答 / 评价</code>，挂在气泡外面，不污染正文。复制走<b>主进程剪贴板</b>（<code>file://</code> 下浏览器剪贴板常被拒，一键复制不该看环境脸色）；重答只在「因为某句话才答的」回答上出现，重放原问题后<b>替换掉原来那条</b>，不会堆两条；评价（有用 / 没用）连同问题和回答原文存在本机，<b>不设条数上限</b>（只占你自己的磁盘），只有本机存储真写满时才让最旧的让位，不往外传。</li>
+        </ul>
+      </li>
+      <li><b>语音听写先落输入框：</b>点麦克风说话，识别结果<b>写进输入框、光标停在末尾，不自动发出去</b>。说错一个字、识别跑偏，都还来得及改；连说几句会接着往后拼。确认无误再按「发」或回车。</li>
+      <li><b>脑子里有一本小册子：</b>除了你的计划、积分、连击、徽章、契约、军团，还内置 217 条<b>生活小技巧 / 工作小技巧 / 生活常识 / 通识知识 / 软激励</b>。问「秦朝哪年统一」「三人成虎什么意思」「复利是什么」，它能直接从通识里答。问水垢怎么去，它给白醋；问效率低，它说「先切成 25 分钟」；说「不想干了」，它先说「那就先干五分钟」而不是讲大道理。每次按问题只挑<b>最多 7 条、340 字以内</b>垫在末尾——是给它当谈资，不是拿清单念给你听；纯实时问题（天气 / 新闻 / 股价）不塞技巧，免得把话带偏。</li>
+      <li><b>回答顺序是刻意的：</b>① 先凭自己的知识答（算数、常识、写作、给建议，它本来就会）→ ② 答不上来翻那 217 条小册子 → ③ 还不行、且联网开着，才出去搜。<b>不会上来就联网</b>，也<b>不会一句「你有病吧」都回「这个我查不到」</b>——被骂也会正常回嘴。</li>
+      <li><b>联网是可选项，默认关：</b>设置页一个开关，<b>默认关闭</b>。开了之后，只在<b>本机数据答不了</b>的实时问题（天气、新闻、行情）上出去搜一次，只取标题 + 摘要 + 链接，不存不传；回答里会写明「参考（来源）」。<b>搜不到就说搜不到，绝不编</b>。问本机的事、算数、闲聊，一律不搜——不该为一句「1+1」去连外网。</li>
+      <li><b>防编造分三层，不是一刀切：</b>① 关于<b>你本人</b>的数据（计划、积分、连击、军团人数、好友完成率）只能来自喂给它的本机信息，没有就说查不到；② <b>通用常识</b>（番茄怎么保存、水垢怎么去）正常回答，不必假装不知道；③ <b>实时信息</b>只有拿到检索摘要才回答，且标明来自网上。它也不会再露内部机制——不说「资料里没有」「我是查表驱动的」「stub」，直接说人话。</li>
+      <li><b>关得掉，问得出：</b>三项动手能力（接消息 / 排计划 / 改计划）各有开关，关掉之后它会直说「这项你关了」，不偷偷绕过；朗读也有独立开关，输入框旁边的小喇叭随时开关。</li>
+      <li><b>原有 AI 的管家：</b>闲聊雷达（本地模型）在它面前报状态；AI 盯学照旧在自习房开摄像头自动开启；自训练一句话训模型——问它「盯学」「训练」就能带你去。</li>
+    </ul>
+
+    <h4>它现在还会动（v2.9.4）</h4>
+    <ul>
+      <li><b>表情和动作可以用嘴说：</b>短句直接说「摇一摇 / 跳一跳 / 生个气 / 笑一个 / 吃个惊 / 委屈一下 / 晚安 / 向左转 / 向右转」，它当场演，<b>打字和语音都认</b>。不是关键词硬匹配——超过 14 字、带疑问词的（「跳一跳怎么玩」）都当正常提问，不会瞎演。</li>
+      <li><b>朗读时有口型：</b>念的时候嘴一张一合，张开时是一个圆圈，念完自己闭上。系统语音秒退的环境也会按字数估个时长，不会「只闪一下」。</li>
+      <li><b>直接看它也行：</b>在面板里拖着它转头（左右各 80°），松手会自己晃。</li>
+      <li><b>只看不动的快捷方式：</b>面板右上角 <b>🖐</b> 一键切只读，或者<b>右键点那颗仙人掌</b>——不用再翻「设置 → 动手能力」。按钮变红写着「只看」就是关上了。</li>
+    </ul>
+
+    <h4>排计划会看现实（v2.9.5）</h4>
+    <ul>
+      <li><b>先看三件事再排：</b>现在几点、今天还剩多少小时、哪些时间点已经被别的计划占了。时间只往「现在之后」排，撞了就错开，剩不下多少时间就少排两条。</li>
+      <li><b>你提一句天气，它就知道：</b>说「外面下雨 / 今天零下 / 太热了」，它不会再排跑步、骑车、散步、爬山、球类这些户外项，会换成室内等价动作（室内原地跑、室内单车、爬楼梯、室内操），并在备注里写清为什么换。</li>
+      <li><b>说「明天有雨」不影响今天</b>，说「今天天气不错」也不会被当成坏天气。</li>
+      <li><b>本地再兜一道：</b>就算模型硬排了户外，落地前也会被改成室内并注明原因——不会出现「下雨去跑步」这种计划。</li>
+      <li><b>你没说天气，它也不瞎猜</b>，更不会在点评里编「今天天气不错」。</li>
+    </ul>
+
+    <h3>3.12 会议式房间（语音 + 画面 + 聊天）</h3>
+    <p>异地房和局域网房共用同一套「腾讯会议式」界面：顶栏一排控制键，中间大画面，下面聊天框。</p>
+    <ul>
+      <li><b>自动开麦：</b>进房间会自动尝试打开麦克风，失败会明确提示「点 🎤 手动开」；
+        有人说话时，他的格子上会亮起光圈。</li>
+      <li><b>画面优先级：</b>共享屏幕 &gt; 摄像头 &gt; 头像。没有任何画面就显示大头像占位，不留黑框。</li>
+      <li><b>屏幕共享：</b>点 🖥 先选画面源（整屏或某个窗口，带实时缩略图，本应用自己的窗口会被过滤掉），
+        高清帧（最高 1600px 宽、约 2 帧/秒，复杂画面自动降档保流畅）；再点一次立即停止，退出房间自动收尾。</li>
+      <li><b>全屏：</b>右上角 <b>□</b> 一键全屏 / 退出，主界面标题栏和两个独立窗口都有这个按钮。</li>
+      <li><b>画面全屏查看：</b>异地房间的会议格子和局域网的摄像头 / 屏幕缩略条都可以<b>点击放大</b>——
+        点开时窗口自动进入<b>全屏</b>，画面<b>铺满整个屏幕</b>、黑底无留白并持续刷新；
+        <b>双击</b>在「铺满整屏 → 完整显示 → 原始像素」之间循环，原始像素模式下可拖动查看每个细节。
+        点击任意处或按 Esc 退出，窗口自动还原成原来的大小。</li>
+      <li><b>提示信息：</b>所有状态提示（已开启专注模式、娱乐房已创建、成员已离开……）统一走右上角
+        <strong>卡片式提示框</strong>——图标 + 文案 + 倒计时进度条，几秒后自动淡出，不挡操作。</li>
+    </ul>
+
+    <h3>3.13 独立窗口（联机不挤在主界面里）</h3>
+    <p>两种房间都能「拎出来」单独开窗，主界面该干嘛干嘛：</p>
+    <ul>
+      <li><b>异地联机窗口：</b>从侧栏进入，是一个独立的 1180×820 窗口，左上角显示房间号与人数，
+        右上角是全屏 □ 和关闭 ✕。</li>
+      <li><b>局域网房间窗口：</b>「在独立窗口打开」会把房间开进新窗口（隐藏侧栏的纯净视图），
+        适合投屏、双屏或边学边记笔记。</li>
+      <li>两个窗口都跟随当前主题（深色 / 浅色）；关闭窗口等于退出房间，麦克风、摄像头、抓屏都会一起关掉。</li>
+    </ul>
+
+    <h3>3.14 护眼模式（到点强制休息，节奏可调）</h3>
+    <p>长时间盯着屏幕是学生党最大的用眼隐患。护眼模式是一个「到点就管」的全屏休息流程：</p>
+    <ul>
+      <li><b>开启 / 关闭都要守护密码：</b>设置页的开关本身就是密码门——别人（包括自己一时心软）改不了。</li>
+      <li><b>节奏三档可选（默认 45 / 15）：</b>设置 → 护眼模式 → 护眼节奏，三档预设任选——
+        <strong>30 分钟 → 休息 10 分钟</strong>（课间小憩型）、<strong>45 分钟 → 休息 15 分钟</strong>（一节课节奏）、
+        <strong>60 分钟 → 休息 20 分钟</strong>（整点长休型）。<b>改节奏同样要输守护密码</b>，改完立即按新节奏重新计时
+        （正在进行中的这一轮不受影响）。</li>
+      <li><b>到点触发：</b>计时从开启（或上一轮结束）开始，到点后弹出<strong>全屏护眼页</strong>，自动播放
+        <strong>眼保健操视频（4 分 12 秒）</strong>——内置人民日报官方 2020 版《非接触眼保健操》，
+        视频直接打包进应用，播放时<strong>完全离线、不加载任何网络内容</strong>。</li>
+      <li><b>视频播完自动进入息屏：</b>全屏纯黑 + 倒计时，<strong>时长随节奏为 10 / 15 / 20 分钟</strong>，
+        让眼睛真正离开屏幕休息；期间 Alt+F4 也关不掉。</li>
+      <li><b>跳过必须输守护密码：</b>眼保健操阶段和息屏阶段右下角都有「跳过」按钮，点开后必须输入正确的
+        守护密码才能中止——密码错误弹窗抖动提示，跳不过去。</li>
+      <li><b>两阶段都结束后自动恢复：</b>息屏倒计时走完，护眼页自动关闭并按当前节奏开始下一轮计时，无需人工干预。</li>
+    </ul>
+
+    <h3>3.15 强制模式（三色名单 + 负分升级）</h3>
+    <p>这是 PlanQuest 最“硬”的部分。把软件分进三张名单，规则各不相同：</p>
+    <table>
+      <tr><th style="width:120px">名单</th><th>什么时候会被强制关闭</th><th style="width:210px">适用对象</th></tr>
+      <tr><td>白名单</td><td>任何时候都不关</td><td>微信、编辑器、浏览器等必要工具</td></tr>
+      <tr><td>灰名单</td><td>没有计划进行中时关闭（娱乐券可放行）</td><td>游戏、视频、社交</td></tr>
+      <tr><td>黑名单</td><td>强制模式开启期间始终关闭</td><td>纯粹的成瘾源</td></tr>
+    </table>
+    <p style="margin-top:12px">配套的几条硬规则：</p>
+    <ul>
+      <li><b>整软件查杀：</b>不是杀单个进程，而是按程序名 <code>taskkill /F /T</code> 结束主进程与全部子进程、全部实例，
+        关掉主窗口后残留的后台进程也会被清掉。</li>
+      <li><b>自动提权：</b>需要关闭的目标若以管理员运行，应用会自动以管理员身份重启自己（走计划任务静默提权，
+        失败则弹 UAC），确保有权限关掉它。</li>
+      <li><b>名单外软件提醒：</b><strong>开启强制模式时</strong>，凡是<strong>有窗口、且三张名单都没登记</strong>的软件，
+        会弹窗提醒并累计次数；同一软件满 5 次扣 15 积分。提醒窗口里可以一键「全部关闭」。
+        <b>非强制模式下不弹窗、不扣分</b>——没开守护就不管普通软件。</li>
+      <li><b>密码保护：</b>改名单、开关强制模式、改计划都要输守护密码。密码用 scrypt 加盐哈希存储，<strong>不存明文</strong>；
+        局域网同步账号信息时也只上传用户名 + 哈希 + 盐。</li>
+    </ul>
+
+    <p style="margin-top:16px"><strong>积分变负 → 名单自动升级。</strong>
+      如果账户积分被扣成负数，说明约束已经明显失效，强制模式会自动“加码”，不需要你手动改配置：</p>
+    <table>
+      <tr><th style="width:150px">积分状态</th><th>灰名单的处理</th><th style="width:230px">普通非白名单软件的处理</th></tr>
+      <tr><td>≥ 0（正常）</td><td>没有计划进行中时关闭，娱乐券可放行</td><td>不关闭，只弹“名单外软件”提醒</td></tr>
+      <tr><td>&lt; 0（负分）</td><td><b>升级为黑名单</b>：强制模式期间随时关闭，娱乐券也不再豁免</td><td><b>升级为灰名单</b>：没有计划进行中时直接关闭</td></tr>
+    </table>
+    <p style="margin-top:12px"><b>积分怎么扣成负数？</b>所有<strong>惩罚类扣分都不设 0 分兜底</strong>，
+      积分不够扣就记成负数并立即触发名单升级，包括：撤销打卡（把已到手的积分退回来，花掉的部分照样扣）、
+      忽略打卡提醒满 5 次、名单外软件提醒满 5 次、编辑/新建计划扣 10 分、删除/关闭/重开计划扣 10 分。
+      而主动消费（商城兑换、娱乐房时长）依然必须积分充足才允许。守护模块与界面<strong>实时同步</strong>，
+      扣成负数的那一刻名单立即升级，不用重启。</p>
+    <div class="note warn">
+      <strong>负分状态下白名单是唯一的豁免通道。</strong>所以请务必先把输入法、显卡驱动面板、编辑器这类
+      “关掉会出事”的软件放进白名单，否则负分期间它们也会被关掉。积分回到正数后规则自动恢复，
+      升级与恢复都会在界面上给出提示，守护页顶部还会挂一条红色状态条。
+    </div>
+
+    <p style="margin-top:16px"><strong>负分期间的两条补充规则：</strong></p>
+    <ul>
+      <li><b>计划的放行功能全部禁用：</b>上一节说的“计划内需要的软件”在负分期间一律不放行——
+        正分时攒下的豁免不能在惩罚期继续用。</li>
+      <li><b>灰名单兑换通道（唯一合法出口）：</b>负分期间，灰名单里的软件可以用积分<strong>兑换</strong>短暂使用时间：
+        <ul style="margin-top:6px">
+          <li>在守护页「名单已升级」面板里选择灰名单软件兑换：<b>每 10 分钟 15 积分</b>（与娱乐房同价），
+            <b>每个灰名单软件每天最多兑换 30 分钟</b>；</li>
+          <li>兑换成功会生成一张<b>临时计划</b>插入计划表（带「临时」徽章，标注有效期到当天），时段内只放行这一个软件；</li>
+          <li>临时计划<strong>第二天自动删除</strong>，删除/关闭它<strong>不扣分</strong>（它本来就是花积分换来的）；</li>
+          <li>只有临时计划活跃时，普通软件升级灰名单的第二层惩罚照常执行——兑换只救灰名单自己，不给别的软件开洞。</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>3.16 计划内放行软件与 1 小时额度</h3>
+    <p>计划不只需要“该做什么”，有时还需要“做这件事必须开哪个软件”——写代码要 IDE，上网课要浏览器。
+      所以每个计划都可以附带一组<strong>计划内需要的软件</strong>：</p>
+    <ul>
+      <li><b>怎么加：</b>计划表单里可以直接从<strong>运行中的进程</strong>下拉挑选，也能手动用逗号分隔填写，最多 12 个。</li>
+      <li><b>放行范围：</b>计划时段内（提醒时间起 45 分钟窗口）这些软件不会被强制关闭，也不会被算作“名单外软件”弹窗提醒。</li>
+      <li><b>必须避开名单：</b>填进黑名单或灰名单的软件会在保存时被<strong>自动剔除</strong>并提示原因——
+        不允许计划自己给自己开洞。</li>
+      <li><b>1 小时额度：</b>放行不是无限期的。每个进程单独计时，按 2.5 秒节拍累计<strong>实际运行时长</strong>
+        （不是“打开就算一小时”），累计满 <b>60 分钟</b>后放行失效，回归普通软件规则，并弹提示告知额度用尽。
+        守护页「惩罚规则」里能看到每个进程还剩多少分钟。</li>
+      <li><b>换计划重新计时：</b>额度按计划计算，切到另一个计划会重新开始。</li>
+      <li><b>新建也要付出代价：</b>新建（或编辑）一个带放行软件的计划扣 <b>10 积分</b>；不带放行软件的普通计划不扣。
+        避免“随手给计划加个浏览器放行”变成零成本的自我豁免。</li>
+      <li><b>负分期间整体禁用：</b>积分一旦变成负数，所有计划里的放行软件立即失效
+        （界面上的 🧩 标签会标灰提示“负分期间禁用”），积分转正后自动恢复。</li>
+    </ul>
+    <div class="note">
+      <strong>为什么要有额度：</strong>“计划内可以开浏览器”很容易变成“计划内一直在刷网页”。
+      给它一个明确的总时长，等于把“我需要用它”和“我在用它摸鱼”分开——到点就收走，不需要你临场做判断。
+    </div>
+
+    <h3>3.17 专注模式（隐藏桌面图标）</h3>
+    <p>一键隐藏桌面上的所有图标，减少视觉干扰；关闭专注模式或退出应用时自动恢复，不会让桌面一直空着。
+      实现上会先尝试直接通知桌面窗口切换，如果系统不响应，就通过重启资源管理器让设置真正生效
+      （任务栏会短暂闪一下，属正常现象）。</p>
+
+    <h3>3.18 系统集成</h3>
+    <p>开机自启、常驻托盘、关闭窗口不退出（可配置）、提醒音、深色/浅色主题、托盘菜单可直接“试一次提醒”。
+      应用只有一个实例在跑，重复启动会唤起已有窗口，不会出现两个计时器打架。</p>
+    <p><b>开机自启的落点：</b>Electron 的 <code>app.setLoginItemSettings()</code>，开启时写
+      <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Run</code> 一条当前用户启动项，
+      值为 <code>…\PlanQuest.exe --hidden</code>。<code>--hidden</code> 才是 Windows 上真正让窗口不弹出的开关
+      （<code>openAsHidden</code> 只在 macOS 生效），配 <code>window-all-closed</code> 不退出实现静默常驻托盘。
+      它<b>不需要管理员权限</b>，也不在 HKLM 写东西。绿色版换目录后，应用启动时会用当前
+      <code>process.execPath</code> 重写一次启动项，所以自启会自动指向新位置。</p>
+    <div class="note ok">
+      <strong>安装器不碰这一块：</strong>单文件绿色安装程序只做解压（普通用户权限、不请求 UAC、不写卸载注册表项、
+      不建开始菜单）。因为不代写系统，<b>开启自启前应用会先弹确认</b>，把「会写 HKCU Run」讲清楚；
+      关掉开关即删除该条。这一步也是绿色版与安装版唯一需要用户知情的地方。
+    </div>
+
+    <h3>3.19 计划文件（.pqplan）：一个文件搬走全部计划</h3>
+    <p>换电脑、重装系统、把手上的计划挪到手机——最麻烦的从来不是装软件，而是数据。v1.9 为此定义了一个
+      专用文件类型 <code>.pqplan</code>：导出得到一个文件，导入就恢复成一套可用的计划系统。
+      它不走云、不需要账号，也不要求你截图手抄。</p>
+    <p><b>v2.0 起，它从「设置页里的一项」搬到了窗口标题栏：</b>不管你停在今日、计划还是自习，
+      左上角始终有 <b>＋ 新建</b> / <b>↓ 导入</b> / <b>↑ 导出</b> 三个按钮，不用再翻设置。</p>
+    <ul>
+      <li><b>三个按钮各管一件事：</b><b>新建</b>＝弹「另存为」写一个空白 <code>.pqplan</code>
+        （不动现有数据，适合做一份干净模板发给别人）；<b>导入</b>＝选文件 → 校验 → 选合并或覆盖；
+        <b>导出</b>＝把当前全部数据写成一个文件，用于备份或搬机器。</li>
+      <li><b>双击就能打开：</b>桌面版启动时向当前用户（HKCU，不需要管理员）注册文件关联，
+        资源管理器里 <code>.pqplan</code> 显示专属图标（白纸折角 + 蓝紫勾选）。双击后由应用弹窗询问
+        「导入文件（合并）/ 导入文件（覆盖）/ 导出文件（覆盖此文件）」，不用先开软件再找菜单。</li>
+      <li><b>坏文件有出路：</b>文件是空的、不是 JSON、缺字段、校验和对不上——都会说清是哪一种问题，
+        并给一个「按空白模版填充」的按钮，把它修成可用的空白计划文件，而不是卡在那里没法用。</li>
+      <li><b>一个文件装全部：</b>计划、打卡记录、积分与等级、目标与里程碑、契约、徽章、商城与兑换记录、
+        守护名单、每日小结与每周复盘，全在一个文件里。</li>
+      <li><b>认得出、也拒得掉：</b>文件带固定标识与格式版本号，随便拿个 JSON 改后缀是导不进来的；
+        内容另有 SHA-256 校验和，被手动改过一个字符就直接判为损坏并拒绝导入，而不是悄悄导入一半。</li>
+      <li><b>三端通用：</b>电脑版走「另存为」对话框、网页版直接下载、安卓版走系统文件选择器，
+        同一份文件在三端都能读——这也是在没有云同步时最可靠的搬运方式。</li>
+      <li><b>两种导入口径：</b><b>合并</b>（默认，按条目 id 去重，本机已有的记录优先）与
+        <b>覆盖</b>（用文件里的数据替换全部计划与记录）。日常搬运用合并，重装回滚用覆盖。</li>
+    </ul>
+    <table>
+      <tr><th style="width:150px">字段</th><th>含义</th></tr>
+      <tr><td><code>magic</code></td><td>固定为 <code>PLANQUEST-PLAN</code>，用来一眼判断“这是不是我的文件”</td></tr>
+      <tr><td><code>format</code></td><td>信封格式版本，当前为 <code>1</code>；未来结构变化时按版本决定怎么读</td></tr>
+      <tr><td><code>version</code> / <code>exportedAt</code> / <code>from</code></td><td>导出它的应用版本、导出时间、来自哪一端（桌面 / 网页 / 安卓）</td></tr>
+      <tr><td><code>checksum</code></td><td>对 <code>data</code> 计算的 SHA-256，导入前重算比对</td></tr>
+      <tr><td><code>data</code></td><td>真正的数据本体：计划数组、按天归档的打卡记录、积分、名单等</td></tr>
+    </table>
+    <div class="note">
+      <strong>请把它当私人文件：</strong>文件是明文 JSON（就是为了坏了还能修、还能看），
+      里面含守护密码的哈希与你的每日小结。发给别人、传到公开网盘前先想一下。
+    </div>
+
+    <h3>3.20 自习房发言判定：AI 播报不再把自己刷成禁言</h3>
+    <p>自习房的聊天有一套自动规则：命中违规词、10 秒内超过 5 条算刷屏、短时间内连续重复同一句算灌水，
+      命中就禁言。v2.0 修掉了一个会「自己罚自己」的循环，并把几处误判调小了。</p>
+    <ul>
+      <li><b>AI 播报走旁路：</b>「🤖 AI 盯学：检测到我在摸鱼…」这类播报不再算普通发言，
+        既不进刷屏统计、也不进重复统计，而是以系统提示的形式落在聊天记录里。
+        此前它每 10 秒发一条一模一样的话，30 秒就会被判成「连续重复发送相同内容」而禁言 2 分钟。</li>
+      <li><b>播报节流：</b>同一房间 3 分钟内最多播一条，并带上「第几次 · 累计扣多少分」——照扣分，只是不刷屏。</li>
+      <li><b>重复判定加时间窗：</b>只有 60 秒内连续第 4 次说同一句才算灌水。
+        以前没有时间窗，上午和下午各说一句「好的」也会被累计到一起。</li>
+      <li><b>闲聊判定要求更确定：</b>语音转写本来就含糊，现在只有模型给出 ≥70% 的「闲聊」置信度才计数扣分，
+        读书声、随口一句正经话不会被算成摸鱼。</li>
+    </ul>
+
+    <h3>3.21 契约项目：把钱押进时间里</h3>
+    <p>v2.1 把契约模式重做成「项目制」。光靠积分奖惩还不够狠的时候，可以建一个契约项目，
+      把真金白银押进去：<strong>建项目、定时长、定每日罚金，往里塞子任务，然后一天一天地熬过去。</strong>
+      v2.2 又做了一轮精修——旧的「邀请见证人发红包」玩法整块撤掉，只留项目制这一条路；
+      热度图从一张总账拆成每个项目各一张，欠谁的钱、欠了哪几天，不再糊在一起。</p>
+    <ul>
+      <li><b>项目与子任务：</b>在「目标」页创建契约项目（名称、时长 7~365 天、每日罚金上限），
+        项目里可以加任意多个契约子任务——设置和普通计划一样（时间、星期、积分、需密码确认、放行软件），
+        但创建不扣积分。</li>
+      <li><b>规则写在创建处：</b>新建项目的表单里直接用提示框写明「到期前项目和任务都不可删除、
+        按完成度扣钱、创建任务不扣积分」——不用翻文档，也不用等踩坑才发现。</li>
+      <li><b>金边任务进「今日」：</b>契约子任务出现在「今日」页的金边卡片里，与普通任务分成两个栏目、
+        按项目分组；每组带项目进度条、今日完成数和第几天/总天数。标题只留一句「🤝 契约任务」，
+        不再挂解释性小字。</li>
+      <li><b>到期前撕不掉：</b>契约项目和子任务到期前不可删除——「我的计划」里的删除按钮会变成 🔒。
+        自律挑战最怕的「今天状态不好先撤了」，这条路被堵死了。</li>
+      <li><b>每日结算：</b>某天的契约子任务没全部完成，就按完成度扣钱：
+        应扣 = 罚金上限 × (100 − 完成度)%，至少 1 元，全勤不扣。第二天「今日」页顶部直接告诉你
+        「昨日应扣 ¥X」和每个项目的明细，交了钱可标记「已交」。</li>
+      <li><b>每个项目一张热度图：</b>项目卡片里就有本项目专属的 35 天热度图——格子越黄完成度越高，
+        带红边的日子有应扣款；抬头是本项目的累计应扣。多开几个项目也不会互相干扰，
+        哪个项目在漏、漏在哪几天，看一眼就清楚。</li>
+      <li><b>选择性搬运：</b>.pqplan 导入/导出可选「全部 / 仅普通计划 / 仅契约计划」，
+        契约项目、子任务与各自的打卡记录可以单独打包带走；范围导入不夹带积分与档案。</li>
+    </ul>
+    <h3>3.11b.7 好友区：F0 未结缘 → F1 搭子档 → F2 战友档</h3>
+    <p>军团是「一群人」，好友区是「一个人」。它刻意做成<b>慢热</b>的：不能搜陌生人私信，
+      防止变成约炮或微商入口；想认识一个人，只有三条正路——
+      <b>双人自习室</b>（同房打卡过）、<b>对赌契约</b>（互为监督人）、<b>问答申请</b>
+      （对方出 1~5 题并自带答案键，全对才放行）。结缘页面能看到对方是哪条路上认识的。</p>
+
+    <table style="margin-top:10px">
+      <tr><th style="width:120px">档位</th><th>怎么升级 / 降级</th><th style="width:260px">能做什么</th></tr>
+      <tr>
+        <td><b>F0 未结缘</b></td>
+        <td>默认态。不能私信，先一起干活去</td>
+        <td>无私聊。可发起问答申请 / 同房 / 立契约结缘</td>
+      </tr>
+      <tr>
+        <td><b>F1 搭子档</b></td>
+        <td>结缘即 F1</td>
+        <td>纯文本 + 软件<em>内</em>链接（计划/房间/军团）；消息 24h 焚毁；每日 20 条；<b>双方今日完成率 ≥50% 才能发</b>，两边都摆烂输入框直接灰掉，提示「先各自干活」</td>
+      </tr>
+      <tr>
+        <td><b>F2 战友档</b></td>
+        <td>双方当日都 100% 全勤 → 次日升级；任一方断勤退回 F1；<b>连续 3 天断勤自动解缘回 F0</b></td>
+        <td>F1 全部 + 50 条/天 + 打卡截图互证 + 计划包转发（二次确认）+ 1v1 语音监督房</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:10px">好友区还有三样东西：<b>任务排行</b>（我和所有搭子按今日完成率排，前三名挂金银铜牌，平分按昵称序，人人算出同一个榜）；
+      <b>互相契约</b>（双方各押 5~200 分、约 3~30 天，断勤一天扣「押金÷天数」，全勤到期全退，生效中不能重复立，可提前结算）；
+      <b>自动提醒对方</b>（每晚 21 点后你还有没打完的卡，软件自动给每个搭子发一条免费提醒——不占每日额度，每天每人最多一条）。</p>
+
+    <h3>3.11b.8 军团闲聊档位 L0~L3 与内容权限矩阵</h3>
+    <p>军团频道能不能闲聊，不看心情，看<b>今天的活干完没有</b>。档位是系统算出来的，团长也改不了：</p>
+
+    <table style="margin-top:10px">
+      <tr><th style="width:110px">档位</th><th>解锁条件</th><th style="width:290px">内容权限</th></tr>
+      <tr>
+        <td><b>L0 静默</b></td>
+        <td>默认态（个人完成率 &lt;50% 或集体任务未达基线）</td>
+        <td>只读：打卡截图 / 系统通知 / 求助@团长 / 非闲聊文本 / 软件内链接；闲聊被 <b>AI 雷达折叠</b>并提示「先干活」，不扣分</td>
+      </tr>
+      <tr>
+        <td><b>L1 轻聊</b></td>
+        <td>个人今日完成率 ≥50%</td>
+        <td>纯文本短句 ≤50 字/条 + 软件内链接；禁图禁表情包；闲聊降为抽检，<b>超 3 条/小时回落 L0 到次日重置</b></td>
+      </tr>
+      <tr>
+        <td><b>L2 狂欢</b></td>
+        <td>军团集体任务达成（如全员出操率 ≥90%）</td>
+        <td>全解锁：长文 / 图片 ≤3 张 / 语音房 / 表情包 ≤3 个；窗口到当日 24 点；<b>个人贡献 &lt;30% 不跟随解锁</b>（防搭便车），只回 L1</td>
+      </tr>
+      <tr>
+        <td><b>L3 荣光</b></td>
+        <td>个人连续 7 天全勤 且 军团本周集体任务全勤</td>
+        <td>L2 全部 + 自定义频道头衔 + 置顶庆功公告 + 专属徽章展示；纯荣誉层，不影响功能</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:10px"><b>内容权限矩阵（跨 L0~L3 与 F1/F2 通用）：</b>纯文本分档放开；图片只在 L2/L3 与 F2 打卡截图放开；
+      普通文件只在 L2/L3；<b>.pqplan 计划文件全档可发但必须二次确认</b>；外部 URL 一律不放行（软件内链接才能点）；
+      本军团房间链接与军团公开主页全档可发；跨军团邀请链接需审批；表情包只在 L2/L3。
+      集体任务由团长发起（名称 + 基线 60~100%），达成后<b>全团 +20 分</b>、记为当日完成的一个任务，并直接解锁 L2。</p>
+
+    <h3>3.11b.9 .pqplan 安全四件套与 Lv1~Lv3 分级管理权</h3>
+    <p><b>计划包安全四件套</b>——别人发来的 .pqplan，四道关卡才落地：</p>
+    <ul style="margin-top:6px">
+      <li><b>计划预览（二次确认）：</b>收到计划包先弹预览窗——全部项目、契约、积分规则、押金金额列清楚，手动点「确认导入」才生效，防整蛊防恶意条款。</li>
+      <li><b>来源标记：</b>每个计划包自动带发送者 ID 与时间戳，导入后出了问题能追溯到源头、能举报。</li>
+      <li><b>24 小时沙箱：</b>确认导入后先进沙箱——24 小时内积分变动和契约执行全是<b>虚拟的</b>，不碰主计划；没问题手动「转正」，有问题直接删，毫发无损。</li>
+      <li><b>军团黑名单：</b>团长可把频繁发恶意计划包的人拉进黑名单，此后 TA 的任何 .pqplan 被自动拦截，接收方连预览都看不到。</li>
+    </ul>
+
+    <p style="margin-top:10px"><b>Lv1~Lv3 分级管理权</b>——团长的权力是分级的，级别越高越要别人点头：</p>
+    <ul style="margin-top:6px">
+      <li><b>Lv1 劝导权（默认拥有）：</b>对特定成员的聊天「折叠 + 私信提醒」，不公开处刑；被提醒 3 次进观察名单，团长可看其发言频率统计。<b>不能禁言、不能踢人</b>，只能温和地点一下。</li>
+      <li><b>Lv2 管制权（须副团长投票过半）：</b>对单个成员禁言 1/6/24 小时或移出话题（不踢军团）；<b>必须填理由</b>，理由记入全员可查的军团日志；管制被 3 人举报作废算滥用，<b>累积 3 次滥用自动解除团长职务</b>。</li>
+      <li><b>Lv3 驱逐权（须全员投票 + 申诉期）：</b>驱逐提案 24 小时全员投票，赞成 &gt;2/3 执行；被驱逐者有 <b>7 天申诉期</b>，申诉成功恢复成员身份，发起驱逐的团长<b>信誉扣 50 点</b>。</li>
+    </ul>
+
+    <div class="callout" style="margin-top:14px">
+      <strong>阿刺在这套规则里的位置：</strong>你一直没完成任务时，它会主动发一条加油（一天最多 3 次，
+      进度一动就闭嘴——加油不是催命）；「帮我填」会自动填昵称/姓名/监督人这类表单（值取本机资料，不猜邮箱手机号）；
+      「帮我回」按你当前完成率代拟三条回复，挑一条贴过去就能过闲聊雷达。
+    </div>
+  </section>
+
+  <!-- ============ 4 AI 能力（重点） ============ -->
+  <section>
+    <h2><span class="num">4</span>阿刺 Pro 完全手册：设置 · 用法 · 排错</h2>
+    <p>这一章只讲阿刺。它的定位不是「万能聊天机器人」，而是<b>一个跟你一伙、但会盯着你的搭子</b>：查数据、催你干活、给建议；接了模型之后，还能替你把消息回了、把计划排了、把时间改了——<b>但每一步都要你点头</b>。</p>
+
+    <h3>4.1 它在哪儿：三个入口，一块面板</h3>
+    <ul>
+      <li><b>浮标：</b>左下角那盆仙人掌。按住可以拖到任意位置，松手即停、下次打开还在那儿；点一下展开聊天面板，面板跟着浮标弹出。有未完成计划时浮标上会挂一个「!」。</li>
+      <li><b>面板：</b>上面是 3D 仙人掌（可拖动旋转、会眨眼、说话时嘴动），中间是对话，下面依次是<b>输入框、🎤 麦克风、🔊 朗读开关、发</b>。顶部状态条写着当前引擎（🧠 查表 + qwen3:4b / 📋 纯查表兜底）。</li>
+      <li><b>每条回答下面：</b><code>朗读</code> <code>复制</code> <code>重答</code> <code>评价</code> 四个小按钮——在气泡外面，不会混进正文里。</li>
+      <li><b>设置页：</b>「阿刺引擎」「联网搜」「动手能力」「朗读」四块，全部集中在这里。下面 4.2 是一张总表。</li>
+    </ul>
+    <div class="note"><b>先说性格，免得第一次被怼以为出 bug：</b>它是「毒舌但真诚」的同龄人，不是客服机器人。会损你（「自律三分钟也叫坚持」）、会回嘴（你骂它，它说「骂仙人掌，出息」），但<b>不羞辱人、不拿家人开玩笑、不喊口号</b>；你真难受的时候先接情绪，再给一个最小动作。它也不装懂：不知道就不知道，不拿假数字糊弄。</div>
+
+    <h3>4.2 设置总表：每一项在哪、默认什么、干什么</h3>
+    <table>
+      <tr><th style="width:150px">设置项</th><th style="width:180px">位置</th><th style="width:110px">默认</th><th>作用与说明</th></tr>
+      <tr><td><b>模型来源</b></td><td>设置 → 阿刺引擎</td><td>本机 Qwen3-4B</td><td>四选：LongCat（美团长猫，longcat.chat）/ 本机 Qwen3-4B（Ollama）/ 自定义兼容端点 / 纯查表。选「纯查表」就完全不调模型。</td></tr>
+      <tr><td>API Key</td><td>同上</td><td>空</td><td>只有美团或自定义需要。只存在本机，不写日志、不上报。</td></tr>
+      <tr><td>端点 / 模型名</td><td>同上</td><td>按来源预填</td><td>美团默认 <code>api.longcat.chat/openai</code> + <code>LongCat-Flash-Chat</code>；本机默认 <code>127.0.0.1:11434</code> + <code>qwen3:4b</code>。可改，用于走中转或换模型。</td></tr>
+      <tr><td>重新探测</td><td>同上</td><td>—</td><td>用 1 个 token 的最小请求验证是否通。状态灯 🧠 = 已接上，📋 = 退回纯查表。</td></tr>
+      <tr><td><b>联网搜</b></td><td>设置 → 联网搜</td><td><b>关</b></td><td>开了才在实时问题上搜一次。只取标题 + 摘要 + 链接。</td></tr>
+      <tr><td>搜索端点</td><td>同上（高级）</td><td>空</td><td>空 = 内置（DuckDuckGo 轻量页，失败退 Bing）；填了就只用你填的，可用 <code>{q}</code> 占位。</td></tr>
+      <tr><td><b>只读模式</b></td><td>设置 → 动手能力（最上面）</td><td>关</td><td>一键把「接消息 / 排计划 / 改计划」<b>三项全关并灰掉</b>：它只剩嘴、没有手。关掉只读模式会恢复你之前的选择，不用重新勾。</td></tr>
+      <tr><td><b>动手能力</b></td><td>设置 → 动手能力</td><td>三项全开</td><td><b>接消息 / 排计划 / 改计划</b>，可独立关。关掉后它会直说「这项你关了」，不偷偷绕过。不开模型时这三项等于待机。</td></tr>
+      <tr><td><b>朗读开关</b></td><td>设置 → 朗读</td><td><b>关</b></td><td>打开后阿刺说的话会自动念出来（正在听你说话时不念，避免自己听自己）。输入框旁的 🔊 是同一個开关。</td></tr>
+      <tr><td>朗读服务地址</td><td>同上</td><td>空 = <code>127.0.0.1:8899</code></td><td>8899 是脚本里写死的默认端口，故意避开 8080 / 3000 / 5000 这些常被占用的。<b>如果你改过脚本里的端口，这里必须填同一个</b>，否则检测不通。</td></tr>
+      <tr><td>语速</td><td>同上</td><td>1.0</td><td>0.5 ~ 2.0，两边都生效（MeloTTS 与系统语音）。</td></tr>
+      <tr><td>检测 / 试念一句</td><td>同上</td><td>—</td><td>「检测」看本地服务通不通；「试念」立刻听一耳朵，不用等它说话。</td></tr>
+      <tr><td>守护密码</td><td>设置 → 守护</td><td>未设</td><td><b>与阿刺无关、也不受它影响</b>：改计划仍要密码，删计划仍会降级为停用。</td></tr>
+    </table>
+    <div class="note">记忆位置：模型配置、朗读开关、联网开关、动手能力开关都存在<b>本机</b>（浏览器 localStorage / 用户数据目录），换电脑不会跟着走，也不会同步到云端。</div>
+
+    <h3>4.3 用法速查：说这句话，它做什么</h3>
+    <table>
+      <tr><th style="width:230px">你说</th><th>它做什么</th><th style="width:110px">要模型吗</th></tr>
+      <tr><td>我的进度 / 还剩几项 / 今天安排</td><td>现场读本机计划，报完成数、剩余条目、分值</td><td>不要</td></tr>
+      <tr><td>积分 / 连击 / 徽章 / 这周完成率</td><td>本机账本现算，不做估算</td><td>不要</td></tr>
+      <tr><td>打开计划 / 去军团 / 看看统计</td><td>直接跳页</td><td>不要</td></tr>
+      <tr><td>现在几点 / 今天几号 / 星期几</td><td>本机时间</td><td>不要</td></tr>
+      <tr><td>明天天气怎么样 / 最近有什么新闻</td><td><b>联网搜</b>（开关打开时），取摘要作答并标来源；没开或搜不到就直说</td><td>不要</td></tr>
+      <tr><td>水垢怎么去 / 番茄怎么存 / 效率低怎么办</td><td>从内置常识库里挑几条具体的给你</td><td>不要</td></tr>
+      <tr><td><b>帮我定一个减肥计划</b></td><td>把主题拆成今天就能动手的 3~5 条（快走 30 分钟 / 晚餐主食减半），出卡片</td><td><b>要</b></td></tr>
+      <tr><td><b>帮我排：晨读 20 页、跑步 3 公里</b></td><td>按你说的两条排，不加戏，出卡片</td><td><b>要</b></td></tr>
+      <tr><td><b>把晨读改到 20:00</b></td><td>本地当场解析「哪条 + 几点」，直接出卡片（离线可用）</td><td>不要</td></tr>
+      <tr><td><b>积分改成 35 / 停用跑步</b></td><td>同上，本地解析直接出卡片</td><td>不要</td></tr>
+      <tr><td><b>帮我回一下他 / 接一下消息</b></td><td>读好友区或频道里的消息，按你的口气起草回复，出卡片</td><td><b>要</b></td></tr>
+      <tr><td>模型状态 / 怎么装模型</td><td>报当前引擎与装法</td><td>不要</td></tr>
+      <tr><td>闭嘴 / 安静 / 醒醒</td><td>静音 / 叫回来</td><td>不要</td></tr>
+    </table>
+    <div class="note"><b>记忆有多长：</b>它记得<b>最近 30 轮对话</b>（60 条消息），另有 12000 字符的总量闸门——聊半小时也还记得开头说了什么。再往前才会丢。想彻底重来点「清空」，只想删一段就删那一条。</div>
+    <div class="note"><b>它答问题的顺序是固定的：</b>① 先凭自己的知识答（算数、定义、常识、写作、给建议，它本来就会）→ ② 答不上来翻那 217 条小册子 → ③ 还不行、而且你开了联网，才出去搜。<b>不会一上来就联网</b>，也<b>不会一句「你有病吧」都回「这个我查不到」</b>——骂它它也会回嘴；问它「作文怎么写」，它直接给方法，不会先跑去搜一圈。</div>
+
+    <h3>4.4 动作卡片：它为什么不直接动手</h3>
+    <p>排计划、改计划、回消息，它都只给你一张卡片：<b>「我要这么做（N 步）· 你点头我才动手」</b>。卡片里逐条列出要做什么，前面有勾选框；底下一排是<b>「就这么办」</b>和<b>「算了」</b>。</p>
+    <ul>
+      <li><b>勾选 → 点「就这么办」：</b>逐条执行，最后给一张回执（办了几个、哪个失败）。</li>
+      <li><b>点「算了」/ 直接关掉：</b>什么都没有发生，计划表一个字没动。</li>
+      <li><b>只勾一部分：</b>没勾的那几条不会被执行。</li>
+      <li><b>三道护栏：</b>① 动作类型必须在白名单里（排 / 改 / 停用 / 回消息），别的直接作废；② 引用的计划 id、好友 uid 必须<b>真实存在</b>，编出来的一律拒绝；③ 有上限——一次最多 8 步、最多 6 条计划，标题 24 字、说明 60 字、回复 200 字。</li>
+      <li><b>删除 = 停用：</b>不管你怎么说「删掉它」，最终只会把那条计划停用——历史记录、连击、徽章都不受影响，随时能开回来。</li>
+      <li><b>改计划要密码的话照样要：</b>守护账户开着时，卡片执行到改计划那一步仍然要输密码，阿刺不能替你绕过。</li>
+    </ul>
+
+    <h3>4.5 朗读：三种念法</h3>
+    <ul>
+      <li><b>自动念（默认关）：</b>打开设置里的朗读开关，之后阿刺每句话都会念。正在用麦克风听你说话时它会闭嘴，免得把自己的声音录进去。</li>
+      <li><b>点段念：</b>回答有换行时按段拆开，<b>点哪段念哪段</b>；正在念的那段会亮起来，<b>再点同一段就停</b>。单行的回答整块可点。</li>
+      <li><b>点条念：</b>每条回答底下的「朗读」按钮，整条念一遍（超过 600 字只念开头，免得念到天亮）。</li>
+      <li><b>念的时候会自动跳过：</b>表情符号、markdown 符号、网址、尾巴上的「参考（来源）」清单——听着不像在读代码。</li>
+      <li><b>没声音怎么排查：</b>先看设置页「朗读」点「检测」是否显示已连上；没连上就说明 MeloTTS 服务没起，它会自动用系统中文语音；系统语音也没有（比如系统没装中文音色）就彻底安静——<b>不会弹错、不会卡住对话</b>。</li>
+      <li><b>探活有缓存：</b>通了记 5 分钟，没通只记 20 秒。你照着 4.8 起服务，最多等 20 秒就能听到。</li>
+    </ul>
+
+    <h3>4.6 语音输入：先说，后改，再发</h3>
+    <ul>
+      <li>点 🎤 开始听，说完停一秒自动结束。识别结果<b>写进输入框、光标停在末尾</b>，<b>不会自动发出去</b>。</li>
+      <li>连说几句会接着往后拼，中间空格隔开；说错了直接改字就行。</li>
+      <li>改完按「发」或回车才真发。这是故意的：语音识别错一个字，自动发出去就收不回来了。</li>
+      <li><b>第一次点 🎤 要先下模型：</b>约 42MB，下载那几秒界面会像没反应，等它一下就好；模型存在本机，<b>之后不用再下</b>。</li>
+      <li>识别在本机完成（Vosk 中文小模型），<b>音频不出设备、断网可用</b>。</li>
+      <li>想让阿刺念东西时先把麦克风关掉，不然它念的话会被自己听进去。</li>
+    </ul>
+
+    <h3>4.7 接模型：三种来源怎么选</h3>
+    <table>
+      <tr><th style="width:150px">来源</th><th style="width:200px">你需要准备</th><th style="width:130px">花费</th><th>适合谁</th></tr>
+      <tr><td><b>LongCat（美团长猫）</b></td><td>开放平台 <code>longcat.chat</code> 注册，自动生成 default Key；官网 <code>longcat.ai</code></td><td>每日 10 万免费 token</td><td><b>大多数人</b>：不用装东西，本机直连，额度日常够用</td></tr>
+      <tr><td><b>本机 Qwen3-4B</b></td><td>装 Ollama，<code>ollama pull qwen3:4b</code>，约 3GB 磁盘 / 4GB 内存</td><td>免费</td><td>不想联网、在意隐私、机器带得动</td></tr>
+      <tr><td><b>自定义端点</b></td><td>任意 OpenAI / Ollama 兼容地址（可带 Key）</td><td>看服务商</td><td>有自己中转或私有部署的人</td></tr>
+      <tr><td><b>纯查表</b></td><td>无</td><td>免费</td><td>只想查数据、不想让任何东西联网</td></tr>
+    </table>
+    <div class="note"><b>接不上？按这三步查（九成是这三个原因）：</b><br>
+      ① 命令行执行 <code>ollama list</code>，看列表里有没有 <code>qwen3:4b</code>。没有 → <code>ollama pull qwen3:4b</code>，等它下完（约 3GB，<b>下到一半断了不算装好</b>）。<br>
+      ② 执行 <code>curl http://127.0.0.1:11434/api/tags</code>，看服务在不在监听。连不上 → Ollama 没启动，去开始菜单打开它。<br>
+      ③ 端口被别的程序占了 → 设置页把端点改成实际端口，或关掉占用程序。<br>
+      三步都正常还是 ⚡：点一次「重新探测」；仍不行就换 LongCat（longcat.chat 注册就能用），或先用纯查表。</div>
+    <ul>
+      <li><b>接不上会怎样：</b>状态灯变 📋，阿刺退回纯查表作答——对话照常，只是排计划 / 改主题 / 起草回复这些需要模型的事做不了，它会直说。</li>
+      <li><b>Key 被拒 / 额度用完：</b>提示「API Key 被拒」并自动兜底，不会把错误码甩给你。</li>
+      <li><b>探测不花额度：</b>只用 1 个 token 的最小请求。</li>
+      <li><b>换电脑要重填：</b>配置只在本机，不随账号同步。</li>
+    </ul>
+
+    <h3>4.8 装 MeloTTS（可选，不装也能用）</h3>
+    <p>MeloTTS 是 MyShell 开源的 <b>MIT 许可</b>中文语音合成项目。它官方只给 Python 库、没有 HTTP 接口，所以包里带了一个自写的胶水脚本 <code>tools\melo-tts-server.py</code>（协议是本项目自定的 <code>/health</code> + <code>/tts</code>，不是官方接口）。</p>
+    <ol>
+      <li>装 Python 3.9 以上（勾选 Add to PATH）。</li>
+      <li>命令行执行 <code>pip install melotts</code>。首次运行会自动下载中文音色模型（几百 MB，只下一次）。</li>
+      <li>双击 <code>PlanQuest-win64\tools\melo-tts-server.py</code>（或 <code>python tools\melo-tts-server.py</code>），窗口别关。</li>
+      <li>设置 → 朗读 → 点「检测」，显示已连上；再点「试念一句」听效果，然后打开朗读开关。</li>
+    </ol>
+    <table>
+      <tr><th style="width:230px">现象</th><th>多半是</th><th style="width:250px">怎么办</th></tr>
+      <tr><td>「检测」不通</td><td>服务没起 / 端口不是 8899</td><td>看黑窗口有没有报错；换了端口就在设置里填地址</td></tr>
+      <tr><td><code>python 不是内部或外部命令</code></td><td>Python 没进 PATH</td><td>重装时勾 Add to PATH，或用 <code>py tools\melo-tts-server.py</code></td></tr>
+      <tr><td>pip 装到一半报编译错</td><td>缺 C++ 编译环境</td><td>装 Visual Studio Build Tools 里的「使用 C++ 的桌面开发」</td></tr>
+      <tr><td>首次运行卡在下载模型</td><td>网络慢</td><td>等它下完（只一次）；或换网络后重试</td></tr>
+      <tr><td><code>Address already in use</code></td><td>8899 被别的程序占了</td><td>关掉占用的程序，或改脚本里的端口 + 设置里同步填</td></tr>
+      <tr><td>服务起了但还是没声</td><td>系统没装中文语音，或音量/输出设备不对</td><td>先看「试念」有没有声，再查系统声音输出</td></tr>
+    </table>
+    <div class="note">隐私：朗读服务只监听 <code>127.0.0.1</code>，局域网和公网都连不进来；合成结果直接回给界面播放，不落盘、不上传。不装 MeloTTS 的话，阿刺就用系统自带的中文语音，功能一样是全的。</div>
+
+    <h3>4.9 联网搜：什么时候搜、什么时候不搜</h3>
+    <ul>
+      <li><b>默认关。</b>开关在设置 → 联网搜，打开后按问题自动判断。</li>
+      <li><b>会搜：</b>天气、新闻、股价、汇率、票价、航班、比分、上映时间这类「必须知道今天的事」的问题。</li>
+      <li><b>不搜：</b>问本机数据（进度、积分、计划）、纯算术（1+1）、纯闲聊（好烦啊）——为这些去连外网没有意义。</li>
+      <li><b>搜了怎么用：</b>只取标题 + 摘要 + 链接（最多 5 条），组织成回答并标「参考（来源）」；<b>摘要里没有的就直说查不到</b>，不猜、不编年份和数字。</li>
+      <li><b>来源能点：</b>参考不是一串死链接，而是可点的标题——点一下用系统浏览器打开，自己核一眼；只放行 http/https，<code>javascript:</code> 这类一律丢掉。</li>
+      <li><b>没开联网却问了天气：</b>它直接说「这个得联网才查得到，设置页把联网搜打开」，不装懂、也不甩一句查不到。</li>
+      <li><b>隐私：</b>检索请求由本机发出，结果只在本次对话里用，不落盘、不上传；不加关键词记录。</li>
+    </ul>
+
+    <h3>4.10 常见问题</h3>
+    <table>
+      <tr><th style="width:240px">你遇到</th><th>原因与处理</th></tr>
+      <tr><td>它报的数不对</td><td>本机数据类的问题它是现算的，先看「今日」页对不对；如果两边不一致，退出重进让它重读一次。它不会编——数字只从本机来。</td></tr>
+      <tr><td>答得很短、像敷衍</td><td>多半是模型没接上（状态条显示 📋），退回纯查表了。按 4.7 接一个模型，或接受它只答本机数据。</td></tr>
+      <tr><td>点了卡片没反应</td><td>看卡片底部回执：没勾选、没有改的权限（守护密码）、或目标计划已被别的窗口停用，都会写清楚。</td></tr>
+      <tr><td>朗读没声</td><td>依次查：朗读开关 → 「检测」→ 服务窗口 → 系统音量。它会自动回落系统语音，两样都没有才是真没声。</td></tr>
+      <tr><td>一直催，有点烦</td><td>这是设计好的节流：同一条最多 2 次、每天最多 6 次、间隔 ≥45 分钟。真不想听就打勾完成任务，或在设置里关掉对应计划。</td></tr>
+      <tr><td>关掉软件还会催吗</td><td>不会。催办靠软件在后台跑，退出托盘图标就停了；提醒同理。</td></tr>
+      <tr><td>评价有什么用</td><td>「有用 / 没用」连问答原文存在本机，<b>上限 1000 条</b>——重度用户一天评 5 条也能留半年多；超了只滚动覆盖最旧的。现在不联网、不上传。</td></tr>
+      <tr><td>聊久了它怎么忘事</td><td>记最近 30 轮（60 条消息），再往前才丢；聊得特别长时按 12000 字符总量截。想彻底重来点「清空」。</td></tr>
+      <tr><td>不想让它动手</td><td>设置 → 动手能力，三项全关。它以后只会说、不会做，也不会偷偷绕过。</td></tr>
+      <tr><td>想让它彻底安静</td><td>说「闭嘴」关掉主动搭话；朗读开关留关；麦克风别开。</td></tr>
+      <tr><td>重答和重新搜有什么区别</td><td>「重答」是让模型<b>重新生成</b>：会把上一版一起递过去，要求换说法、换角度，不是拿同一个词再搜一遍。重写完替换原条，不会堆两条。</td></tr>
+      <tr><td>对话太长了想清掉</td><td>全清：面板右上角「清空」，只清屏幕和上下文，计划、打卡、评价记录都不动。<br/>只删一段：鼠标移到那条上，点右上角 <b>×</b>，只删这一条，连带把它那轮从上下文摘掉。</td></tr>
+      <tr><td>它怎么知道该不该联网</td><td>先自己答，答不了翻常识库，还不行才联网。方法论（怎么写、为什么）、算数、闲聊都不联网；天气、新闻、行情这类才会。</td></tr>
+    </table>
+
+    <h3>4.11 边界与隐私：四句话记完</h3>
+    <ul>
+      <li><b>只提议，不执行</b>——任何改动都要你在卡片上点确认；删除永远降级为停用。</li>
+      <li><b>本机优先</b>——你的计划、积分、连击、聊天、评价、Key、设置，全在这台机器上；软件不含埋点与统计 SDK。</li>
+      <li><b>朗读不出网</b>——只连 <code>127.0.0.1</code>，不落盘、不上传。</li>
+      <li><b>联网只取摘要</b>——默认关，开了也只拿标题 / 摘要 / 链接，来源标在回答里，且做成可点链接让你自己核。</li>
+      <li><b>能清就清</b>——可以一键清空，也可以只删某一条；只动屏幕与上下文，不动你的账本。</li>
+    </ul>
+
+    <h2><span class="num">5</span>AI 能力：把「有没有在学」变成可计算的数</h2>
+    <p class="lead">PlanQuest 里有两类 AI，别混为一谈：<b>阿刺</b>是陪你、怼你、偶尔替你扛一下的战友（见 3.11c）；本章讲的是另一类——<b>房间里的判定模型</b>，把「有没有在学」变成可计算的数。三个模型全部在设备本地推理——不上传画面、不调云端接口、断网照常工作。</p>
+
+    <p>「一起学」最大的漏洞是：房间里开着麦，人却在刷手机。靠人盯人不现实，靠自觉更不现实。
+      PlanQuest 的做法是给房间装两个「眼睛」——一个读文字，一个看画面——都只做一件事：
+      <strong>判断这一句 / 这一帧，是认真还是摸鱼</strong>。判定结果不藏在后台，而是直接贴在聊天里、房间里，
+      并且<strong>允许你当场纠正</strong>；纠正的样本攒起来，就能训出更懂你习惯的模型。</p>
+
+    <div class="grid g3">
+      <div class="feat">
+        <h4><span class="dot"></span>💬 闲聊雷达</h4>
+        <p>读房间聊天文字，给每条消息打上 🐟 闲聊 / 📖 正经事 徽章，并给出置信度。</p>
+      </div>
+      <div class="feat">
+        <h4><span class="dot g"></span>🤖 AI 盯学</h4>
+        <p>开摄像头后每 5 秒看一帧画面，判断你在认真还是趴桌、玩手机、发呆。</p>
+      </div>
+      <div class="feat">
+        <h4><span class="dot w"></span>🎯 自训练</h4>
+        <p>你每纠正一次判定，就多一个训练样本；攒够 10 条，一句话训出「我的模型」。</p>
+      </div>
+    </div>
+
+    <h3>4.1 闲聊雷达：这句话是在讨论问题，还是在发「哈哈哈」</h3>
+    <p>房间里的每条发言都会本地过一遍分类模型，结果以徽章形式贴在消息气泡后面：
+      <strong>🐟 闲聊 87%</strong> 或 <strong>📖 正经事 92%</strong>。设计上有三条克制的规则：</p>
+    <ul>
+      <li><b>不确定就不表态。</b>置信度低于 <code>0.8</code> 时判为「不确定」，不显示徽章、不计入统计——
+        宁可漏判，也不要冤枉一句「这个积分怎么算」。</li>
+      <li><b>只对自己扣分。</b>闲聊统计的是<strong>你自己</strong>的发言：5 分钟内攒到 <code>3</code> 条判为闲聊，
+        扣 <code>2</code> 分。别人闲聊不会让你掉分，避免误伤和互相甩锅。</li>
+      <li><b>判错可以当场翻案。</b>点一下徽章就能选「其实是正经事」，消息立刻改判，同时这条发言（带正确标签）
+        进入你的训练集。这是整套 AI 的数据来源。</li>
+    </ul>
+    <div class="note">
+      <strong>模型是怎么工作的：</strong>中文 WordPiece 分词 → 预训练句向量模型 <code>gte-small-zh</code>（int8 量化，约 29 MB）
+      编出 512 维句向量 → 一个两层 MLP 输出「工作 / 摸鱼」两个概率。
+      编码器负责「理解中文」，只有最后一层是 PlanQuest 自己的分类头——这也是自训练能只改几 KB 权重的原因。
+    </div>
+
+    <h3>4.2 AI 盯学：摄像头就是监考老师</h3>
+    <p>房间里点开摄像头，盯学自动开始（不需要额外开关）；关掉摄像头或退出房间才会停。
+      每 <code>5</code> 秒抓一帧送到本地模型，摸鱼置信度 ≥ <code>0.6</code> 记一次「摸鱼帧」，
+      <strong>连续 2 帧</strong>才触发——单帧误判不会让人背锅：</p>
+    <div class="flow">
+      <span class="step">摄像头取一帧</span><span class="arrow">→</span>
+      <span class="step">本地 CNN 分类</span><span class="arrow">→</span>
+      <span class="step">连续 2 帧摸鱼</span><span class="arrow">→</span>
+      <span class="step">房间广播 + 扣 2 分</span><span class="arrow">→</span>
+      <span class="step">问一句「刚才真在摸鱼吗」</span>
+    </div>
+    <ul>
+      <li><b>模型：</b><code>mobilenet_v3_small</code>（BSD-3 许可，替换了早期 AGPL 的 YOLOv8 版本，见 5.6 声明），
+        输入 224×224，两分类（摸鱼 / 认真）；
+        用 <strong>628 张真实摄像头照片</strong>训练（319 张摸鱼、309 张认真），
+        126 张完全没参与训练的真人照片验证集 Top-1 准确率 <strong>83.3%</strong>（摸鱼 81.2% / 认真 85.5%）。</li>
+      <li><b>触发后：</b>在房间聊天里广播一条提示（同房间的人都能看到），扣 <code>2</code> 分（可扣成负分），
+        然后弹出一句「刚才那帧真的是摸鱼吗」——你说「不是」，这一帧就变成画面校准样本。</li>
+      <li><b>画面不出设备：</b>推理全在本机内存里完成；只有你自己打开了「摄像头共享」，才会以低清缩略帧
+        发给同房间成员，两件事互不影响。</li>
+    </ul>
+
+    <h3>4.3 自训练：从「官方模型」到「我的模型」</h3>
+    <p>通用模型不可能懂每个人：你可能习惯记笔记时抬头看天花板，模型会以为你在发呆。
+      所以 PlanQuest 把「训练」做进了设置页，<strong>两类数据、两种训练方式</strong>，都在本机几秒内跑完：</p>
+
+    <table style="margin-top:10px">
+      <tr><th style="width:150px">训练类型</th><th>改了什么</th><th style="width:130px">代价</th><th style="width:150px">样本来源</th></tr>
+      <tr><td>文字模型</td><td>冻结编码器，只重训最后那层 512 → 2 的分类头（Adam 全批训练）</td><td>权重约 5 KB<br />1 秒内完成</td><td>点聊天徽章纠正过的发言</td></tr>
+      <tr><td>画面校准</td><td>整只 CNN 无法在浏览器/手机里重训，改为学「温度 T + 偏置 b」两个参数，把官方 logit 差按你的习惯重新映射成摸鱼概率，同时隐含地学出你的判定阈值</td><td>2 个参数<br />毫秒级</td><td>盯学抓包后的「确实 / 误判」反馈</td></tr>
+    </table>
+
+    <ul>
+      <li><b>门槛：</b>每类样本攒够 <code>10</code> 条即可训练；界面实时显示「闲聊 6 / 正经 9」这样的分布。</li>
+      <li><b>验证：</b>样本 ≥ <code>40</code> 条时自动留出 <code>20%</code> 做验证集，分别给出「训练集准确率」和
+        「留出验证准确率」；样本太少时只用训练集精度，并在界面上明确标注<strong>偏乐观</strong>。</li>
+      <li><b>可回退：</b>每类保留最近 8 个模型，随时一键切回官方模型；训练完默认自动切换到新模型。</li>
+      <li><b>可清空：</b>文字样本、画面样本都能单独清空（云端已上传的不会删，需在云端侧处理）。</li>
+    </ul>
+
+    <h3>4.4 为什么坚持本地推理</h3>
+    <table>
+      <tr><th style="width:180px">维度</th><th>本地推理（PlanQuest 的选择）</th><th>云端推理</th></tr>
+      <tr><td>隐私</td><td>聊天文字、摄像头画面不出设备；训练集默认只存本机</td><td>每一句、每一帧都要上传</td></tr>
+      <tr><td>延迟</td><td>聊天判定毫秒级，画面 5 秒一帧无压力</td><td>受网络抖动影响，弱网直接不可用</td></tr>
+      <tr><td>成本</td><td>零 API 费用，模型随安装包分发（约 36 MB）</td><td>按调用量计费，长期用不便宜</td></tr>
+      <tr><td>离线</td><td>完全可用——自习房本身就在局域网里</td><td>断网即失效</td></tr>
+      <tr><td>可训练</td><td>你的纠正样本能立刻变成权重，不用上传、不用等</td><td>个人数据无法训练公共模型（合规也不允许）</td></tr>
+    </table>
+
+    <h3>4.5 翻案风控：一条翻案不能零摩擦地进训练集</h3>
+    <p>AI 会判错，所以每条判定都允许你「翻案」。但训练样本是整个模型的地基——一键就改，等于把地基交给了手滑、赌气和脚本。
+      所以翻案不是点一下，而是一整套带摩擦、带限额、带复核的流程：</p>
+    <ul>
+      <li><b>① 微操作 + 二次确认 + 必选理由：</b>聊天徽章要<b>双击</b>（手机长按 / 右键）才进入翻案，单点只会提示「再点一次」；
+        随后必须从「AI 误判 / 上下文误解 / 漏看关键信息 / 确实是玩笑反讽」里选一个理由，再点一次「确认提交」。
+        全程记入审计日志，翻完不能假装没发生。</li>
+      <li><b>② 冷却与限额（按信用分，不是积分）：</b>信誉用的就是<b>积分借贷那套信用分</b>——
+        受限（&lt;80）每天 2 次、普通（80-99）5 次、良好（100-119）10 次、可信（≥120）20 次；
+        两次翻案之间至少隔 <b>15 秒</b>，同一条消息 <b>24 小时只准翻一次</b>；名额用完或失信期内直接锁到次日。
+        另有两道保护：<b>新号首日最高只到「普通」</b>、三天内最高「良好」；<b>历史准确率低于 50%</b>（满 5 次后统计）自动降一档。</li>
+      <li><b>③ 权重分级：</b>可信 1.0 / 良好 0.8 / 普通 0.5 / 受限 0.2。
+        只有<b>「良好」及以上、且行为一致</b>的翻案直接采纳（direct，立即改判并进训练集）；其余一律进<b>候选池</b>——
+        界面上挂一个「⏳ 待确认」，<b>原判定不变</b>。</li>
+      <li><b>③b 新手期：</b>首次使用起 <b>7 天内</b>翻的案，改判规则完全照旧（该直接采纳还是直接采纳，该进候选池还是进候选池），
+        但样本只记入<b>「观察」</b>——<b>不参与训练、不上传云端</b>，复核通过也不会转正。
+        理由很实在：前一周连判定口径都没摸熟，错标一条比漏标十条更伤模型。新手期按本机首次使用时间算，
+        7 天后新的翻案正常进训练集。</li>
+      <li><b>④ 行为一致性：</b>翻成「正经事」但你近期判定的 80% 都是闲聊（或反过来），视为「自肥」可疑：
+        权重直接×0.3，并强制进候选池。AI 判错可以被纠正，人给自己刷标签不行。</li>
+      <li><b>⑤ 房间公投（交叉验证）：</b>候选池里的翻案会以「🛡 翻案待复核」发到当前自习房/娱乐房聊天里，
+        其他同学可点「认可 / 不认可」——<b>≥1 位同学认可且多于反对</b>即转正进训练集；
+        <b>2 人以上不认可</b>则直接作废。没有房间时，退化为「另一条相似内容的同向翻案佐证」或者
+        <b>冷静 30 分钟后的二次确认</b>（自审 = 第二票）。</li>
+      <li><b>⑥ 隐式反馈兜底：</b>翻案后 10 分钟内，同一个人又被判出 <b>3 条高置信闲聊</b>——说明刚才那次是嘴硬：
+        翻案自动回滚、样本标记作废、<b>信用分 -5</b>；一天被回滚 3 次，当天翻案权限直接锁死。</li>
+      <li><b>⑦ 端侧轻量过滤：</b>翻案前先在本地跑规则：少于 2 个字、纯表情符号、含「加微信 / 代刷 / 返利 / 扫码 / 网址」等广告特征、
+        或字符重复率过高的刷屏乱码，<b>直接拦下</b>——不占名额、不进候选池、更不会上传服务器。</li>
+      <li><b>⑧ 训练集隔离与去毒：</b>候选池 / 被回滚 / 被拦截 / <b>新手期观察</b>的样本<b>不参与训练、不上传云端</b>（训练与云同步都按状态过滤）；
+        训练时仍会跑<b>留出验证集</b>评估新标签有没有拉低指标，偏低会提示你先清理候选池；
+        「设置 → AI 自训练 → 翻案候选池」保留<b>最近审计</b>，支持单条驳回、批量清理已回滚记录、以及清空本机翻案记录（审计层去毒）。</li>
+    </ul>
+    <h3>4.5.1 翻案和训练是什么关系：一条样本的完整一生</h3>
+    <p>一句话：<strong>翻案是训练集唯一的人工入口，信誉分是这个入口的闸门。</strong>
+      没有翻案，模型只能永远停在官方版本——它不可能知道你笔记记到一半会抬头；
+      没有翻案风控，训练集就会被手滑、赌气和脚本灌满，模型越训越糊涂。
+      所以它们不是两个功能，而是同一件事的三段：<b>翻案负责「改」，风控负责「能不能改」，训练负责「改完怎么用」</b>。</p>
+
+    <p style="margin-top:12px">一条样本从被判错到变成权重，走的是这五步——每一步的出口都不一样：</p>
+    <table style="margin-top:8px">
+      <tr><th style="width:82px">阶段</th><th>发生了什么</th><th style="width:180px">谁说了算</th><th style="width:170px">数据落到哪</th></tr>
+      <tr>
+        <td><b>① 判错</b></td>
+        <td>闲聊雷达给出「闲聊 / 正经事」，画面模型给出摸鱼概率；低于阈值的判定会挂上可翻案的徽章</td>
+        <td>模型（本地推理）</td>
+        <td>本机样本池，状态为「未标注」</td>
+      </tr>
+      <tr>
+        <td><b>② 翻案</b></td>
+        <td>双击徽章（手机长按 / 右键）→ 必选一个理由 → 二次确认，才算提交</td>
+        <td>你</td>
+        <td>FlipGuard 审计日志（时间、理由、原判定）</td>
+      </tr>
+      <tr>
+        <td><b>③ 裁决</b></td>
+        <td><b>direct</b>：立即改判，样本转「已确认」；<b>pending</b>：原判定不变，挂「⏳ 待确认」进候选池；
+          公投 ≥1 人认可转正；10 分钟内又被判 3 条闲聊则<b>回滚</b></td>
+        <td>信誉分档位 × 权重 + 行为一致性 + 房间公投 + 隐式反馈</td>
+        <td>样本状态：<code>direct / pending / confirmed / rolledback</code>，新手期（前 7 天）另记 <code>probation</code></td>
+      </tr>
+      <tr>
+        <td><b>④ 训练</b></td>
+        <td>每类攒够 10 条开训；≥40 条时自动留 20% 做验证集，跑完给出训练集与留出验证两套准确率</td>
+        <td>只吃 <b>direct / confirmed</b>，其余状态在 <code>trainable()</code> 这一层就被挡掉</td>
+        <td>本机权重（文字约 5 KB / 画面 2 个参数）</td>
+      </tr>
+      <tr>
+        <td><b>⑤ 上传</b></td>
+        <td>云端同步（可选）同样按状态过滤：候选池、被回滚、被本机拦下、新手观察的样本一条都不传</td>
+        <td>你主动开启才会上传</td>
+        <td>云端样本库，只含已确认样本</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:14px"><b>信誉分在这条链上出现三次，每次都卡在不同位置：</b></p>
+    <ul>
+      <li><b>卡次数（限额）：</b>受限 &lt;80 每天 2 次、普通 80–99 每天 5 次、良好 100–119 每天 10 次、可信 ≥120 每天 20 次。
+        两次之间隔 15 秒、同一条 24 小时只准翻一次——防的是脚本连点。</li>
+      <li><b>卡权重（能不能直接生效）：</b>可信 1.0 / 良好 0.8 / 普通 0.5 / 受限 0.2。
+        只有<b>「良好」及以上</b>才可能走 direct 直接进训练集，其余全部先蹲候选池。
+        换句话说：<b>信誉分不决定「你对不对」，只决定「你的纠正要不要先被别人看一眼」</b>。</li>
+      <li><b>卡资格（还允不允许改）：</b>分数掉到 0 进 24 小时失信期，翻案与借分一起锁死；
+        历史准确率低于 50%（满 5 次后统计）自动降一档；新号首日最高「普通」、三日内最高「良好」。</li>
+    </ul>
+
+    <p style="margin-top:12px"><b>反过来，训练也在改造翻案的密度——这是个闭环，不是单行道：</b></p>
+    <table style="margin-top:8px">
+      <tr><th style="width:150px">方向</th><th>机制</th><th style="width:210px">结果</th></tr>
+      <tr><td>训练 → 翻案</td><td>模型学走你的习惯后，误判变少，徽章上「可翻案」的提示随之变少</td><td>翻案从「天天要纠正」降到「偶尔一次」</td></tr>
+      <tr><td>翻案 → 训练</td><td>只有被证实（direct / confirmed）的翻案才会变成样本</td><td>训练集里几乎不含赌气标注</td></tr>
+      <tr><td>翻案不实 → 翻案</td><td>被回滚一次扣 5 分、样本作废；一天回滚 3 次当天锁死</td><td>越翻越难翻，刷标签的人自己把路走窄</td></tr>
+      <tr><td>训练质量 → 信任</td><td>训练后留出验证准确率低于 0.6，界面直接提示「先清理候选池再训」</td><td>低质量样本不会悄悄污染权重</td></tr>
+      <tr><td>训坏了 → 回退</td><td>每类保留最近 8 个模型，一键切回官方模型</td><td>最坏情况是回到出厂状态，不是坏到没法用</td></tr>
+    </table>
+
+    <p style="margin-top:14px"><b>三个常见误解，顺手说清：</b></p>
+    <ul>
+      <li><b>「多翻案能把信誉分刷上去？」</b>不能。翻案被证实只加 3 分、每天最多 6 分；被推翻一次扣 8 分，恶意翻案亏得更多。
+        翻案是纠错通道，不是加分渠道。</li>
+      <li><b>「翻错了模型就学坏了？」</b>不会。候选池、被回滚、被本机拦截的样本，在<b>训练和上传两处</b>都被同一套状态过滤挡住；
+        再加上留出验证集把关，单条脏样本进不了权重。</li>
+      <li><b>「我翻案的理由别人能看到吗？」</b>看不到。翻案理由与审计记录只留在本机；
+        进房间公投的只有一句「🛡 翻案待复核 #编号」，不含原文、不含理由、不含分数。</li>
+    </ul>
+
+    <div class="note">
+      <strong>为什么非要把信誉分和翻案绑在一起：</strong>如果翻案没有成本，训练集就是公共厕所——谁都能往里扔东西；
+      如果翻案门槛只看积分，积分又能花钱买，那训练集就成了价高者得。绑在<b>不可购买、只能靠行为积累</b>的信誉分上，
+      等于让「愿意认真纠正 AI 的人」自动获得更多话语权，让「只想刷标签的人」自然被降权。这不是惩罚机制，是<b>数据质量的分级授权</b>。
+    </div>
+
+    <h3>4.6 语音闲聊检测：说出来的话也算数</h3>
+    <p>房间里开着麦，人在说话——如果只判定打字，说话就成了一条绕过判定的后门。v1.9 把这块补上了：
+      开麦时把麦克风音频<strong>在本地转成文字</strong>，再交给同一个闲聊雷达去判。</p>
+    <ul>
+      <li><b>同一套模型、同一套规则：</b>转写出来的句子仍然走 <code>AIChat.classify</code>——同一个
+        <code>gte-small-zh</code> 编码器、同一个 <code>0.8</code> 置信度阈值、同样“自己 5 分钟内 3 条闲聊 → 扣 2 分”。
+        没有为语音另立一套判据，所以不会出现“打字扣分、说话不扣分”的漏洞。</li>
+      <li><b>完全离线：</b>Vosk 中文小模型（约 43.9 MB）随安装包分发，音频不出设备、不联网，断网照常工作。</li>
+      <li><b>说完才判：</b>识别需要一个“句尾”，所以采集到说话停下时会补约 1.6 秒静音尾巴，Vosk 才吐出最终结果；
+        同一句话 20 秒内不重复判定，避免一边想一边说被连扣。</li>
+      <li><b>认错能改：</b>识别错字导致误判，点徽章就能改判，这条样本照常进你的训练集。</li>
+    </ul>
+    <div class="note">
+      <strong>为什么不是 FunASR Paraformer：</strong>许可同样是 Apache-2.0，但 int8 量化后仍有约 237 MB，
+      是 Vosk 小模型的五倍多。在“必须完全离线”这个前提下，选了更小、够用的那个。
+    </div>
+
+    <h3>4.7 模型来源与开源许可声明</h3>
+    <p>PlanQuest 的 AI 能力建立在开源社区之上，这里如实说明每个模型的来历与许可证：</p>
+    <table>
+      <tr><th style="width:190px">组件</th><th>来源与说明</th><th style="width:120px">许可证</th></tr>
+      <tr><td>画面分类模型<br />（AI 盯学）</td><td>早期版本使用 <strong>Mind+</strong>（底层为 Ultralytics <strong>YOLOv8n-cls</strong>）在自建的 628 张真人照片上训练；
+        因 YOLOv8 采用 AGPL-3.0 许可，为避免许可传染，现行版本已替换为 <strong>MobileNetV3-Small</strong>——
+        以 torchvision 的 BSD-3 预训练权重为起点、在同一数据集上微调，架构与权重许可均宽松合规。</td><td>BSD-3<br />（torchvision）</td></tr>
+      <tr><td>中文句向量编码器<br />（闲聊雷达）</td><td><code>gte-small-zh</code>（thenlper 发布），int8 量化后内嵌；其上的分类头由 PlanQuest 自行训练</td><td>Apache-2.0</td></tr>
+      <tr><td>本地推理运行时</td><td>ONNX Runtime Web（桌面 / 网页 / 安卓三端共用同一份模型文件）</td><td>MIT</td></tr>
+      <tr><td>桌面框架</td><td>Electron</td><td>MIT</td></tr>
+      <tr><td>语音识别<br />（语音闲聊检测）</td><td>Vosk + vosk-model-small-cn-0.22（Alpha Cephei），vosk-browser 运行时；
+        完全本地转写，识别结果交给与文字聊天相同的闲聊分类器与扣分规则。
+        曾评估 FunASR Paraformer（Apache-2.0），因 int8 量化后约 237 MB 超出体积预算未采用</td><td>Apache-2.0</td></tr>
+    </table>
+    <div class="note">
+      <strong>关于 AGPL：</strong>Ultralytics 官方将 YOLOv8 的代码与用它训练得到的权重都视作 AGPL-3.0 的约束范围。
+      为了不让 AGPL 义务落在使用者头上，画面分类模型已整体替换为宽松许可的 MobileNetV3 自训版本；
+      替换只换底层模型文件，界面上的自训练、画面校准、扣分规则全部不受影响。
+    </div>
+
+    <div class="note ok">
+      <strong>AI 判定与扣分速查：</strong>闲聊雷达——置信度 ≥ 0.8 才表态，自己 5 分钟内 3 条闲聊 → 扣 2 分；
+      AI 盯学——摸鱼置信度 ≥ 0.6 记一帧，连续 2 帧 → 广播 + 扣 2 分。两者都是<strong>强制开启</strong>，
+      区别是盯学需要你打开摄像头才会工作。
+    </div>
+  </section>
+
+  <!-- ============ 5 云同步（重点） ============ -->
+  <section>
+    <h2><span class="num">6</span>云同步：让打卡数据跟着账号走（可选）</h2>
+    <p class="lead">v1.6 新增。默认不联网；只有你自己在设置里登录，数据才开始跨设备。</p>
+
+    <p>PlanQuest 一开始是纯离线的：数据只写 <code>%APPDATA%\PlanQuest\data.json</code>。
+      但真实使用里有两件事绕不开——<strong>换电脑</strong>和<strong>手机也想打卡</strong>。
+      云同步就是为这两件事加的，并且被刻意设计成「可以完全不用」的可选项。</p>
+
+    <div class="grid g3">
+      <div class="feat">
+        <h4><span class="dot"></span>不登录 = 和以前一样</h4>
+        <p>所有功能照常，数据只在本机；云端组件加载失败、断网、登录过期，都不影响本机使用。</p>
+      </div>
+      <div class="feat">
+        <h4><span class="dot g"></span>登录 = 自动流转</h4>
+        <p>打卡、计划、积分、目标、商城在手机、平板、电脑之间自动同步，重装也能找回。</p>
+      </div>
+      <div class="feat">
+        <h4><span class="dot w"></span>账号 = 数据边界</h4>
+        <p>服务端按登录态做行级权限（RLS），前端不传用户 ID，别人的数据在数据库层面就取不到。</p>
+      </div>
+    </div>
+
+    <h3>5.1 怎么登录</h3>
+    <table>
+      <tr><th style="width:170px">方式</th><th>适用端</th><th>说明</th></tr>
+      <tr><td>手机号验证码</td><td>电脑 / 网页 / 手机</td><td>输入手机号 → 获取 6 位验证码 → 登录即注册；不用记密码</td></tr>
+      <tr><td>WorkBuddy 账号授权</td><td>网页版 / 安卓版</td><td>浏览器授权后跳回应用，不用等短信；桌面版暂不支持（本地页面无法接收回调跳转，会提示改用验证码）</td></tr>
+    </table>
+
+    <h3>5.2 同步什么，不同步什么</h3>
+    <p>云端只存一份「账号数据」，按 <code>updated_at</code> 做整份覆盖式同步——简单、可预测，不搞逐字段合并。
+      但有些字段天生属于这台设备，永远不跟着账号走：</p>
+    <table>
+      <tr><th style="width:220px">数据</th><th>是否同步</th></tr>
+      <tr><td>计划、打卡记录、积分、目标、日记、商城奖励、兑换记录</td><td><b>同步</b></td></tr>
+      <tr><td>AI 自训练的样本与模型</td><td><b>默认只存本机</b>；在「设置 → AI 自训练」里显式开启后才上传</td></tr>
+      <tr><td>守护密码、开机自启、主题、窗口位置等设备偏好</td><td><b>不同步</b>（跟随本机，避免换设备后行为了变）</td></tr>
+      <tr><td>摄像头 / 屏幕画面、房间聊天</td><td><b>从不上云</b>（只在房间内点对点传输）</td></tr>
+    </table>
+
+    <h3>5.3 同步是怎么跑的</h3>
+    <div class="flow">
+      <span class="step">本机改动</span><span class="arrow">→</span>
+      <span class="step">防抖 1.5 秒</span><span class="arrow">→</span>
+      <span class="step">推送到云端</span>
+    </div>
+    <div class="flow" style="margin-top:8px">
+      <span class="step">登录 / 启动</span><span class="arrow">→</span>
+      <span class="step">比对 updated_at</span><span class="arrow">→</span>
+      <span class="step">拉取或推送</span><span class="arrow">→</span>
+      <span class="step">刷新界面</span>
+    </div>
+    <ul>
+      <li><b>本地优先：</b>业务永远先写本机，云端是「追加上去的一份备份」；写云端失败只显示状态，不阻断任何操作。</li>
+      <li><b>首次登录有冲突选择：</b>这个账号在云端已有数据、本机也有真实数据时，会让你选「以云端为准」还是「以本机为准」，
+        不会悄悄覆盖。示例计划和「只有 100 初始积分、没有任何打卡记录」不算「真实数据」，避免新设备一登录就弹窗。</li>
+      <li><b>应用云端数据后短暂静默：</b>拉取后的 1.2 秒内忽略本机变更回调，避免「刚拉下来又被推上去」的抖动。</li>
+      <li><b>状态可见：</b>设置页显示「未登录 / 同步中 / 已同步 / 出错」以及上次同步时间。</li>
+    </ul>
+
+    <h3>5.4 训练集上云：和 AI 联动的那部分</h3>
+    <p>AI 训练集默认只存本机。如果你想让手机和电脑共用同一份纠正样本，需要在设置里<strong>主动打开两个开关之一</strong>：</p>
+    <table>
+      <tr><th style="width:220px">开关</th><th>效果</th></tr>
+      <tr><td>允许云端同步训练集</td><td>样本上传到 <code>pq_ai_samples</code> 表，<b>按账号隔离</b>（服务端 RLS）；
+        换设备登录同一个账号就能拉到自己的样本，包括摄像头缩略图</td></tr>
+      <tr><td>参与公共训练集</td><td>样本标为 <code>shared</code>，可被同样开启该选项的用户读取，一起训练；
+        <b>只带文字与判定数值，不带摄像头画面</b>；同时你也会拉到公共样本</td></tr>
+    </table>
+    <div class="note warn">
+      <strong>关于公共训练集：</strong>公共样本来自其他用户的手工标注，可能包含错误甚至恶意标注，
+      自动拉下来参与训练会有风险。介意的话只开「云端同步」（自己账号内），不要开「公共训练集」。
+    </div>
+
+    <h3>5.5 三端同一套账号</h3>
+    <p>电脑版（Electron 绿色版）、网页版（PWA，可添加到主屏）、安卓版（APK）共用<strong>同一个云环境、
+      同一张数据表、同一套账号</strong>。三端的业务规则由同一份核心代码生成，
+      所以「手机上加的计划，电脑上到点也会提醒」这件事是成立的；差异只在系统能力上——
+      进程查杀、提权、隐藏桌面图标只有电脑版有。</p>
+  </section>
+
+  <!-- ============ 6 规则速查 ============ -->
+  <section>
+    <h2><span class="num">7</span>规则速查表</h2>
+    <p class="lead">所有会影响积分和行为的数值，集中在这里。</p>
+    <table>
+      <tr><th style="width:200px">项目</th><th>数值</th></tr>
+      <tr><td>打卡基础分</td><td>10 / 20 / 30 可选，默认 20</td></tr>
+      <tr><td>连续打卡加成</td><td>连续天数 × 2，最高 +20（即 10 天封顶）</td></tr>
+      <tr><td>每日全勤奖励</td><td>+30（当天全部计划完成，仅一次）</td></tr>
+      <tr><td>番茄专注</td><td>0.8 积分 / 分钟</td></tr>
+      <tr><td>忽略弹窗</td><td>60 秒未处理记 1 次；满 5 次扣 15 分</td></tr>
+      <tr><td>名单外软件提醒</td><td><b>仅强制模式开启时</b>：同一软件满 5 次扣 15 分，4 分钟内不重复提醒；非强制模式不弹不扣</td></tr>
+      <tr><td>编辑已有计划</td><td>需密码，扣 10 分</td></tr>
+      <tr><td>关闭计划（暂停）</td><td>确认后扣 10 分</td></tr>
+      <tr><td>重新启用计划</td><td>确认后扣 10 分（避免“关掉再打开”白赚暂停）</td></tr>
+      <tr><td>计划内放行软件</td><td>计划时段内放行；每个进程累计上限 60 分钟，用满后按普通软件处理；不能与黑/灰名单重叠；<b>新建/编辑带放行的计划扣 10 分；负分期间全部禁用</b></td></tr>
+      <tr><td>积分为负（强制模式）</td><td>灰名单升级为黑名单；普通非白名单软件升级为灰名单；积分转正自动恢复；<b>惩罚类扣分不设 0 分兜底，可扣成负数并实时触发升级</b></td></tr>
+      <tr><td>灰名单兑换（负分期间）</td><td>每 10 分钟 15 积分；每个灰名单软件每天上限 30 分钟；兑换生成临时计划，<b>第二天自动删除</b>，删除/关闭不扣分</td></tr>
+      <tr><td>补卡</td><td>每月 3 次，需填理由，得基础分一半</td></tr>
+      <tr><td>稍后提醒</td><td>默认 10 分钟（可配置）</td></tr>
+      <tr><td>连续提醒间隔</td><td>未完成计划每 2 小时再提醒</td></tr>
+      <tr><td>娱乐房时长</td><td>单次最长 2 小时，按积分兑换，加入需消耗积分</td></tr>
+      <tr><td>商城奖励定价</td><td>普通奖励 <b>≥ 10 积分</b>；娱乐券（放行灰名单）<b>≥ 50 积分</b>；<b>添加/删除奖励需守护密码</b></td></tr>
+      <tr><td>等级经验</td><td>升级所需积分逐级 ×1.28 递增</td></tr>
+      <tr><td>AI 闲聊雷达</td><td>置信度 <b>≥ 0.8</b> 才表态，低于则「不确定」不显示徽章；<b>自己</b> 5 分钟内 3 条判为闲聊 → 扣 <b>2 分</b>；强制开启</td></tr>
+      <tr><td>AI 盯学</td><td>每 5 秒分析一帧；摸鱼置信度 <b>≥ 0.6</b> 记一帧；<b>连续 2 帧</b> → 房间广播 + 扣 <b>2 分</b>（可扣成负分）；强制开启，关摄像头即停</td></tr>
+      <tr><td>AI 自训练</td><td>每类样本 <b>≥ 10 条</b>可训练；<b>≥ 40 条</b>自动留出 20% 做验证；每类保留最近 <b>8 个</b>模型，可随时切回官方</td></tr>
+      <tr><td>翻案 → 训练集</td><td>只有 <b>direct / confirmed</b> 状态的样本参与训练与上传；候选池、被回滚、被本机拦截的样本<b>两处都过滤</b>；训练后留出验证准确率 <b>&lt; 0.6</b> 会提示先清理候选池</td></tr>
+      <tr><td>翻案限额（按信誉分）</td><td>受限 &lt;80 <b>2 次/天</b>、普通 80–99 <b>5 次</b>、良好 100–119 <b>10 次</b>、可信 ≥120 <b>20 次</b>；间隔 <b>15 秒</b>、同一条 <b>24 小时 1 次</b></td></tr>
+      <tr><td>翻案权重</td><td>可信 <b>1.0</b> / 良好 <b>0.8</b> / 普通 <b>0.5</b> / 受限 <b>0.2</b>；仅「良好」及以上可走 direct 直接改判</td></tr>
+      <tr><td>军团投票</td><td>有效期 <b>10 分钟</b>；在线成员<b>过半</b>参与且 ≥ <b>2 人</b>；同意率 <b>≥ 60%</b> 且同意 > 反对才通过；改票只留最后一次</td></tr>
+      <tr><td>投票发起成本</td><td>需「普通」及以上；每日 <b>2 / 3 / 4 次</b>（普通 / 良好 / 可信）；同时最多 <b>2 个</b>未结束；自投与自举报均禁止</td></tr>
+      <tr><td>投票被举报</td><td><b>3 个不同的人</b>举报 → 作废 + 发起人禁发起 <b>24 小时</b> + 扣 <b>3 分</b>（每天最多扣 6）</td></tr>
+      <tr><td>职务任命</td><td><b>只走投票</b>，任何人（含团长）都不能直接任命；团长与副团长可发起职务投票，其他人不能；<b>一人一职</b>，已有职务者先撤销再任命</td></tr>
+      <tr><td>团长选举</td><td>团长退团即发公告；异地团自动开 <b>10 分钟</b>选举：普通及以上可参选、一人一票、票投给已参选者；结算须<b>过半且 ≥2 人</b>参与，<b>票多者接任</b>（平票比等级再比 uid）；主进程每 20 秒自动结算，不依赖打开面板</td></tr>
+      <tr><td>房间聊天 @ / 转发</td><td>@ 出名单补全、被 @ 高亮与未读角标（<b>不回已读回执</b>）；📎 可发计划包 / 房间链接 / 军团链接；计划包附件 <b>≤ 60KB</b>，超了提示改用导出文件</td></tr>
+      <tr><td>团内可见的信誉信息</td><td>只显示<b>等级徽章</b>（受限 / 普通 / 良好 / 可信）与昵称，<b>不显示具体分数、不显示明细</b>；没上报分值的显示「等级未知」</td></tr>
+      <tr><td>好友结缘</td><td>不能搜陌生人私信；只走<b>双人自习室 / 对赌契约 / 问答申请</b>（1~5 题、全对才放行）；好友上限 <b>20 人</b></td></tr>
+      <tr><td>好友私聊（F1/F2）</td><td>F1 每日 <b>20 条</b>、F2 <b>50 条</b>；双方今日完成率 <b>≥50%</b> 才能发；消息 <b>24h 焚毁</b>；禁图片/文件/外部链接（F2 放开打卡截图与计划包）</td></tr>
+      <tr><td>F2 升降</td><td>双方当日全勤 → 次日升 F2；任一方断勤退 F1；<b>连续 3 天断勤自动解缘</b>回 F0</td></tr>
+      <tr><td>互相契约</td><td>押金 <b>5~200 分</b>、<b>3~30 天</b>；漏一天扣「押金÷天数」向上取整，全勤到期全退；生效中不能重复立；可提前结算</td></tr>
+      <tr><td>自动提醒对方</td><td>每晚 <b>21 点</b>后还有没打完的卡 → 自动给每个搭子发一条免费提醒（不占额度），每天每人最多一条</td></tr>
+      <tr><td>军团闲聊档位</td><td>L0 静默（默认，雷达折叠闲聊）→ L1 轻聊（个人 ≥50%，≤50 字/条，闲聊 <b>超 3 条/小时回落 L0</b>）→ L2 狂欢（集体任务达成；个人贡献 <b>&lt;30% 不跟随</b>）→ L3 荣光（连 7 天全勤 + 本周集体全勤，纯荣誉）</td></tr>
+      <tr><td>军团集体任务</td><td>团长发起，基线 <b>60~100%</b>；达成<b>全团 +20 分</b>并记为当日完成的一个任务，解锁 L2</td></tr>
+      <tr><td>.pqplan 四件套</td><td>预览二次确认 + 来源标记（ID+时间戳）+ <b>24h 沙箱</b>（虚拟运行，手动转正）+ 军团计划黑名单（团长可拦，连预览都不给）</td></tr>
+      <tr><td>Lv1~Lv3 管理权</td><td>Lv1 劝导（折叠+私信提醒，3 次进观察名单）；Lv2 管制（副团长<b>过半</b>同意+必填理由，<b>滥用 3 次解除团长</b>）；Lv3 驱逐（全员 <b>24h 投票 &gt;2/3</b>，<b>7 天申诉期</b>，申诉成功发起团长扣 <b>50 信誉</b>）</td></tr>
+      <tr><td>云同步</td><td>可选；本机改动防抖 <b>1.5 秒</b>推送；首次登录冲突由你二选一；训练集上云需<b>显式打开开关</b></td></tr>
+    </table>
+  </section>
+
+  <!-- ============ 7 技术架构 ============ -->
+  <section>
+    <h2><span class="num">8</span>技术架构</h2>
+    <p class="lead">基于 Electron 构建，主进程负责数据与系统能力，渲染进程只做界面，通过 IPC 通信。</p>
+
+    <div class="flow">
+      <span class="step">Electron 主进程（Node）</span><span class="arrow">→</span>
+      <span class="step">preload 安全桥</span><span class="arrow">→</span>
+      <span class="step">渲染进程（UI）</span>
+    </div>
+
+    <table style="margin-top:16px">
+      <tr><th style="width:190px">模块</th><th>职责</th><th style="width:90px">规模</th></tr>
+      <tr><td>src/main.js</td><td>数据持久化、提醒调度、全部 IPC 接口、托盘与窗口、提权链路、屏幕共享授权、导出</td><td>约 2.8k 行</td></tr>
+      <tr><td>src/guardian.js</td><td>强制模式：进程扫描、整树查杀、三色名单、密码哈希、名单外检测</td><td>约 440 行</td></tr>
+      <tr><td>src/study-room.js</td><td>局域网房间协议：加入/快照/聊天（含计划包与 pq:// 附件）/禁言/娱乐房计时/摄像头与屏幕帧中继</td><td>约 730 行</td></tr>
+      <tr><td>src/netroom.js</td><td>异地联机的连接码编解码（gzip + base64url）、房间号生成——<b>纯本地，不发请求</b></td><td>约 65 行</td></tr>
+      <tr><td>src/renderer/net-room.js</td><td>异地房间全部逻辑：手动配对、星型拓扑转发、语音协商、会议界面、屏幕共享</td><td>约 1.2k 行</td></tr>
+      <tr><td>src/renderer/net.html / net-win.js</td><td>异地联机独立窗口页面与外壳（主题注入、全屏、关窗即退房）</td><td>约 90 行</td></tr>
+      <tr><td>src/discovery.js</td><td>UDP 广播，自动发现同一局域网内的房间</td><td>约 180 行</td></tr>
+      <tr><td>src/preload.js</td><td>contextBridge 白名单接口，渲染层拿不到 Node 能力</td><td>约 120 行</td></tr>
+      <tr><td>src/renderer/</td><td>界面与交互：app.js、样式、提醒弹窗、心率检测、未授权软件弹窗</td><td>约 5.4k 行</td></tr>
+      <tr><td>src/renderer/ai-chat.js</td><td>闲聊雷达：WordPiece 分词 → gte-small-zh 句向量 → 两层 MLP 输出「工作 / 摸鱼」</td><td>367 行</td></tr>
+      <tr><td>src/renderer/ai-watch.js</td><td>AI 盯学：mobilenet_v3_small 画面分类 + 连续帧判定 + 扣分/广播</td><td>341 行</td></tr>
+      <tr><td>src/renderer/voice-asr.js</td><td>语音转文字：Vosk 本地识别，转写结果接入闲聊雷达（同模型同规则）</td><td>约 130 行</td></tr>
+      <tr><td>src/renderer/ai-train.js</td><td>AI 自训练：文字输出层重训、画面温度校准、样本与模型管理、可选云端同步</td><td>671 行</td></tr>
+      <tr><td>src/renderer/pq-cloud.js</td><td>云同步：登录（验证码 / 授权）、防抖推送、按 updated_at 拉取、冲突选择、状态显示</td><td>683 行</td></tr>
+      <tr><td>src/renderer/voice-lk.js</td><td>LiveKit 语音胶水层（电脑 / 手机共用）：票证连接、麦克风开关</td><td>139 行</td></tr>
+      <tr><td>vendor/pq-text、pq-ai、pq-asr</td><td>本地模型资源：中文编码器（int8，约 29 MB）+ 分类头（1 MB）；摸鱼 CNN（6.1 MB，BSD-3）；中文语音识别模型（约 42 MB，Apache-2.0）</td><td>约 78 MB</td></tr>
+    </table>
+
+    <h3>几个关键实现</h3>
+    <ul>
+      <li><b>安全模型：</b>开启 <code>contextIsolation</code>、关闭 <code>nodeIntegration</code>，渲染层只能调用
+        preload 暴露的方法；外部 HTML 通过 CSP 限制脚本来源。</li>
+      <li><b>数据存储：</b>单个 JSON 文件，带版本号和字段归一化，老数据升级不丢；写入前自动备份损坏文件。</li>
+      <li><b>子进程调用：</b>系统命令一律用 <code>execFile</code> + 参数数组，不拼字符串，避免引号转义把命令打碎。</li>
+      <li><b>提权：</b>优先注册计划任务（最高权限静默启动），失败再走 UAC；10 分钟内不重复弹窗打扰。</li>
+      <li><b>心跳检测：</b>纯前端实现 rPPG（分析摄像头画面里的肤色亮度周期性变化），不上传任何画面数据。</li>
+      <li><b>异地联机：</b>不引入任何信令服务——把 SDP 压成文本「连接码」由用户自己转发；
+        采用非 trickle ICE，等候选收集完再出码，所以一段码就能连上。DataChannel 只走点对点，房主做星型转发。</li>
+      <li><b>语音协商：</b>房主预置一条 <code>sendrecv</code> 音频通道；成员收到 offer 后要把对应 transceiver
+        改回 <code>sendrecv</code>，否则 answer 会变成 <code>recvonly</code>，对方就永远听不到声音。
+        开麦用 <code>replaceTrack</code> 塞入麦克风轨道，不需要重新协商。</li>
+      <li><b>局域网语音信令：</b>复用房间已有的 TCP 通道，房主只转发 SDP / ICE，音频经 WebRTC 直连（DTLS-SRTP 加密），
+        同一 WiFi 内不需要 STUN / TURN。信令对象不能直接过进程间通信——<code>RTCSessionDescription</code> /
+        <code>RTCIceCandidate</code> 会被序列化成空对象，所以发送前手动拆成 <code>{type, sdp}</code>、
+        <code>{candidate, sdpMid, sdpMLineIndex}</code> 再发。</li>
+      <li><b>本地 AI 推理：</b>ONNX Runtime 在渲染层跑模型，桌面版受 <code>file://</code> 限制不能 <code>fetch</code>，
+        模型与 wasm 以 base64 内嵌（<code>window.__PQ_MODEL_B64</code>）；安卓 / 网页直接 <code>fetch</code>。
+        推理全部在主线程外的会话里完成，不阻塞界面。</li>
+      <li><b>避免整页重绘：</b>房间成员快照每秒一次（兼作心跳），但只有成员真正变化时才广播状态；
+        所有整页重绘前会保存并恢复输入框内容、焦点与光标位置——否则正在打的字会被重建的 DOM 冲掉。</li>
+      <li><b>云同步：</b>本地优先——业务永远先写 <code>data.json</code>，云端是追加的备份；改动防抖 1.5 秒推送，
+        登录 / 启动时按 <code>updated_at</code> 整份比对。身份由服务端按登录态判定（前端不传用户 ID），
+        配合行级权限（RLS）保证只能读写自己那一行。</li>
+    </ul>
+  </section>
+
+  <!-- ============ 8 隐私 ============ -->
+  <section>
+    <h2><span class="num">9</span>数据与隐私</h2>
+    <p class="lead">这是很多人第一反应会问的问题：我的数据去哪了？答案分三档——本机、房间内、云端（可选）。</p>
+    <table>
+      <tr><th style="width:200px">数据</th><th>存放位置 / 是否外传</th></tr>
+      <tr><td>计划、打卡、积分、目标、日记</td><td>本地 <code>%APPDATA%\PlanQuest\data.json</code>，<b>不上传</b></td></tr>
+      <tr><td>守护密码</td><td>本地存 scrypt 加盐哈希，<b>不存明文</b>；局域网同步只带哈希与盐</td></tr>
+      <tr><td>摄像头画面</td><td>只在本机内存中做运算，<b>不出本机</b>；只有你在房间里主动开启共享，才会以低清缩略帧发给同房间成员</td></tr>
+      <tr><td>屏幕画面</td><td>只有你主动选择画面源并授权后才抓屏，约 1 帧/秒低清缩略帧发给同房间成员，随时可停止，不出局域网</td></tr>
+      <tr><td>心率数值 / 房间聊天</td><td>仅在同一个局域网房间内传输，不经过任何服务器</td></tr>
+      <tr><td>异地联机的连接码</td><td>由你的本机生成、你自己转发；<b>生成和解析都不发请求</b>，STUN 默认关闭</td></tr>
+      <tr><td>异地联机的聊天 / 语音 / 画面</td><td>点对点直传，WebRTC 强制加密（DTLS-SRTP），无服务器中转、无落盘</td></tr>
+      <tr><td>AI 判定的文字与画面</td><td>闲聊雷达、AI 盯学的推理<b>全部在本机完成</b>，聊天文字与摄像头帧<b>不上传</b>，断网照常工作</td></tr>
+      <tr><td>AI 训练样本</td><td><b>默认只存本机</b>；在设置里打开「允许云端同步训练集」才上传到你的云账号（服务端按账号隔离）；
+        再打开「参与公共训练集」才匿名共享，且<b>只带文字与判定数值，不带摄像头画面</b></td></tr>
+      <tr><td>云账号与同步数据</td><td><b>可选</b>：不登录 = 没有任何账号、没有云端、数据只在本机；
+        登录后只上传计划 / 打卡 / 积分等业务数据，无遥测、无广告 SDK</td></tr>
+      <tr><td>云同步的设备偏好</td><td>守护密码、开机自启、主题、窗口位置等<b>不跟随账号</b>，永远留在本机</td></tr>
+    </table>
+    <div class="note warn">
+      <strong>需要知道的一点：</strong>局域网房间的聊天走局域网明文 TCP，同一网络内理论上可被抓包；
+      异地联机虽然是加密的，但连接码本身会经过微信/QQ 等第三方转发。
+      两种房间都不要发送密码等敏感信息。
+    </div>
+  </section>
+
+  <!-- ============ 9 部署 ============ -->
+  <section>
+    <h2><span class="num">10</span>安装与使用</h2>
+    <p class="lead">绿色版，不写注册表、不需要装 Node，任何 Win10 / Win11 解压即用。</p>
+
+    <div class="flow">
+      <span class="step">解压 zip</span><span class="arrow">→</span>
+      <span class="step">双击 PlanQuest.exe</span><span class="arrow">→</span>
+      <span class="step">排计划</span><span class="arrow">→</span>
+      <span class="step">等提醒打卡</span>
+    </div>
+
+    <table style="margin-top:16px">
+      <tr><th style="width:230px">位置</th><th>内容</th></tr>
+      <tr><td><code>PlanQuest-win64\</code></td><td>程序本体（约 110 MB，含运行环境，可整体拷到 U 盘）</td></tr>
+      <tr><td><code>PlanQuest-win64\一键创建快捷方式.bat</code></td><td>双击一下：在<strong>桌面和开始菜单</strong>各创建一个快捷方式（图标用程序自带图标）。基于自身位置运行，解压到哪个文件夹都有效</td></tr>
+      <tr><td><code>PlanQuest-win64\清空数据（先备份）.bat</code></td><td>把 <code>data.json</code> 改名成 <code>data.json.bak-时间戳</code> 后清空，下次启动回到全新状态；旧数据没删，随时能改回来</td></tr>
+      <tr><td><code>%APPDATA%\PlanQuest\data.json</code></td><td>你的全部数据（换电脑时拷这个文件即可迁移）</td></tr>
+      <tr><td><code>%APPDATA%\PlanQuest\focus.log</code></td><td>专注模式执行日志，出问题时排查用</td></tr>
+      <tr><td><code>%APPDATA%\PlanQuest\guard-elev.log</code></td><td>提权过程日志</td></tr>
+    </table>
+
+    <div class="note ok">
+      <strong>随放随跑，与路径无关：</strong>程序内部<strong>没有写死任何一个盘符或绝对路径</strong>——页面、图标、
+      眼保健操视频全部按程序自身位置相对加载；数据、日志、开机自启项都指向运行时的真实位置。
+      因此把 <code>PlanQuest-win64</code> 文件夹放到<strong>任意盘、任意目录、任意深度的中文或带空格路径</strong>
+      （包括桌面、U 盘、移动硬盘）都能直接双击运行；换台 Win10 / Win11 电脑也一样，开机自启会自动指向新位置。
+    </div>
+
+    <h3>上手建议（前 10 分钟）</h3>
+    <ul>
+      <li>先只建 <b>2～3 个</b>计划，别一上来排满 10 个——完成率比数量重要得多。</li>
+      <li>把必用的工具（微信、编辑器）放进<b>白名单</b>，否则强制模式会误伤。</li>
+      <li>只是“某段时间要用”的软件，别塞白名单——用计划里的<b>计划内需要的软件</b>放行，额度只有 1 小时，到点自然收走。</li>
+      <li>先跑一天不开强制模式，确认提醒时间合适，再打开强制模式。</li>
+      <li>商城里先给自己准备一个“真的很想要”的奖励，激励才成立。</li>
+    </ul>
+
+    <div class="note ok">
+      <strong>典型用法：</strong>学生——计划排晚自习科目 + 自习房和同学互相监督；
+      上班族——通勤/午休的碎片计划 + 灰名单挡住视频网站；
+      备考——契约模式押金 + 强制模式 + 每日热力图盯连续性；
+      异地研友——用连接码开一间自习房，语音一直开着，谁走神谁被听见。
+    </div>
+  </section>
+
+  <!-- ============ 10 限制 ============ -->
+  <section>
+    <h2><span class="num">11</span>已知限制与边界</h2>
+    <p class="lead">老实说清楚这些，比事后解释要省事。</p>
+    <table>
+      <tr><th style="width:200px">限制</th><th>说明与应对</th></tr>
+      <tr><td>负分升级比较激进</td><td>积分为负且强制模式开启时，普通软件（有窗口、且不在白名单）在没有计划进行中时会被直接关闭。请先把必须保留的软件加入白名单再用。</td></tr>
+      <tr><td>放行额度按实际运行累加</td><td>每 2.5 秒累计一次运行时长，误差在秒级；只统计进程真正处于运行状态的时间，关掉不扣。</td></tr>
+      <tr><td>仅支持 Windows</td><td>依赖 Win32 的进程管理与桌面接口，目前面向 Win10 / Win11 64 位。</td></tr>
+      <tr><td>强制关闭需要权限</td><td>目标是管理员权限运行时会触发一次 UAC 确认；拒绝授权则该软件关不掉，界面会提示。</td></tr>
+      <tr><td>专注模式可能闪任务栏</td><td>系统不响应图标切换消息时会重启资源管理器，任务栏短暂消失属正常。</td></tr>
+      <tr><td>局域网房间</td><td>需要在同一网段；部分公司/学校网络隔离了广播和端口，此时无法自动发现，只能用房间码手动加入。</td></tr>
+      <tr><td>异地联机没有中继</td><td>纯 P2P，两端都在严格对称 NAT（多见于手机热点、部分校园网）下时可能连不上。可以试着打开 STUN，或换一个网络；本应用不提供 TURN 中继——那需要一个公网服务器，与“零服务器”的取舍冲突。</td></tr>
+      <tr><td>连接码要手动转发</td><td>首次配对需要两次复制粘贴（约 30 秒），没有扫码、没有一键链接。这是不用任何服务器的直接代价。</td></tr>
+      <tr><td>防不住“想作弊的人”</td><td>能挡住顺手摸鱼，挡不住主动去改数据文件的人。它的目标是降低摩擦，不是绝对监禁。</td></tr>
+      <tr><td>心率精度有限</td><td>摄像头测心率受光线和晃动影响，数值仅供参考，不能用于医疗判断。</td></tr>
+      <tr><td>AI 会误判</td><td>摸鱼模型在 126 张独立真人照片上的 Top-1 准确率是 86.5%，闲聊雷达抓的是词汇表面特征——
+        反讽、术语、长句都可能判错。判错就点徽章纠正，纠正样本攒够 10 条可以训练「我的模型」；
+        置信度低于阈值时它不会表态，属于有意为之的保守设计。</td></tr>
+      <tr><td>AI 依赖摄像头与光线</td><td>盯学只在开摄像头时工作；背光、逆光、镜头被挡会显著影响准确率。
+        它挡不住刻意规避（比如把手机放在镜头外），目标是提高摸鱼成本，不是全天候监控。</td></tr>
+      <tr><td>公共训练集有噪声</td><td>公共样本来自其他用户标注，可能包含错误或恶意标注。介意就不要开「参与公共训练集」，
+        只用自己账号内的样本。</td></tr>
+      <tr><td>云同步依赖网络</td><td>断网、服务维护、登录过期时云同步会暂停并在设置页显示状态，<b>但本机功能完全不受影响</b>；
+        恢复网络后会自动补推。首次登录同一账号时如果两端都有数据，需要你手动选一边。</td></tr>
+      <tr><td>桌面版不支持授权登录</td><td>WorkBuddy 账号授权需要浏览器跳转回调，本地 <code>file://</code> 页面接收不到，
+        桌面版请用手机号验证码登录。</td></tr>
+    </table>
+  </section>
+
+  <!-- ============ 11 结语 ============ -->
+  <section>
+    <h2><span class="num">12</span>最后</h2>
+    <p>PlanQuest 不承诺“用了就能自律”。它只做一件事：在你决定放弃的那一刻，多给你 <strong>三秒</strong> 的犹豫时间。</p>
+    <p>那三秒里，你会看到连续 12 天的火苗、账户里的积分、房间里还在学的同学——
+      这些东西不会替你做决定，但它们让“再坚持一下”这件事，变得比“算了明天再说”更顺手一点。</p>
+  </section>
+
+  <div class="foot">
+    PlanQuest v1.0 · 计划打卡奖励助手 · 本地离线运行<br />
+    本文档随版本更新，规则数值以应用内实际显示为准
+  </div>
+</div>
+<script>
+/* 悬浮目录：自动扫 h2 章节生成（不改动正文结构） */
+(function () {
+  try {
+    var hs = document.querySelectorAll('h2');
+    if (!hs.length) return;
+    var toc = document.createElement('nav');
+    toc.className = 'toc';
+    hs.forEach(function (h, i) {
+      if (!h.id) h.id = 'sec-' + (i + 1);
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent.replace(/^\s*\d+\s*/, '').trim();
+      if (a.textContent.length > 12) a.textContent = a.textContent.slice(0, 12) + '…';
+      toc.appendChild(a);
+    });
+    var page = document.querySelector('.page') || document.body;
+    var hero = document.querySelector('.hero');
+    if (hero) hero.after(toc); else page.prepend(toc);
+    var btn = document.createElement('a');
+    btn.className = 'top-btn';
+    btn.href = '#';
+    btn.textContent = '↑';
+    btn.title = '回到顶部';
+    btn.addEventListener('click', function (e) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    document.body.appendChild(btn);
+    window.addEventListener('scroll', function () {
+      btn.classList.toggle('show', window.scrollY > 600);
+    }, { passive: true });
+  } catch (_) {}
+})();
+</script>
+</body>
+</html>

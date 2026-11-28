@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>msgpop shot</title>
+<link rel="stylesheet" href="../src/renderer/styles.css" />
+<style>
+  body{margin:0;height:100vh;background:#0e1020}
+  #app{width:100%;height:100vh;background:var(--bg)}
+  .demo-pad{padding:24px;color:var(--text-2);font-size:13px;font-family:var(--font)}
+  .demo-pad b{color:var(--text);font-size:16px}
+</style>
+</head>
+<body>
+<div id="app" data-theme="dark">
+  <div class="demo-pad"><b>消息弹窗效果预览</b><div>右侧是真实渲染的弹窗组件（msg-center.js）</div></div>
+</div>
+<script src="../src/renderer/msg-center.js"></script>
+<script>
+  window.__center = PQMsgCenter.init({ onJump: function () {} });
+  window.__seed = function () {
+    var c = window.__center;
+    c.push({ kind: 'aci', convId: 'aci', name: '阿刺', avatar: '🌵', id: 'a1', text: '你今天打卡又晚了七分钟，我数着呢。' });
+    c.push({ kind: 'friend', convId: 'u1', name: '小林', avatar: '💬', id: 'f1', text: '晚上八点一起自习？' });
+    c.push({ kind: 'friend', convId: 'u1', name: '小林', avatar: '💬', id: 'f2', text: '我先开房间了，你来就行' });
+    c.push({ kind: 'room', convId: 'r1', name: '自习房 #4821', avatar: '🪑', id: 'r1-1', text: '开始专注了，40 分钟', mention: true });
+    var batch = [];
+    for (var i = 0; i < 7; i++) batch.push({ kind: 'channel', convId: 'c1', name: '军团频道', avatar: '📣', id: 'c1-' + i, text: '第 ' + i + ' 条离线消息' });
+    c.pushBatch(batch);
+  };
+</script>
+</body>
+</html>

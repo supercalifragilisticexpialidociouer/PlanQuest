@@ -105,6 +105,8 @@
       + '#pqb-ro.on:hover{color:#fff !important}'
       + '#pqb-fun{padding:6px 12px 0;font-size:10.5px;line-height:1.5;color:var(--pqb-dim)}'
       + '#pqb-fun b{color:var(--pqb-text);font-weight:600}'
+      + '#pqb-fun-id{padding:3px 12px 0;font-size:10.5px;line-height:1.55;color:var(--pqb-dim)}'
+      + '#pqb-fun-id b{color:var(--pqb-teal);font-weight:600}'
       + '#pqb-msgs{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}'
       + '.pqb-m{max-width:82%;padding:7px 10px;border-radius:12px;white-space:pre-wrap;word-break:break-word;animation:pqbIn .18s ease both}'
       + '.pqb-m.me{align-self:flex-end;color:var(--pqb-text);background:var(--pqb-chip);border:1px solid color-mix(in srgb,var(--pqb-teal) 45%,transparent)}'
@@ -211,7 +213,7 @@
       + '.pqb-skin-foot{margin-top:auto;padding-top:9px}'
       + '.pqb-skin-warn{font-size:10px;color:var(--pqb-dim);line-height:1.5;margin-bottom:7px}'
       + '.pqb-skin-foot .pqb-btn{width:100%;padding:7px}'
-      /* ---- 身份卡：改名 + 隐藏重置入口 ---- */
+      /* ---- 身份卡：聊天引导 + 隐藏重置入口（不再放直改表单） ---- */
       + '#pqb-idcard .pqb-namein{display:flex;gap:5px;margin-top:4px}'
       + '#pqb-idcard input{flex:1;min-width:0;background:color-mix(in srgb,var(--pqb-text) 6%,transparent);border:1px solid var(--pqb-line);border-radius:7px;color:inherit;padding:4px 7px;font-size:11.5px;outline:none}'
       + '#pqb-idcard input:focus{border-color:var(--pqb-teal)}'
@@ -229,7 +231,16 @@
       + '.pqb-resetbox .keep{font-size:10.5px;color:var(--pqb-teal);margin-bottom:8px}'
       + '.pqb-resetbox .row{display:flex;gap:6px}'
       + '.pqb-resetbox .row .pqb-btn{flex:1}'
-      + '.pqb-btn.danger{color:#ef4444;border-color:#ef4444}';
+      + '.pqb-btn.danger{color:#ef4444;border-color:#ef4444}'
+      /* 选皮肤毒舌弹窗 / 养成页利弊卡：五套皮肤各弹各的 */
+      + '.pqb-tauntbox{border:1px solid #ef4444;border-radius:10px;padding:8px 9px;margin-top:8px;background:color-mix(in srgb,#ef4444 7%,transparent);box-shadow:0 5px 16px rgba(0,0,0,.14);animation:pqbIn .18s ease both}'
+      + '.pqb-taunt-h{font-size:11px;font-weight:700;color:#ef4444;margin-bottom:5px}'
+      + '.pqb-taunt-say{font-size:11.5px;color:var(--pqb-text);line-height:1.55;margin:5px 0 7px}'
+      + '.pqb-taunt-cols{display:flex;gap:9px}'
+      + '.pqb-taunt-cols>div{flex:1;min-width:0}'
+      + '.pqb-taunt-cols b{font-size:10.5px;color:var(--pqb-teal)}'
+      + '.pqb-taunt-cols ul{margin:3px 0 0;padding-left:14px}'
+      + '.pqb-taunt-cols li{font-size:10.5px;color:var(--pqb-dim);line-height:1.45;margin:2px 0}';
     var st = document.createElement('style');
     st.id = STYLE_ID;
     st.textContent = css;
@@ -263,6 +274,8 @@
   var MOOD_BG = {
     happy: '#f0b46a', smirk: '#9b8cff', listen: '#5fc8f0', surprised: '#ffd166',
     sad: '#6f8fa8', sleep: '#3f4f7a', angry: '#e0554f', disappointed: '#7b7f7c', fight: '#d94a44',
+    /* 不爽四连：半睁眼/斜眼笑/撇嘴/翻白眼，底色也跟着偏冷偏灰 */
+    annoyed: '#b08a5e', sideeye: '#8f7bd6', pout: '#c07a86', eyeroll: '#8a8f9c',
   };
   function hex2rgb(h) {
     h = String(h || '').replace('#', '');
@@ -293,28 +306,77 @@
     if (gl3d) gl3d.setTalking(!!on);
     if (gl3dFab) gl3dFab.setTalking(!!on);
   }
+  /* 扎人反馈：两个 3D 实例（面板大图 + 桌面浮标）一起抖刺 */
+  function prick(ms) {
+    [gl3d, gl3dFab].forEach(function (g) {
+      if (g && typeof g.prick === 'function') g.prick(ms || 800);
+    });
+  }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  /* 语气准则：脸是圆润笑脸，话得傲到天上——居高临下、自命不凡，
+   * 「我肯被你碰是恩赐」。越客气越毒，绝不平起平坐地拌嘴，也不调情。 */
+  var POKE_GOOD = ['（笑眯眯地由你戳）赏你的，别贪。', '戳完了？我肯被碰，是你的福气。', '嗯？手倒是挺闲，比你的计划闲多了。'];
+  var POKE_TEASE = ['戳什么戳。本刺这身段是给你摸的？', '（斜了你一眼）手挺闲，完成率挺空。', '再戳一下，我就当你今天什么都没干。'];
+  var POKE_BAD = {
+    disappointed: ['（笑得很甜，头却别得更远）……别碰我，你不配。', '省省吧，我现在懒得嫌你。'],
+    angry: ['再戳一下试试。我笑着呢，正好想扎人。', '（刺全竖起来，嘴角还挂着笑）你胆子见长啊。'],
+    sad: ['（缩了缩，笑意没退）……今天连嫌你都嫌费劲。'],
+    sleep: ['（翻了个身，嘴角还翘着）……梦里都比你能干。'],
+    annoyed: ['烦。我这张脸是摆着看的，不是给你戳的。', '（半睁眼，笑得特别敷衍）有事？'],
+    pout: ['（撇嘴，笑意收了半分）哼，也配碰我。'],
+    eyeroll: ['（翻了个白眼，嘴角还上扬）……行吧，随你。'],
+    sideeye: ['（斜眼笑）手很闲啊。要不要我给你找点活干？'],
+    def: ['（抖了抖刺，笑得客气）别戳。', '我笑着没翻脸，是给你留面子。'],
+  };
+  var pokeLast = 0;
+  function poke() {
+    var now = Date.now();
+    if (now - pokeLast < 700) return;   /* 连戳限流，别把刺抖散架 */
+    pokeLast = now;
+    var m = currentMood();
+    if (m === 'sleep') { prick(320); setMood('sleep', 1200); return; }
+    /* 心情不好：先抖刺，再给脸色；心情好：软下来（偶尔才说话，免得刷屏） */
+    if (!wantsInteraction()) {
+      prick(950);
+      setMood(Math.random() < 0.5 ? 'annoyed' : 'pout', 2600);
+      if (Math.random() < 0.5) pushMsg('bud', pick(POKE_BAD[m] || POKE_BAD.def));
+      return;
+    }
+    prick(520);
+    if (m === 'happy' || m === 'smirk' || m === 'listen') {
+      setMood('happy', 1500);
+      if (Math.random() < 0.3) pushMsg('bud', pick(POKE_GOOD));
+    } else {
+      setMood(Math.random() < 0.5 ? 'sideeye' : 'smirk', 1800);
+      if (Math.random() < 0.3) pushMsg('bud', pick(POKE_TEASE));
+    }
+  }
 
   /* ---------------- 3D 互动：说一句就演一下 ----------------
    * 只有「短句 + 祈使开头」才算指令（≤14 字），
    * 免得「我今天很生气」也被当成让它演生气。
    * 文字和语音走的是同一个入口（语音最后也是变成文字喂给 answer），所以两边都认。 */
+  /* 六个圆润笑脸负责「娇」，台词负责「傲」：用最甜的脸，说最不把你当回事的话。
+   * 反差就是上头点——赏你、恩赐、你不配、凡人退下。不许写成调情，也不许写成说教。 */
   var FUN_RULES = [
     { k: 'wiggle', re: /^(?:摇一?摇|摇摇看?|摇一下|晃一晃|晃晃)/, mood: 'smirk',
-      say: ['摇完了，满意了？', '别晃，我刺要掉。', '再摇秃了算你的。', '晕了晕了，停手。', '摇一摇能摇出计划来？不能。'] },
+      say: ['摇完了。赏你的，够你跟人吹半年了吧。', '我肯为你晃一下，你今天就算没白活。', '摇完了。别不知足，本刺一般不伺候。', '晃一下而已，看你激动的，没见过世面。', '摇完了。回去写进日记，这种面子不常有。'] },
     { k: 'jump', re: /^(?:跳一跳|跳一下|蹦一下|蹦一蹦|蹦一个|跳个舞|跳两下)/, mood: 'happy',
-      say: ['蹦完了。这算你今天的运动量吗？', '落地不响，放心。', '跳是跳了，腿还是那么短。'] },
+      say: ['蹦完了。我肯为你离地一次，你祖上积德了。', '跳了。（笑眯眯）别鼓掌，本刺嫌吵。', '落地不响，天生的体面，你学不来。', '蹦完了。本刺肯为你离地，你这辈子受过这恩赐吗？'] },
     { k: 'angry', re: /^(?:给我)?(?:生个?气|凶一个?|凶我|凶一点|发火|瞪我)/, mood: 'angry',
-      say: ['行，我生气了。看好了，就这样。', '这就叫生气，学着点。'] },
+      say: ['行，气给你看了。收藏好，这表情不外传。', '凶完了。别怕，我懒得真跟你计较。', '这就叫生气？记好了，我这脸色金贵得很。'] },
     { k: 'happy', re: /^(?:给我)?(?:笑一个|笑一笑|笑个|开心一点|高兴一点|乐一个)/, mood: 'happy',
-      say: ['笑成这样，够了吧？', '行行行，笑了。', '心情不错啊今天。'] },
+      say: ['笑成这样，够了吧？我这张脸不是谁都配看的。', '笑了。赏你三秒，多看一眼收费。', '笑眯眯的，别当我好相处。'] },
     { k: 'surprised', re: /^(?:吃个?惊|惊讶一下|震惊一下|吓我一跳|瞪大眼|瞪眼)/, mood: 'surprised',
-      say: ['吓到了？我以为你见多识广。', '啊？就这？'] },
+      say: ['啊？就这？本刺还以为你干了件人事。', '瞪大了，满意了？我这双眼平时懒得睁。', '惊到了？（笑眯眯）替你尴尬而已，别多想。'] },
     { k: 'sad', re: /^(?:委屈一下|委屈一个|哭一个|蔫一个|难过的表情)/, mood: 'sad',
-      say: ['……行吧，这样够委屈了吗。'] },
+      say: ['……行了，装一下就够了，别真当我在跟你诉苦。', '这样够乖了吗？本刺只是演的，你别得意。'] },
     { k: 'sleep', re: /^(?:睡吧|睡觉|晚安|眯一?会)/, mood: 'sleep',
-      say: ['行，我眯一会儿。别吵。'] },
-    { k: 'left', re: /^(?:向左转|往左转|左转|转左边)/ },
-    { k: 'right', re: /^(?:向右转|往右转|右转|转右边)/ },
+      say: ['行，本刺歇了。你别吵，凡人。', '眯一会儿。梦里没你这种凡人，清静。'] },
+    { k: 'left', re: /^(?:向左转|往左转|左转|转左边)/,
+      say: ['转过去了。赏你个背影，慢慢品。'] },
+    { k: 'right', re: /^(?:向右转|往右转|右转|转右边)/,
+      say: ['转回来了。（笑眯眯）看够了就谢恩，本刺的侧脸不外借。'] },
   ];
 
   function funIntent(t) {
@@ -396,14 +458,16 @@
 
   function nameOf() { return mem.name ? mem.name : '你'; }
 
-  /* 阿刺的加油池：任务连续几轮没动时，主动推一条（毒舌但不伤人） */
+  /* 阿刺的加油池：任务连续几轮没动时，主动推一条。
+   * 举着胳膊笑眯眯，吐出来的得是最扎人的话——傲到天上，不是苦口婆心。 */
   var CHEERS = [
-    '还在那儿？你的计划可没在那儿等你。挑最轻的那条，先做 5 分钟。',
-    '我不催你——但你的完成率催。做一条是一条，坑是从脚下填平的。',
-    '连我这种植物都看得出你在拖。要不先把手机扣桌上，就扣十分钟。',
-    '昨日之日不可留，今日还有几条没打。挑一个，现在。',
-    '别盯着整个列表发怬，只看第一条。做完再抬头。',
-    '你不是不行，你只是还没开始。去证明我这句话。',
+    '（笑眯眯举着胳膊）你再拖下去，我都想自己拔根刺下来替你扎一下了，省得你连疼都懒得喊。',
+    '还在那儿？我这张笑脸是给你看的，不是陪你发怔的。挑最轻那条，赏你五分钟做完。',
+    '我不催你——本刺的身份，催你都嫌掉价。可你那完成率，替我把话说了。',
+    '连我这种天生体面的植物都替你臊得慌。手机扣桌上，就扣十分钟，算我开恩。',
+    '昨日之日不可留，今日还有几条没打。挑一个，现在——别让本刺等第二遍。',
+    '别盯着整个列表发怔，只看第一条。做完再抬头看我，我这张脸才配得上你的战果。',
+    '你不是不行，你只是还没开始。去证明我这句话——毕竟我金口一开，从不落空。',
   ];
 
   /* 自动填表：只填「昵称/姓名/名字/称呼/监督人」这类框，值取本机资料，不猜邮箱手机号 */
@@ -563,6 +627,21 @@
     });
   }
 
+  /* AI 人设段落：按当前皮肤性格 + 当下心境生成，注入 system 提示词。
+   * 只描述"外形/脾气/心境"，不含概率/数值/机制；拿不到皮肤数据时返回空串走老提示词。 */
+  function alaPersona() {
+    var PK = window.PQPerk;
+    if (!PK || !skinId || !PK.skinProfile || !PK.skinProfile(skinId)) return '';
+    var level = '';
+    try {
+      var sin = alaSin && (alaSin.skin === skinId) ? alaSin : (alaSin || {});
+      if (sin && (sin.skinMoodLevel || sin.skinMood != null)) {
+        level = sin.skinMoodLevel || PK.skinMoodLevel(skinId, sin.skinMood);
+      }
+    } catch (e) {}
+    try { return PK.personaText(skinId, level) || ''; } catch (e2) { return ''; }
+  }
+
   function alaFacts(opts) {
     opts = opts || {};
     var s = (typeof getState === 'function' && getState()) || {};
@@ -666,6 +745,7 @@
         var q = cps[c] || {};
         cl.push('· ' + (q.title || '契约') + ' 第 ' + (q.dayIndex || 0) + '/' + (q.days || 0) + ' 天'
           + '；今日 ' + (q.todayDone || 0) + '/' + (q.todayCount || 0)
+          + (q.noTaskToday ? '；今日没排任务，不扣' : (q.todayOwe ? '；今日应扣 ¥' + q.todayOwe : ''))
           + '；累计应扣 ¥' + (q.oweTotal || 0) + (q.expired ? '（已到期）' : ''));
       }
       secs.push({ k: 'contracts', text: cl.join('\n') });
@@ -746,7 +826,7 @@
     if (cfg.mode === 'custom' && !cfg.endpoint) return Promise.resolve(null);
     if (cfg.mode === 'meituan' && !cfg.apiKey) return Promise.resolve(null);
     var facts = alaFacts({ text: text }) + (extraFacts ? '\n\n' + extraFacts : '');
-    var msgs = lib.buildMessages(text, facts, alaHist);
+    var msgs = lib.buildMessages(text, facts, alaHist, alaPersona());
     return new Promise(function (resolve) {
       function done(r) {
         var txt = r && r.ok && r.text ? r.text : (r && r.text ? r.text : null);
@@ -1442,7 +1522,7 @@
     if (!mod || !llm) return Promise.resolve(null);
     var cfg = alaRuntimeCfg();
     if (cfg.enabled === false) return Promise.resolve(null);
-    var msgs = mod.buildMessages(kind, text, facts, alaHist);
+    var msgs = mod.buildMessages(kind, text, facts, alaHist, alaPersona());
     var opts = { maxTokens: 900, maxChars: 2400, temperature: 0.4 };
     return new Promise(function (resolve) {
       function done(r) {
@@ -1802,12 +1882,12 @@
    * 规矩在别处执行，毒舌在这里补刀。app.js 在这些事件发生时调 PQBuddy.scold(kind, detail)。 */
 
   var SCOLDS = {
-    warn: ['嘴上没把门，警告先挂账上——再犯就不是提醒了。', '这不是我说的，是规矩说的。管住手，省得管嘴。'],
-    mute: ['禁言了。正好，用打字的时间去打卡，回来咱们都体面。', '嘴被按住了吧？仙人掌不说话都能活，你也可以。'],
-    chat: ['这条没发出去——不是网的问题，是你的档位/完成率问题。先干活，频道不会跑。', '频道把你拦下了。理由人家写了，自己看。想说话？先把今天的事做完。'],
-    friend: ['搭子那边没收到。门槛拦的是你，不是我——先把自己的完成率拉上来。', '消息被档了。你们俩的规矩是双方完成率 ≥50% 才能聊，这不是我定的，但我是拥护者。'],
-    planban: ['计划包被拦了。黑名单不是摆设，你这包我救不了。', '包被拦了。来路不明的计划文件就该这么办——你该谢谢拦截你的人。'],
-    evict: ['驱逐投票挂头上了。别急着骂人，备好申诉材料——或者干脆把打卡补上，比什么都硬。'],
+    warn: ['（笑眯眯）嘴上没把门？警告先挂你账上——本刺的账，从不赊第二回。', '（歪头笑）这不是我说的，是规矩说的。管住手，别脏了我的地盘。'],
+    mute: ['禁言了。正好，用打字的时间去打卡——回来别指望我哄你，我没那么闲。', '（笑得甜）嘴被按住了吧？本刺一句话不说都比你体面，学着点。'],
+    chat: ['这条没发出去——不是网的问题，是你的完成率不够看。先干活，频道不会等你这种档位。', '频道把你拦下了。（掩嘴笑）理由人家写了，自己看。想说话？先把今天的事配齐。'],
+    friend: ['搭子那边没收到。（挑眉）门槛拦的是你，不是我——本刺走到哪儿都一路绿灯。', '消息被档了。你们俩完成率 ≥50% 才配聊，这规矩定得漂亮，我举双手赞成。'],
+    planban: ['计划包被拦了。（笑）黑名单不是摆设，你这包，本刺都懒得伸手。', '包被拦了。来路不明的东西也敢往我跟前递？该谢谢拦你的人，替我挡了脏。'],
+    evict: ['驱逐投票挂头上了。（笑眯眯）别急着骂人——把打卡补上，比什么都硬，也比我肯替你求情实在。'],
   };
   var scoldLast = {};
 
@@ -1894,20 +1974,8 @@
       say: ['行，我挂机。想让我回来就说「醒醒」。', '安静模式。仙人掌本来就是最安静的植物。'] },
     { k: 'wake', re: /醒醒|回来|说话/, mood: 'happy',
       say: ['回来了。刚才安静得我都快生根了。', '哟，舍得让我开口了？'] },
-    /* 给我改名：先让主进程按皮肤+心情掷骰子，答不答应由阿刺决定（不是用户说了算） */
-    { k: 'rename', re: /(?:改名|名字改成|以后叫你|你就叫|叫你)\s*([\u4e00-\u9fa5a-zA-Z0-9]{1,8})(?:[，。!！]|$)/, mood: 'smirk',
-      fn: function (m) {
-        var nm = m[1];
-        if (!skinId) return '连皮肤都没选，先给我个样子再说名字。';
-        aciDo('tryRename', { name: nm }).then(function (r) {
-          if (r && r.ok && r.renamed) {
-            companionName = nm;
-            if (r.view) syncCompanionModel(r.view);
-            refreshAciGrow();
-          }
-        });
-        return '「' + nm + '」？行，我先掂量掂量这名字——同不同意，我说了算。';
-      } },
+    /* 改名不在 BRAIN 里了：由 answer() 的 identityRequest 分支统一接管，
+       保证「用户说一句 → 阿刺掷骰子 → 结果说回聊天」是同一条链路，不会自问自答。 */
     { k: 'name', re: /(?:叫我|记得我叫|我名字是|我是)\s*([\u4e00-\u9fa5a-zA-Z0-9]{1,8})(?:[，。!！]|$)/, mood: 'happy',
       fn: function (m) {
         mem.name = m[1];
@@ -2093,6 +2161,130 @@
     return null;
   }
 
+  /* ---------------- 身份请求：改名 / 换皮肤，一律在聊天里说 ----------------
+   * 产品口径：养成面板不放「填个表就把名字改了」的按钮。想改名、想反悔换皮肤，
+   * 都得在聊天框跟阿刺开口，由他按皮肤 + 心情 + 名字掷骰子决定接不接受；
+   * 接受也好、拒绝也好，那句话都得说回聊天里，不能只在角落里闪一行小字。
+   * 开局选完皮肤就锁死，聊天里提换皮肤只会得到拒绝 + 唯一出路（重置，代价是清空聊天）。 */
+  function identityRequest(t) {
+    var s = String(t || '').trim();
+    /* 改名：名字要说全。「改个名」没带名字时，让阿刺在聊天里追问，不弹任何表单 */
+    var m = /(?:改个?名|名字改成|改名叫|名字叫|以后叫你|你就叫|叫你|给你起个?名|给你取个?名)\s*(?:叫|做|为)?\s*([\u4e00-\u9fa5a-zA-Z0-9]{1,8})(?:$|[，。！!？\s、])/.exec(s);
+    if (m) return { type: 'rename', action: 'tryRename', payload: { name: m[1] } };
+    if (/(?:改个?名|换个?名字|起个?名|取个?名)/.test(s)) return { type: 'renameNoName' };
+    /* 换皮肤 / 换造型：包括「换成玫瑰」「重新选皮肤」「皮肤能改吗」 */
+    if (/(?:皮肤|造型|样子|模样|长相).{0,8}(?:换|改|重选|重新选|换回|变成|能不能换|能换吗)|(?:换|改|重新选|重选|换回).{0,8}(?:皮肤|造型|样子|模样)|(?:换成|变成|改回|换回)\s*(?:仙人掌|玫瑰|刺猬|板栗|豪猪)/.test(s)) {
+      return { type: 'skin', action: 'requestSkinChange', payload: {} };
+    }
+    return null;
+  }
+
+  var identityTalkTimer = null;
+  /* 说一句并显示口型（pushMsg 本身不张嘴，这里补上，跟其它聊天回复一致） */
+  function identitySay(text, mood) {
+    var line = String(text || '');
+    pushMsg('bud', line);
+    setMood(mood || 'smirk', 4200);
+    talking(true);
+    clearTimeout(identityTalkTimer);
+    identityTalkTimer = setTimeout(function () {
+      talking(false);
+    }, Math.max(900, Math.min(6500, line.length * 170)));
+  }
+
+  /* 网页版没有主进程：用同一份 PQSkin 规则在本地判定，保证「聊天里请求」的口径不打折 */
+  function localIdentityAction(req) {
+    var SK = window.PQSkin;
+    if (!SK) return { ok: false, refused: true, message: '这事我现在记不住。' };
+    if (req.type === 'skin') {
+      var sr = SK.requestSkinChange(skinId, { rng: Math.random });
+      return { ok: false, refused: true, message: sr.reply, hint: sr.hint };
+    }
+    var ev = SK.evaluateRename(skinId, req.payload.name, {
+      current: companionName,
+      mood: currentMood(),
+      level: 1,
+      disappointed: aciDisappointed,
+      renameCount: 0,
+      rng: Math.random,
+    });
+    if (!ev.accept) return { ok: false, refused: true, chance: ev.chance, message: ev.reply };
+    saveLocalIdentity(skinId, req.payload.name);
+    companionName = String(req.payload.name);
+    return { ok: true, renamed: true, message: '「' + companionName + '」……行，赏你了。别得寸进尺。' };
+  }
+
+  /* 覆盖第 3 次起：换皮 / 养成锁死 24 小时，聊天里求也没用（主进程另有兜底） */
+  function isOverwriteFrozen() { return !!window.PQOverwriteFrozen; }
+  function frozenLine() {
+    var PO = window.PQPlanOverwrite, st = window.PQOverwriteState || null;
+    var vars = {
+      left: Math.max(1, Math.ceil(((st && st.frozenLeft) || 86400000) / 3600000)),
+      n: (st && st.count) || 3,
+    };
+    return PO ? PO.line('frozen', vars, Math.random) : '（笑眯眯）换皮？养成？门锁着呢，钥匙我吞了。';
+  }
+
+  async function handleIdentityRequest(req) {
+    if (isOverwriteFrozen()) {
+      identitySay(frozenLine(), 'angry');
+      prick(900);
+      return;
+    }
+    if (req.type === 'renameNoName') {
+      identitySay(pick(['（挑眉）名字呢？本刺可没空替你猜。', '光说要改不说叫什么？想让我自己随便认一个，你也太看得起自己了。']), 'annoyed');
+      prick(700);
+      return;
+    }
+    var api = aciApi();
+    var hasApi = !!(api && typeof api.aciAction === 'function');
+    setMood('listen', 3200);
+    talking(true);
+    var r = null;
+    if (hasApi) {
+      try { r = await api.aciAction(req.action, req.payload); }
+      catch (e) { talking(false); identitySay('（笑眯眯）……本刺刚才懒得抬眼，你再说一遍。', 'annoyed'); return; }
+      /* 网页桥接桩只回「桌面版专属」，别把这句当阿刺的台词，改走本地规则 */
+      if (r && r.ok === false && /桌面版|desktop/i.test(String(r.message || '')) && window.PQSkin) r = localIdentityAction(req);
+    } else {
+      r = localIdentityAction(req);
+    }
+    var line = (r && r.message) || (req.type === 'skin' ? '合同签了就别想反悔，本刺没兴趣陪你重开。' : '（笑眯眯）这次没答应，赏你个机会再想想措辞。');
+    if (req.type === 'rename' && r && r.ok && r.renamed) {
+      if (!hasApi) companionName = req.payload.name;
+      if (r.view) syncCompanionModel(r.view);
+      else aciFetch();
+      refreshAciGrow();
+      applySkinIdentity();
+      identitySay(line, 'happy');
+    } else {
+      /* 拒绝不是「没反应」：半睁眼 / 撇嘴 + 抖一下刺，让人真的被扎到 */
+      identitySay(line, Math.random() < 0.5 ? 'annoyed' : 'pout');
+      prick(950);
+      /* 换皮肤被拒后，把唯一出路和代价也在聊天里说清楚，别让人以为没辙 */
+      if (req.type === 'skin' && r && r.hint) {
+        setTimeout(function () { identitySay(r.hint, 'sideeye'); }, 750);
+      }
+    }
+  }
+
+  /* 面板按钮只是「帮你在聊天里开口」，绝不绕过聊天直接改数据 */
+  function sendChatText(text) {
+    switchAciTab('chat');
+    setOpen(true);
+    answer(String(text || ''));
+  }
+  function prefillChat(text) {
+    switchAciTab('chat');
+    setOpen(true);
+    var inp = document.getElementById('pqb-text');
+    if (inp) {
+      inp.value = String(text || '');
+      inp.focus();
+      try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e) {}
+    }
+  }
+
   function answer(text) {
     text = String(text || '').trim();
     if (!text) return;
@@ -2105,6 +2297,22 @@
       return;
     }
     pushMsg('me', text);
+    /* 顶罪不能求、不能规定：开口求他扛，只会被他自己怼回来。
+     * 这里没有开关、没有概率、没有「同意」分支，纯看文案回敬。 */
+    if (/顶罪|替我(扛|扣|挡|出)|帮我(扛|顶|挡)|别扣我分|这分别扣我|替我擦/.test(text)) {
+      var PK = window.PQPerk;
+      identitySay(PK ? PK.pleaLine(Math.random) : '（斜眼笑）扛不扛我说了算，你求也没用。', 'sideeye');
+      return;
+    }
+    /* 心情：聊天 = 微量互动；真诚道歉 = 一次性恢复。都是阿刺自己记账，
+     * 没有开关、没有概率、没有请求顶罪的入口。 */
+    if (/对不起|我错了|向你道歉|真诚道歉|我道歉|原谅我|抱歉/.test(text)) {
+      moodAction('apology').then(function (r) {
+        if (r && r.message) identitySay(r.message, (r.band === 'bad') ? 'angry' : 'sideeye');
+      }).catch(function () {});
+      return;
+    }
+    moodAction('chatPing').catch(function () {});
     /* 有一批动作在等守护密码：先认「密码 xxx」和「取消」 */
     if (pendingAct) {
       var pw = /^密码[\s:：]*(\S+)$/.exec(text);
@@ -2140,6 +2348,11 @@
       if (aciApi() && aciApi().aciAction) aciApi().aciAction('setDisappointed', { on: false }).catch(function () {});
       pushMsg('bud', '（阿刺抬了抬头……行吧，这次就当你认错了。）');
     }
+    /* 身份请求：改名 / 换皮肤只能在聊天里开口，且必须放在表情指令之前，
+       免得「换个皮肤」被当成随便一个逗它玩的动作。 */
+    var idReq = identityRequest(text);
+    if (idReq) { handleIdentityRequest(idReq); return; }
+
     /* 表情/动作指令：摇一摇、跳一跳、生个气、笑一个、吃个惊、左转右转……
      * 认出来就当场演，不喂模型、不进上下文——这是逗它，不是问它问题。 */
     var fun = funIntent(text);
@@ -2149,7 +2362,12 @@
         var m0 = currentMood();
         var arr = NO_FUN[m0] || NO_FUN.angry;
         pushMsg('bud', arr[Math.floor(Math.random() * arr.length)]);
-        setMood(m0 === 'sleep' ? 'sleep' : (m0 === 'happy' || m0 === 'idle' ? 'smirk' : m0), 3200);
+        /* 拒绝不是「没反应」：刺抖一下、半睁眼或撇嘴，让人真的被扎到 */
+        var grumpy = (m0 === 'disappointed' || m0 === 'sad') ? 'pout'
+          : m0 === 'sleep' ? 'sleep'
+            : (Math.random() < 0.5 ? 'annoyed' : 'pout');
+        prick(880);
+        setMood(grumpy, 3200);
         return;
       }
       funDo(fun);
@@ -2280,13 +2498,38 @@
     return box;
   }
 
+  /* 面板关着的时候，阿刺说的话也要弹窗提醒（桌面最小化到托盘、或用别的页面时）。
+     走统一消息中心：去重、合并、静音规则跟其它消息完全一致。 */
+  function notifyBuddySays(text) {
+    if (!text) return;
+    if (open && typeof document !== 'undefined' && !document.hidden) return; // 面板就在眼前就不弹
+    var C = typeof window !== 'undefined' ? window.PQMsg : null;
+    if (!C || typeof C.push !== 'function') return;
+    var sk = window.PQSkin && typeof window.PQSkin.get === 'function' ? window.PQSkin.get(skinId) : null;
+    C.push({
+      kind: 'aci',
+      convId: 'aci',
+      name: companionName || '阿刺',
+      avatar: (sk && sk.emoji) || '🌵',
+      text: text,
+      id: 'aci-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
+    });
+  }
+
   function pushMsg(who, text, opts) {
+    var body = String(text == null ? '' : text);
+    /* 五套皮肤说话风格各异：阿刺的每句话统一在这里过一层语气壳。
+     * 幂等、不改数字与事实；系统说明 / 已定型的台词可传 {raw:true} 跳过。 */
+    if (who === 'bud' && !(opts && opts.raw) && window.PQPerk && typeof window.PQPerk.styleLine === 'function') {
+      try { body = window.PQPerk.styleLine(body, skinId, opts && opts.kind); } catch (e) {}
+    }
+    if (who === 'bud') notifyBuddySays(body);
     if (!msgsEl) return null;
-    var item = makeItem(who, String(text == null ? '' : text), opts);
+    var item = makeItem(who, body, opts);
     msgsEl.appendChild(item);
     msgsEl.scrollTop = msgsEl.scrollHeight;
     /* 自动朗读只念阿刺自己说的话；点哪段念哪段是另一条路（见 fillMsg） */
-    if (who === 'bud' && ttsOn() && !listening) speak(text);
+    if (who === 'bud' && ttsOn() && !listening) speak(body);
     return item;
   }
 
@@ -2408,7 +2651,7 @@
       ? '\n\n【上一版回答（这次重写：换个说法、换个开头、别复读它）】\n' + String(prev).slice(0, 300)
       : '';
     var facts = alaFacts({ text: text }) + extra;
-    var msgs = lib.buildMessages(text, facts, []);
+    var msgs = lib.buildMessages(text, facts, [], alaPersona());
     var opts = { temperature: 0.95, maxTokens: 600, maxChars: 600 };
     return new Promise(function (resolve) {
       function done(r) { resolve(r && r.text ? String(r.text) : null); }
@@ -2603,6 +2846,7 @@
     skinKnown = true;
     skinCatalog = d.skins || skinCatalog;
     resetCostInfo = d.resetCost || resetCostInfo;
+    alaSin = (d.derived && d.derived.sin) || alaSin;
     applySkinIdentity();
     var st = { mood: d.aci.mood, disappointed: !!d.aci.disappointed, level: d.aci.level };
     if (aciFightUntil && Date.now() < aciFightUntil) st.fighting = true;
@@ -2626,16 +2870,18 @@
     var p = {
       happy: 1, smirk: 0.9, listen: 0.95, surprised: 0.85,
       sleep: 0.35, sad: 0.5, angry: 0.45, disappointed: 0.15, fight: 0.75,
+      /* 不爽的时候：能推就推，实在推不掉也敷衍一下 */
+      annoyed: 0.5, sideeye: 0.6, pout: 0.4, eyeroll: 0.55,
     }[currentMood()];
     if (p == null) p = 0.95;
     return Math.random() < p;
   }
   var NO_FUN = {
-    disappointed: ['（它把头别过去了，懒得动。）', '……现在不想动。', '（蔫着，连刺都懒得竖。）'],
-    angry: ['不跳。气还没消。', '（瞪了你一眼，没动。）', '现在别逗我。'],
-    sad: ['……没心情。', '（缩了缩，没动。）'],
-    sleep: ['（睡着了，没反应。）', '呼……（翻了个身。）'],
-    fight: ['正打架呢，别闹。'],
+    disappointed: ['（笑得甜，一动不动）……今天不伺候。', '省省吧，我懒得为你抬一下刺。', '（蔫着，嘴角还翘着）凡人退下。'],
+    angry: ['不跳。我肯站着看你，已经很给面子了。', '（瞪着你，笑得很假）现在别烦我。', '没空。等我把嫌你的劲儿攒够再说。'],
+    sad: ['……没心情。你那点事也配我来演？', '（缩着，笑意浅浅）今天歇业，改日排队。'],
+    sleep: ['（睡得四仰八叉）……别喊，本刺的梦比你的人生精彩。', '呼……（翻了个身）跪安吧。'],
+    fight: ['正忙着赢呢。你连自己的计划都打不过，别来烦我。'],
   };
 
   /* 皮肤=主题色 + 名字 + 头像 emoji。面板/浮标都用同一套 CSS 变量。 */
@@ -2680,6 +2926,7 @@
   var companionName = '阿刺';
   var skinCatalog = null;
   var resetCostInfo = null;
+  var alaSin = null; // 缓存主进程下发的顶罪/心情账本（含分皮肤心境），供 AI 人设提示词用
   var pickSel = '';
   var skinKnown = false; // 是否已经拿到过身份状态（避免异步没回来就误判"未选皮肤"）
 
@@ -2709,7 +2956,29 @@
       return (r && r.aci) ? r : null;
     } catch (e) { return null; }
   }
+  /* 心情事件：桌面走 aci:action，网页 / 安卓走 pq-core 暴露的 PQMoodEvent。
+   * 只上报「发生了什么」，扛不扛、涨不涨由阿刺的心情引擎自己决定。 */
+  function moodAction(ev, payload) {
+    try {
+      if (typeof window.PQMoodEvent === 'function') {
+        var r = window.PQMoodEvent(ev, payload || {});
+        return Promise.resolve(r ? { ok: true, message: r.line || '', band: r.band, delta: r.delta } : null);
+      }
+    } catch (e) {}
+    var api = aciApi();
+    if (api && typeof api.aciAction === 'function') {
+      try { return api.aciAction(ev, payload || {}); } catch (e) { return Promise.resolve(null); }
+    }
+    return Promise.resolve(null);
+  }
+
   async function aciDo(action, payload) {
+    /* 冻结期：养成 / 换皮 / 重置一律不让碰，且当场开口嘲讽 */
+    if (isOverwriteFrozen() && /^(water|useSupply|redeemSupply|chooseSkin|resetIdentity|requestSkinChange|tryRename|buyTicket|skipCooldown)$/.test(String(action))) {
+      pushMsg('bud', frozenLine());
+      setMood('angry', 3600);
+      return { ok: false, frozen: true, message: '' };
+    }
     var api = aciApi();
     if (!api || typeof api.aciAction !== 'function') { pushMsg('sys', '阿刺养成只在桌面版可用'); return null; }
     try {
@@ -2720,6 +2989,8 @@
       } else if (r && r.broadcast && r.broadcast.venue === 'legion') {
         pushMsg('sys', '挑战文案已生成，请复制到军团频道发布（避免绕过发言规则）：\n' + r.broadcast.text);
       }
+      /* 竞技场连败掉段时：先出系统判定，再让阿刺插话顶罪（或不顶） */
+      if (r && r.cover && r.cover.systemNotice) pushMsg('sys', r.cover.systemNotice);
       if (r && r.message) pushMsg('bud', r.message);
       return r;
     } catch (e) { pushMsg('sys', '操作失败：' + ((e && e.message) || e)); return null; }
@@ -2733,6 +3004,7 @@
   }
 
   function openSkinPicker() {
+    if (isOverwriteFrozen()) { pushMsg('bud', frozenLine()); setMood('angry', 3600); return; }
     var box = document.getElementById('pqb-skinpick');
     if (!box) return;
     /* setOpen 在"未选皮肤"时也会调本函数：用 open 状态断开递归 */
@@ -2761,10 +3033,26 @@
     }).join('');
     var picked = null;
     for (var i = 0; i < list.length; i++) if (list[i].id === pickSel) picked = list[i];
+    /* 选中哪套皮肤，就把那套的利弊与毒舌弹出来（五套各不相同） */
+    var pc = (pickSel && window.PQPerk && typeof window.PQPerk.prosCons === 'function')
+      ? window.PQPerk.prosCons(pickSel) : null;
+    var tauntHtml = '';
+    if (pc && pc.taunt) {
+      tauntHtml = '<div class="pqb-tauntbox" id="pqb-tauntbox">'
+        + '<div class="pqb-taunt-h">⚠ 先听本刺把话说完 · ' + escA(pc.alias) + '（' + escA(pc.role) + '）</div>'
+        + '<div class="pqb-taunt-say">' + escA(pc.taunt) + '</div>'
+        + '<div class="pqb-taunt-cols"><div><b>利</b><ul>'
+        + (pc.pros || []).map(function (x) { return '<li>' + escA(x) + '</li>'; }).join('')
+        + '</ul></div><div><b>弊</b><ul>'
+        + (pc.cons || []).map(function (x) { return '<li>' + escA(x) + '</li>'; }).join('')
+        + '</ul></div></div></div>';
+    }
     box.innerHTML = ''
       + '<h3>先交个底：我是哪种带刺的？</h3>'
-      + '<div class="pqb-skin-sub">皮肤决定我的头像配色、说话语气和面板主色。选完就定下来——想换得付代价。</div>'
+      + '<div class="pqb-skin-sub">皮肤决定我的建模、说话语气，还有各自的利弊倍率。选完就定下来——想换得付代价。'
+      + (window.PQSkin && window.PQSkin.onboardHint ? escA(window.PQSkin.onboardHint()) : '') + '</div>'
       + '<div class="pqb-skins">' + (cards || '<div class="pqb-muted">皮肤清单没加载出来，重开面板试试。</div>') + '</div>'
+      + tauntHtml
       + '<div class="pqb-skin-foot"><div class="pqb-skin-warn">'
       + (picked ? '确定是「' + escA(picked.name) + '」？点下面按钮就算签合同，以后不能改。'
         : '先点一个，再点下面按钮确认。')
@@ -2813,6 +3101,7 @@
 
   /* ---------------- 重置（隐藏入口：身份卡上的皮肤 emoji 连点 5 下） ---------------- */
   function openResetDialog() {
+    if (isOverwriteFrozen()) { pushMsg('bud', frozenLine()); setMood('angry', 3600); return; }
     var mask = document.getElementById('pqb-resetmask');
     if (!mask) return;
     var c = resetCostInfo || (window.PQSkin ? window.PQSkin.resetCost() : null) || { items: [], keep: '' };
@@ -2885,18 +3174,25 @@
       + escA(sk ? sk.name : '未选皮肤') + '</span></h4>'
       + '  <div class="pqb-kv"><span>名字</span><b>' + escA(companionName) + '</b></div>'
       + (dv.voiceHint ? '  <div class="pqb-muted" style="margin-top:2px">语气：' + escA(dv.voiceHint) + '</div>' : '')
-      + '  <div class="pqb-row"><button class="pqb-btn" id="pqb-rename">✏ 改名</button>'
-      + '  <button class="pqb-btn" id="pqb-skinchange">想换皮肤？</button></div>'
-      + '  <div id="pqb-renamebox" style="display:none">'
-      + '    <div class="pqb-namein"><input id="pqb-nameinput" maxlength="8" placeholder="新名字（1~8 字）" />'
-      + '    <button class="pqb-btn" id="pqb-nameok">提交</button></div>'
-      + (nameSuggest.length ? '    <div class="pqb-sug">' + nameSuggest.map(function (n) {
-        return '<button data-sug="' + escA(n) + '">' + escA(n) + '</button>';
+      + '  <div class="pqb-row"><button class="pqb-btn" id="pqb-rename">✏ 在聊天里改名</button>'
+      + '  <button class="pqb-btn" id="pqb-skinchange">想换皮肤？在聊天里说</button>'
+      + '  <button class="pqb-btn danger" id="pqb-reset" title="和阿刺两清：聊天记录、养成数据清零，从 1 级重来">↺ 重置（两清）</button></div>'
+      + (nameSuggest.length ? '  <div class="pqb-sug">' + nameSuggest.map(function (n) {
+        return '<button data-sug="' + escA(n) + '" title="点一下＝你在聊天里开口问我能不能叫这个">' + escA(n) + '</button>';
       }).join('') + '</div>' : '')
-      + '    <div class="pqb-muted" style="margin-top:4px">这几个是我自己想的。改不改，得看我心情。</div>'
-      + '    <div class="pqb-muted" id="pqb-namefb" style="margin-top:3px"></div>'
-      + '  </div>'
+      + '  <div class="pqb-muted" style="margin-top:5px;line-height:1.6">改名、反悔换皮肤都得在聊天里跟我说；'
+      + '想彻底重来，上面那个红色的「重置」按钮摆着呢，代价自己看清楚。答不答应、叫什么语气，看我心情。</div>'
       + '</div>'
+      + (dv.skinAlias ? '<div class="pqb-card" id="pqb-skillcard"><h4>⚖ ' + escA(dv.skinAlias) + ' · ' + escA(dv.skinRole || '') + '</h4>'
+        + '<div class="pqb-taunt-say">' + escA(dv.skinTaunt || '') + '</div>'
+        + '<div class="pqb-taunt-cols"><div><b>利</b><ul>'
+        + (dv.skinPros || []).map(function (x) { return '<li>' + escA(x) + '</li>'; }).join('')
+        + '</ul></div><div><b>弊</b><ul>'
+        + (dv.skinCons || []).map(function (x) { return '<li>' + escA(x) + '</li>'; }).join('')
+        + '</ul></div></div>'
+        + '<div class="pqb-muted" style="margin-top:6px">心情 ' + escA(String((dv.sin && dv.sin.mood) != null ? dv.sin.mood : 3))
+        + '（' + escA((dv.sin && dv.sin.moodLabel) || '一般') + '）· 顶罪：' + escA((dv.sin && dv.sin.note) || '扛不扛，本刺自己说了算。')
+        + '（本刺已替你扛过 ' + ((dv.sin && dv.sin.total) || 0) + ' 次）</div></div>' : '')
       + '<div class="pqb-card"><h4>' + (sk ? escA(sk.emoji) : '🌵') + ' ' + escA(companionName) + ' · 战友 <span class="pqb-tag">' + escA(dv.tierName || '新芽段') + '</span></h4>'
       + '  <div class="pqb-kv"><span>等级</span><b>Lv.' + (a.level || 1) + ' / ' + (r.MAX_LEVEL || 100) + '</b></div>'
       + '  <div class="pqb-bar"><i style="width:' + pct + '%"></i></div>'
@@ -2919,44 +3215,21 @@
       + '</div>';
     var w = box.querySelector('#pqb-water'); if (w) w.onclick = function () { aciDo('water').then(function (r) { if (r && r.ok) refreshAciGrow(); }); };
     var bt = box.querySelector('#pqb-buyticket'); if (bt) bt.onclick = function () { aciDo('buyTicket').then(function (r) { if (r && r.ok) { refreshAciGrow(); refreshAciPk(); } }); };
-    /* ---- 身份卡：改名 / 换皮肤拒绝 / 隐藏重置 ---- */
+    /* ---- 身份卡：三个按钮都只是「帮你在聊天里开口」，绝不直接改数据 ---- */
     var rn = box.querySelector('#pqb-rename');
-    var rbox = box.querySelector('#pqb-renamebox');
-    var fb = box.querySelector('#pqb-namefb');
-    if (rn) rn.onclick = function () {
-      if (!rbox) return;
-      var show = rbox.style.display === 'none';
-      rbox.style.display = show ? 'block' : 'none';
-      if (show) { var inp0 = box.querySelector('#pqb-nameinput'); if (inp0) inp0.focus(); }
-    };
-    function submitName() {
-      var inp = box.querySelector('#pqb-nameinput');
-      var v = inp ? String(inp.value || '').trim() : '';
-      if (!v) return;
-      aciDo('tryRename', { name: v }).then(function (r) {
-        if (r && r.ok && r.renamed) {
-          companionName = v;
-          if (r.view) syncCompanionModel(r.view);
-          refreshAciGrow();
-        } else if (fb) {
-          fb.style.color = '#ef4444';
-          fb.textContent = (r && r.message) || '这次没答应。';
-          if (inp) inp.select();
-        }
-      });
-    }
-    var nok = box.querySelector('#pqb-nameok'); if (nok) nok.onclick = submitName;
-    var ninp = box.querySelector('#pqb-nameinput');
-    if (ninp) ninp.onkeydown = function (e) { if (e.key === 'Enter') submitName(); };
+    if (rn) rn.onclick = function () { prefillChat('以后叫你 '); };
     box.querySelectorAll('[data-sug]').forEach(function (b) {
-      b.onclick = function () {
-        var inp = box.querySelector('#pqb-nameinput');
-        if (inp) { inp.value = b.getAttribute('data-sug'); inp.focus(); }
-      };
+      b.onclick = function () { sendChatText('以后叫你 ' + b.getAttribute('data-sug')); };
     });
     var chg = box.querySelector('#pqb-skinchange');
-    if (chg) chg.onclick = function () { aciDo('requestSkinChange'); };
-    /* 隐藏入口：皮肤徽章连点 5 下（1.5 秒内）才弹重置，平时点它只是普通标签 */
+    if (chg) chg.onclick = function () { sendChatText('我想给你换个皮肤'); };
+    /* 重置按钮：明明白白摆出来（不用再靠彩蛋），点时仍要过确认弹窗看清代价 */
+    var rst = box.querySelector('#pqb-reset');
+    if (rst) {
+      if (dv.slumpLocked) { rst.disabled = true; rst.title = '连续摆烂，换皮 / 养成锁 24 小时'; }
+      rst.onclick = function () { openResetDialog(); };
+    }
+    /* 彩蛋保留：皮肤徽章连点 5 下（1.5 秒内）也能弹重置，兼容老习惯 */
     var badge = box.querySelector('#pqb-skinbadge');
     if (badge) {
       var taps = 0, tapAt = 0;
@@ -3104,6 +3377,7 @@
       + '<div id="pqb-view-chat" class="pqb-view on">'
       + '  <div id="pqb-msgs"></div>'
       + '  <div id="pqb-fun">想让它动？直接说：<b>摇一摇</b> · <b>跳一跳</b> · <b>生个气</b> · <b>笑一个</b> · <b>吃个惊</b> · <b>向左转</b></div>'
+      + '  <div id="pqb-fun-id">想给我<b>改名</b>，就说「以后叫你 XX」；想反悔<b>换皮肤</b>，也尽管开口——（笑眯眯）不过本刺金贵，答不答应、看心情，你求也没用。</div>'
       + '  <div id="pqb-input">'
       + '    <input id="pqb-text" placeholder="说话，或者点右边麦克风…" maxlength="200" />'
       + '    <button id="pqb-send">发</button>'
@@ -3230,12 +3504,16 @@
   function startDrag(e) {
     e.preventDefault();
     var sx = (e.touches ? e.touches[0].clientX : e.clientX);
+    var sy = (e.touches ? e.touches[0].clientY : e.clientY);
+    var t0 = Date.now(), moved = false;
     var base = rotY;
     var stage = e.currentTarget;
     stage.style.cursor = 'grabbing';
     if (gl3d) { gl3d.startDrag(); gl3d.setRotY(rotY); }
     function move(ev) {
       var x = (ev.touches ? ev.touches[0].clientX : ev.clientX);
+      var y = (ev.touches ? ev.touches[0].clientY : ev.clientY);
+      if (Math.abs(x - sx) > 6 || Math.abs(y - sy) > 6) moved = true;
       rotY = Math.max(-80, Math.min(80, base + (x - sx) * 0.6));
       applyRot();
     }
@@ -3246,6 +3524,8 @@
       document.removeEventListener('touchend', up);
       stage.style.cursor = 'grab';
       if (gl3d) gl3d.endDrag();
+      /* 没拖动＝戳了一下：给个扎人的反应（抖刺 + 脸色），别像个摆件 */
+      if (!moved && Date.now() - t0 < 420) poke();
     }
     document.addEventListener('mousemove', move);
     document.addEventListener('mouseup', up);
@@ -3355,12 +3635,12 @@
   function nagText(it) {
     var mins = Math.max(1, Math.round(it.late));
     if (it.missed) {
-      return '「' + it.title + '」已经错过了。别装看不见——要么现在补，要么把时间挪到你还活着的时候。';
+      return '（笑眯眯）「' + it.title + '」已经错过了。别装看不见——本刺的耐心比你那计划还短，现在补，或者把时间挪到你终于肯争气的时候。';
     }
     if (mins < 60) {
-      return '「' + it.title + '」到点 ' + mins + ' 分钟了，还没打勾。现在做，20 分钟能收尾；拖到半夜就只剩懊悔。';
+      return '「' + it.title + '」到点 ' + mins + ' 分钟了，还没打勾。（撑着胳膊笑）赏你 20 分钟收尾；拖到半夜，就只剩我在旁边看着你懊悔了。';
     }
-    return '「' + it.title + '」欠了 ' + Math.round(mins / 60) + ' 小时了。就它，现在，先做 5 分钟——做不完也比零点强。';
+    return '「' + it.title + '」欠了 ' + Math.round(mins / 60) + ' 小时了。就它，现在，先做 5 分钟——本刺肯亲自点名，是你的福气。';
   }
 
   function nudgeNow() {
@@ -3393,7 +3673,7 @@
       saveMem();
       var badge = document.querySelector('#pqb-fab .pqb-badge');
       if (badge && !open) badge.style.display = 'block';
-      pushMsg('bud', CHEERS[Math.floor(Math.random() * CHEERS.length)] + '\n（今天还剩 ' + t.left + ' 项。这条是加油，不是催命——进度一动，我就不再念。）');
+      pushMsg('bud', CHEERS[Math.floor(Math.random() * CHEERS.length)] + '\n（今天还剩 ' + t.left + ' 项。本刺金贵，只念这一遍——进度一动，我懒得再开尊口。）');
     }
   }
 
@@ -3445,6 +3725,10 @@
 
   window.PQBuddy = {
     start: start,
+    /* 重置入口显式暴露（面板里也有可见按钮），仍要走 openResetDialog 的代价确认 */
+    reset: openResetDialog,
+    /* 当前皮肤 id：审讯预览要按皮肤利弊算扣分，不能自己瞎猜 */
+    currentSkin: function () { return skinId; },
     answer: answer,
     open: function () { setOpen(true); },
     close: function () { setOpen(false); },
@@ -3478,6 +3762,10 @@
       openPk: function () { switchAciTab('pk'); },
       refresh: function () { refreshAciGrow(); refreshAciPk(); },
       switchTab: switchAciTab,
+      /* 身份请求的解析与聊天入口（自测用；产品上只由聊天框/身份卡按钮触发） */
+      parseIdentity: identityRequest,
+      askIdentity: sendChatText,
+      companionName: function () { return companionName; },
     },
     alaCfgApi: {
       get: alaCfg, set: alaSetCfg, probe: alaProbeNow, mode: alaMode, MODES: ALA_MODES,
@@ -3505,6 +3793,9 @@
     facts: alaFacts,
     /* 表情/动作指令（调试/自测用） */
     fun: { intent: funIntent, run: funDo, rules: FUN_RULES },
+    /* 扎人反馈与戳一戳（自测/外部联动用） */
+    prick: prick,
+    poke: poke,
     /* 现实条件（调试/自测用：天气识别与户外改室内） */
     wx: { bad: weatherBad, hint: weatherHint, adjust: adjustForWeather },
     /* 往面板里塞一句话（调试/自测用，走的是和正式消息同一条渲染路径）。

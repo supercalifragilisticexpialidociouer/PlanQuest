@@ -53,7 +53,15 @@ function api(method, endpoint, body, retries = 4) {
   console.log('父提交 ' + parentSha.slice(0, 8));
 
   const tree = [];
-  for (const rel of FILES) {
+  for (const raw of FILES) {
+    /* 前缀 ! 表示从远端删除该路径 */
+    if (raw.startsWith('!')) {
+      const del = raw.slice(1).replace(/\\/g, '/');
+      tree.push({ path: del, mode: '100644', type: 'blob', sha: null });
+      console.log('  delete ' + del);
+      continue;
+    }
+    const rel = raw;
     const full = path.join(ROOT, rel);
     if (!fs.existsSync(full)) { console.log('  跳过（不存在）' + rel); continue; }
     const content = fs.readFileSync(full);

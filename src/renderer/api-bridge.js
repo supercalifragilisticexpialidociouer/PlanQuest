@@ -83,6 +83,65 @@ window.api = (() => {
   const stub = (msg) => async () => ({ ok: false, message: msg || '该功能需要在电脑版使用' });
   const DESKTOP_ONLY = '📱 手机版暂未开通此功能：请在电脑上使用（房间/联机功能后续迭代）';
 
+  /* .pqplan 覆盖留痕：旧计划不真删，AES-256-GCM 加密后藏进 localStorage。
+   * 密钥单独存 pq-overwrite-vkey-v1，data 里只留索引，导出的文件看不到明文。 */
+  const VAULT_KEY = 'pq-overwrite-vkey-v1';
+  const VAULT_STORE = 'pq-overwrite-vault-v1';
+  function b64(u8) {
+    let s = '';
+    for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  function fillRandom(u8) {
+    if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(u8);
+    else for (let i = 0; i < u8.length; i++) u8[i] = Math.floor(Math.random() * 256);
+    return u8;
+  }
+  async function webVaultKey() {
+    let hex = null;
+    try { hex = localStorage.getItem(VAULT_KEY); } catch (_) {}
+    if (hex && /^[0-9a-f]{64}$/i.test(hex)) return hex;
+    const arr = fillRandom(new Uint8Array(32));
+    hex = Array.from(arr, (x) => ('0' + x.toString(16)).slice(-2)).join('');
+    try { localStorage.setItem(VAULT_KEY, hex); } catch (_) {}
+    return hex;
+  }
+  async function sealWebVault(payload) {
+    const PO = window.PQPlanOverwrite;
+    const hex = await webVaultKey();
+    const keyBytes = new Uint8Array(hex.match(/../g).map((h) => parseInt(h, 16)));
+    const iv = fillRandom(new Uint8Array(12));
+    const plain = new TextEncoder().encode(JSON.stringify(payload));
+    let blob = null, tag = new Uint8Array(0), alg = 'xor-stream';
+    if (window.crypto && window.crypto.subtle) {
+      try {
+        const key = await window.crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, ['encrypt']);
+        const buf = new Uint8Array(await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain));
+        tag = buf.slice(buf.length - 16);
+        blob = buf.slice(0, buf.length - 16);
+        alg = 'aes-256-gcm';
+      } catch (_) { blob = null; }
+    }
+    if (!blob) {
+      blob = new Uint8Array(plain.length);
+      for (let i = 0; i < plain.length; i++) blob[i] = plain[i] ^ keyBytes[i % 32] ^ ((i * 31) & 0xff);
+    }
+    let sum = '';
+    try { sum = (await sha256Hex(JSON.stringify(payload))) || ''; } catch (_) {}
+    let store = { v: 1, entries: [] };
+    try {
+      const old = JSON.parse(localStorage.getItem(VAULT_STORE) || 'null');
+      if (old && Array.isArray(old.entries)) store = old;
+    } catch (_) {}
+    store.entries.push({
+      at: payload.at, scope: payload.scope, n: payload.plans.length,
+      cipher: { alg, iv: b64(iv), tag: b64(tag), blob: b64(blob) },
+    });
+    store.entries = store.entries.slice(-(PO ? PO.RULES.VAULT_KEEP : 20));
+    try { localStorage.setItem(VAULT_STORE, JSON.stringify(store)); } catch (_) {}
+    return PO ? PO.vaultIndex(payload, sum) : { at: payload.at, n: payload.plans.length, sha256: sum };
+  }
+
   const refresh = () => { try { emitState(); } catch (e) {} };
 
   return {
@@ -141,6 +200,7 @@ window.api = (() => {
       for (const k of ['autoStart', 'closeToTray', 'sound', 'theme', 'snoozeMinutes', 'repeatRemind', 'netMode']) {
         if (k in p) data.settings[k] = p[k];
       }
+      if ('guideDone' in p) data.settings.guideDone = !!p.guideDone;
       /* 异地通道中继配置：只接受合法结构（urls 非空），与桌面版 settings:update 的清洗一致 */
       if ('netTurn' in p) {
         const t = p.netTurn;
@@ -322,15 +382,53 @@ window.api = (() => {
       };
       inp.click();
     }),
-    planfileApply: async ({ data: inc, mode, checksum, scope }) => {
+    planfileApply: async ({ data: inc, mode, checksum, scope, confirmed, source }) => {
       if (checksum) {
         const sum = await sha256Hex(JSON.stringify(inc));
         if (sum && sum !== checksum) return { ok: false, message: '校验和不匹配：文件可能已损坏或被手动改动' };
       }
-      const r = importDataObj(inc, mode, scope);
+      const r = importDataObj(inc, mode, scope, { confirmed: !!confirmed, source: source || '' });
+      /* 旧计划加密收尸：密文进 localStorage，索引写回账本 */
+      if (r.ok && r.vaultPayload) {
+        try {
+          const idx = await sealWebVault(r.vaultPayload);
+          if (typeof window.pushVaultIndex === 'function') window.pushVaultIndex(idx);
+        } catch (_) {}
+      }
       refresh();
-      return { ok: r.ok, message: r.message };
+      return {
+        ok: r.ok, applied: r.applied, message: r.message,
+        needConfirm: r.needConfirm, interrogation: r.interrogation, preview: r.preview,
+        say: r.say, mood: r.mood, toast: r.toast, punish: r.punish, state: r.state,
+        cover: r.cover, sin: r.sin, stats: r.stats,
+      };
     },
+    /* 只打开编辑：把编辑后的内容下载成 .pqplan，不应用到本机、不扣分 */
+    planfileSaveEnvelope: async ({ data: payload } = {}) => {
+      try {
+        const env = {
+          magic: 'PLANQUEST-PLAN', format: 1, app: 'PlanQuest', version: '2.7.0',
+          exportedAt: new Date().toISOString(), from: 'PlanQuest 编辑',
+          checksum: await sha256Hex(JSON.stringify(payload)), data: payload,
+        };
+        const url = URL.createObjectURL(new Blob([JSON.stringify(env, null, 2)], { type: 'application/json' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'PlanQuest计划-编辑.pqplan';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+        return { ok: true, path: a.download };
+      } catch (e) { return { ok: false, message: e.message }; }
+    },
+    /* 启动翻旧账：读一次即销账 */
+    overwriteBoot: async () => {
+      try {
+        return (typeof window.overwriteBoot === 'function') ? window.overwriteBoot() : { line: '', mood: '', state: null };
+      } catch (_) { return { line: '', mood: '', state: null }; }
+    },
+    overwriteVault: async () => ({ ok: true, entries: [] }),
     /* 空白模版填充：桌面版写回原文件；网页/手机版拿不到原文件路径，改为下载空白模板 */
     planfileBlankTemplate: async () => {
       try {

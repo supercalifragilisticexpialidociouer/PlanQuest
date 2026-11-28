@@ -52,6 +52,10 @@ let chatLog = []; // 房间聊天记录（本机缓存）
 let muteSelf = null; // { until, reason } 自己被禁言的截止时间
 let chatUnreadAt = 0; // 房间里被人 @ 了但还没翻上去看
 let funTickTimer = null; // 娱乐房倒计时刷新
+let msgCenter = null;   // 微信式消息弹窗（msg-center.js）
+let lgcBooted = false;  // 频道基线是否已建：第一次只登记，不给历史消息补一串弹窗
+let lgcSeen = new Set(); // 频道已处理过的消息 id
+let friendInboxTimer = null;
 
 /* 平台判定：只有桌面版（Electron file://）才有开机自启 / 专注模式 / 护眼模式。
    安卓 APK 与网页版系统层做不到（隐藏桌面图标是 Windows 专属能力，
@@ -216,7 +220,7 @@ function renderToday() {
       <div class="cp-block">
         <div class="cp-head">
           <div class="cp-name">🤝 ${esc(c.title)}${c.expired ? '<span class="cp-tag">已到期</span>' : `<span class="cp-tag live">第 ${c.dayIndex}/${c.days} 天</span>`}</div>
-          <span class="cp-meta">今日 ${c.todayDone}/${c.todayCount} · 未全完成应扣 ¥${c.stake}/天 · 累计应扣 ¥${c.oweTotal}</span>
+          <span class="cp-meta">今日 ${c.todayDone}/${c.todayCount}${c.noTaskToday ? ' · 今日无任务，不扣钱' : (c.todayOwe ? ` · 今日应扣 ¥${c.todayOwe}` : ' · 今日全做完，不扣钱')} · 累计应扣 ¥${c.oweTotal}</span>
           ${(() => {
             const w = state.witness && state.witness[c.id];
             return w
@@ -547,6 +551,8 @@ function renderPlans() {
       const blocked = procBlocked(p);
       const proj = p.contract ? (state.contractProjects || []).find((c) => c.id === p.contract) : null;
       const locked = !!(proj && !proj.expired);
+      // 契约任务创建后不可修改：编辑与停用入口一律收起（到期后也一样，只能删）
+      const immutable = !!p.contract;
       return `
     <div class="plan-card ${p.enabled ? '' : 'off'} ${p.contract ? 'is-contract' : ''}" style="animation-delay:${i * 40}ms">
       <div class="pc-top">
@@ -555,7 +561,9 @@ function renderPlans() {
           <div class="pc-title">${esc(p.title)} ${p.contract ? '<span class="cp-tag">🤝 契约</span>' : ''}</div>
           <div class="pc-desc">${esc(p.desc || '')}</div>
         </div>
-        <div class="switch ${p.enabled ? 'on' : ''}" data-toggle="${p.id}" title="${p.enabled ? '启用中' : '已停用'}"></div>
+        ${immutable
+          ? '<span class="cp-tag" title="契约任务创建后不可修改，也不能停用">🔒 不可改</span>'
+          : `<div class="switch ${p.enabled ? 'on' : ''}" data-toggle="${p.id}" title="${p.enabled ? '启用中' : '已停用'}"></div>`}
       </div>
       <div class="pc-meta">
         <span class="pc-chip time">${p.when === 'boot' ? '🚀 开机时' : `⏰ ${esc(p.time)}`}</span>
@@ -568,9 +576,9 @@ function renderPlans() {
         ${DAYS.map((d, idx) => `<span class="pc-day ${(p.days || []).includes(idx) ? 'on' : ''}">${d}</span>`).join('')}
       </div>
       <div class="pc-foot">
-        <span class="pc-chip">${p.contract ? `契约任务 · ${proj ? (proj.expired ? `已到期（${proj.endDate}）` : `${proj.endDate} 到期，此前不可删除`) : ''} · 创建不扣积分` : p.temp ? '时段结束后失效 · 明天自动删除' : p.when === 'boot' ? '打开应用时自动弹窗提醒' : p.enabled ? '到点自动弹窗提醒' : '提醒已关闭'}</span>
+        <span class="pc-chip">${p.contract ? `契约任务 · ${proj ? (proj.expired ? `已到期（${proj.endDate}）` : `${proj.endDate} 到期，此前不可删除`) : ''} · 创建不扣积分 · 创建后不可修改` : p.temp ? '时段结束后失效 · 明天自动删除' : p.when === 'boot' ? '打开应用时自动弹窗提醒' : p.enabled ? '到点自动弹窗提醒' : '提醒已关闭'}</span>
         <div class="pc-ops">
-          <button class="icon-btn" data-edit="${p.id}" title="编辑">✏️</button>
+          ${immutable ? '<span class="cp-tag" title="契约任务创建后不可修改">🔒 不可改</span>' : `<button class="icon-btn" data-edit="${p.id}" title="编辑">✏️</button>`}
           ${locked ? '<span class="cp-tag" title="契约未到期，任务不可删除">🔒 不可删</span>' : `<button class="icon-btn del" data-del="${p.id}" title="删除">🗑️</button>`}
         </div>
       </div>
@@ -649,6 +657,11 @@ function hexBg(hex) {
 let draft = null;
 
 function openPlanForm(plan, contractId) {
+  // 契约任务创建后不可修改：任何路径试图编辑都直接挡回（主进程还有第二道）
+  if (plan && plan.contract) {
+    toast('🔒 契约任务创建后不可修改', '立下的约不能随手涂改；到期后可删除重建。', true);
+    return;
+  }
   draft = plan
     ? { ...plan, days: [...(plan.days || [])], needConfirm: !!plan.needConfirm, when: plan.when || 'time' }
     : {
@@ -675,7 +688,7 @@ function openPlanForm(plan, contractId) {
   mask.innerHTML = `
     <div class="modal">
       <h2>${contract ? `🤝 新建契约任务${contractProj ? ` · ${esc(contractProj.title)}` : ''}` : plan ? '编辑计划' : '新建计划'}</h2>
-      ${contract ? '<div class="form-hint" style="margin-bottom:6px;color:var(--amber)">契约任务：创建不扣积分，设置和普通计划一样；出现在「今日」带金边，项目到期前不可删除。</div>' : ''}
+      ${contract ? '<div class="form-hint" style="margin-bottom:6px;color:var(--amber)">契约任务：创建不扣积分，设置和普通计划一样；出现在「今日」带金边。⚠️ 一旦创建就不可修改、不可停用，到期前也不可删除——想清楚再点保存。</div>' : ''}
       <div class="form-row">
         <label class="form-label">计划名称</label>
         <input class="input" id="f-title" maxlength="30" placeholder="例如：晨间阅读" value="${esc(draft.title)}"/>
@@ -3606,6 +3619,7 @@ function pushChat(msg) {
   const stick = mine || !list || (list.scrollHeight - list.scrollTop - list.clientHeight < 60);
   renderChat(stick);
   bumpMentionUnread(msg);
+  notifyRoomMsg(msg, mine); // 微信式弹窗：不在这个房间时弹一条
   classifyChat(msg); // AI 闲聊雷达：异步判定后回写徽章
   handleRoomVoteMsg(msg);
   handleReputationMsg(msg);
@@ -4674,8 +4688,8 @@ function heatGridHtml(heat) {
       }
       const owe = d.owe ? ` style="box-shadow:inset 0 0 0 2px var(--danger,#e5484d)"` : '';
       const tip = d.due
-        ? `${d.key}：完成 ${d.done}/${d.due}（${d.pct}%）${d.owe ? ` · 应扣 ¥${d.owe}` : ' · 不扣钱'}`
-        : `${d.key}：无契约任务`;
+        ? `${d.key}${d.isToday && !d.future ? '（今日实时）' : ''}：完成 ${d.done}/${d.due}（${d.pct}%）${d.owe ? ` · 应扣 ¥${d.owe}` : ' · 不扣钱'}`
+        : `${d.key}：无契约任务，不扣钱`;
       return `<div class="heat-cell" title="${tip}"${owe}><span style="background:${bg}"></span></div>`;
     })
     .join('');
@@ -4686,7 +4700,7 @@ function heatGridHtml(heat) {
         <div class="cp-owe-total">累计应扣 <b style="color:var(--amber)">¥${heat.totalOwe}</b></div>
       </div>
       <div class="heat-grid">${cells}</div>
-      <div class="sd" style="margin-top:8px">格子越黄完成度越高；带红边的格子表示当天有应扣款。悬停看明细。</div>
+      <div class="sd" style="margin-top:8px">格子越黄完成度越高；带红边表示当天有应扣（今日那格是实时预估，补做完就归零）。悬停看明细。</div>
     </div>
   `;
 }
@@ -4712,7 +4726,7 @@ function renderContractProjectCard(c) {
       <div class="goal-top">
         <div class="goal-info">
           <div class="goal-title">📁 ${esc(c.title)} ${c.expired ? '<span class="cp-tag">已到期</span>' : `<span class="cp-tag live">第 ${c.dayIndex}/${c.days} 天</span>`}</div>
-          <div class="sd">${c.start} ~ ${c.endDate} · 每日罚金上限 ¥${c.stake} · 今日 ${c.todayDone}/${c.todayCount} · 累计应扣 ¥${c.oweTotal}${c.oweUnpaid ? `（未交 ¥${c.oweUnpaid}）` : ''}</div>
+          <div class="sd">${c.start} ~ ${c.endDate} · 每日罚金上限 ¥${c.stake} · 今日 ${c.todayDone}/${c.todayCount}${c.noTaskToday ? '（今日无任务，不扣钱）' : (c.todayOwe ? ` · 今日应扣 ¥${c.todayOwe}` : ' · 今日已全做完，不扣钱')} · 累计应扣 ¥${c.oweTotal}${c.oweUnpaid ? `（未交 ¥${c.oweUnpaid}）` : ''}</div>
           <div class="bar" style="height:8px;margin-top:8px"><div class="bar-fill" style="width:${c.progressPct}%"></div></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
@@ -4735,7 +4749,7 @@ function renderContractProjectCard(c) {
           <div class="mit-item ${p.enabled ? '' : 'off'}">
             <span class="mit-ico">${esc(p.icon)}</span>
             <span class="mit-text">${esc(p.title)} <span class="sd">· ${p.when === 'boot' ? '开机时' : p.time} · ${p.points} 分 · ${(p.days || []).map((d) => DAYS[d]).join('')}</span></span>
-            <button class="icon-btn" data-cptedit="${p.id}" title="编辑">✏️</button>
+            <span class="cp-tag" title="契约任务创建后不可修改">🔒 不可改</span>
             ${c.expired ? `<button class="icon-btn del" data-cptdel="${p.id}" title="删除任务">✕</button>` : ''}
           </div>`
                 )
@@ -4768,9 +4782,6 @@ function bindContractProjectActions() {
       await api.contractProjectPay({ id, date });
       toast('💰 已标记为已交', '请确认转账已完成');
     };
-  });
-  $$('[data-cptedit]').forEach((el) => {
-    el.onclick = () => openPlanForm(state.plans.find((p) => p.id === el.dataset.cptedit));
   });
   $$('[data-cptdel]').forEach((el) => {
     el.onclick = async () => {
@@ -5039,6 +5050,8 @@ function renderSettings() {
       <div class="view-sub">开机自启 · 提醒 · 外观</div>
     </div>
 
+    ${msgCenterPanelHtml()}
+
     <div class="panel">
       <h3>启动与提醒</h3>
       ${
@@ -5098,6 +5111,13 @@ function renderSettings() {
           <div class="sd">立即弹出一个打卡提醒窗口，看看效果。</div>
         </div>
         <button class="btn small" id="test-remind">测试</button>
+      </div>
+      <div class="set-row">
+        <div class="set-info">
+          <div class="st">新手引导</div>
+          <div class="sd">首次打开时自动播放一次。想再看一遍，点右边重新播放。</div>
+        </div>
+        <button class="btn small" id="replay-guide">重新播放</button>
       </div>
     </div>
 
@@ -5255,6 +5275,16 @@ function renderSettings() {
     ${lkPanelHTML()}
   `;
 
+  const replayBtn = $('#replay-guide');
+  if (replayBtn) replayBtn.onclick = () => {
+    if (!window.PQOnboarding || !window.PQOnboarding.shouldShow(state.settings)) {
+      // 已看过：从设置里重开，先写回 false 再播
+      if (state && state.settings) state.settings.guideDone = false;
+      api.updateSettings({ guideDone: false }).catch(() => {});
+    }
+    if (!Guide.isActive()) Guide.start();
+  };
+
   $$('[data-set]').forEach((el) => {
     el.onclick = async () => {
       const key = el.dataset.set;
@@ -5273,6 +5303,7 @@ function renderSettings() {
     };
   });
   bindUpdatePanel();
+  bindMsgCenterPanel();
   $$('[data-setval]').forEach((el) => {
     el.onchange = async () => {
       const key = el.dataset.setval;
@@ -5602,7 +5633,148 @@ async function planFileExport() {
   else if (!r.canceled) toast('导出失败', (r && r.message) || '', true);
 }
 
-/* 导入：选文件 → 校验 → 选合并/覆盖 → 应用；文件坏了给「按空白模版填充」的出口 */
+/* ================= .pqplan 覆盖：阿刺审讯 / 编辑不应用 / 扣刺播报 / 翻旧账 =================
+ * 口径：新增计划按新建扣分、覆盖掉的按删除扣分；只打开编辑不扣分不应用；
+ *      覆盖必须过审讯，点确认才扣刺 + 记逃兵标签，点取消啥事没有。 */
+
+function PO() { return window.PQPlanOverwrite || null; }
+
+function overwriteSay(text, mood, toastText, cover) {
+  try {
+    /* 顶罪演出：系统先报「检测到违规操作，扣除 N 积分」，
+     * 隔半秒阿刺自己跳出来插话 —— 扛不扛由他定，界面不摆概率、不给开关。 */
+    if (cover && cover.systemNotice) {
+      if (window.PQBuddy && typeof PQBuddy.push === 'function') PQBuddy.push('sys', cover.systemNotice);
+      toast('系统判定', String(cover.systemNotice), true);
+    }
+    const delay = cover ? 560 : 0;
+    setTimeout(function () {
+      if (window.PQBuddy && typeof PQBuddy.say === 'function') {
+        PQBuddy.say(String(text || ''), (cover && cover.covered) ? 'smirk' : (mood || 'sideeye'));
+      }
+    }, delay);
+  } catch (_) {}
+  if (toastText) toast('阿刺动手了', String(toastText), true);
+}
+
+/* 冻结标记给 buddy.js 用：第 3 次覆盖起，换皮 / 养成 24 小时不让碰 */
+function applyOverwriteState(st) {
+  if (!st) return;
+  window.PQOverwriteFrozen = !!st.frozen;
+  window.PQOverwriteState = st;
+}
+
+/* 审讯明细在本机预估：和主进程 applyOverwrite 用的是同一份纯函数 */
+function overwritePreview(picked, mode, scope) {
+  const m = PO();
+  if (!m) return null;
+  const cur = (state && state.plans) || [];
+  const inc = (picked && picked.data && picked.data.plans) || [];
+  const diff = m.diffPlans(cur, inc, mode, scope);
+  const ctx = {
+    whitelist: (state && state.guard && state.guard.whitelist) || [],
+    points: (state && state.profile && state.profile.points) || 0,
+    aciLevel: (state && state.aci && state.aci.level) || 1,
+    at: Date.now(), source: (picked && picked.source) || '',
+  };
+  const cost = m.baseCost(diff, ctx);
+  const plan = m.assess((state && state.overwrite) || m.defaultState(), diff, ctx, ctx.at);
+  /* 审讯明细要跟主进程一致：把当前皮肤的利弊倍率算进去 */
+  const perk = window.PQPerk;
+  const skinId = (window.PQBuddy && typeof PQBuddy.currentSkin === 'function') ? PQBuddy.currentSkin() : '';
+  const shaped = (perk && typeof perk.shapePlan === 'function') ? perk.shapePlan(plan, skinId, ctx) : null;
+  const effPlan = shaped ? shaped.plan : plan;
+  return { diff, ctx, cost, plan: effPlan, inq: m.interrogation(diff, effPlan, cost, ctx) };
+}
+
+/* 覆盖后强制「阿刺审讯」：确认扣积分 + 记逃兵标签，取消啥事没有 */
+function interrogateDialog(inq, plan) {
+  return new Promise((resolve) => {
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask pq-inq-mask';
+    const emoji = (state && state.profile && state.profile.avatar) || '🌵';
+    mask.innerHTML = `
+      <div class="modal pq-inq" style="width:470px">
+        <div class="pq-inq-head">
+          <div class="pq-inq-face">${esc(emoji)}</div>
+          <div class="pq-inq-titles">
+            <h2>${esc(inq.title)}</h2>
+            <div class="pq-inq-sub">阿刺 · 覆盖审讯中 · 笑得越甜，扎得越深</div>
+          </div>
+        </div>
+        <div class="pq-inq-lead">${esc(inq.lead)}</div>
+        <div class="pq-inq-buy">${esc(inq.buyRoad)}</div>
+        <ul class="pq-inq-list">${(inq.details || []).map((d) => `<li>${esc(d)}</li>`).join('')}</ul>
+        <div class="pq-inq-tier">第 ${plan.count} 次覆盖 · 第 ${plan.tier} 档赎罪${plan.lock ? ' · 换皮 / 养成锁死 24 小时' : ''}${plan.demote ? ' · 等级掉回新手' : ''}</div>
+        <div class="form-foot">
+          <button class="btn ghost" data-r="0">${esc(inq.cancel)}</button>
+          <button class="btn pq-inq-yes" data-r="1">${esc(inq.confirm)}</button>
+        </div>
+      </div>`;
+    mask.addEventListener('click', (e) => {
+      const r = e.target.closest('[data-r]')?.dataset.r;
+      if (r !== undefined) { mask.remove(); resolve(r === '1'); }
+      else if (e.target === mask) { mask.remove(); resolve(false); }
+    });
+    $('#modal-root').appendChild(mask);
+  });
+}
+
+/* 只打开 .pqplan 编辑：可改、可另存，绝不应用到本机、绝不扣分、不进审讯 */
+function openPlanEditor(picked) {
+  return new Promise((resolve) => {
+    const json = JSON.stringify((picked && picked.data) || {}, null, 2);
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.innerHTML = `
+      <div class="modal" style="width:640px">
+        <h2>只打开编辑 · 不应用</h2>
+        <p style="font-size:13px;color:var(--text-2);line-height:1.6">（斜眼笑）光看不应用？行吧，本刺今天不拔刺。改完可以另存为 .pqplan，但不会写进本机计划，也不会扣你一分。</p>
+        <textarea class="input pq-inq-editor" id="pq-inq-json" spellcheck="false">${esc(json)}</textarea>
+        <div class="form-foot">
+          <button class="btn ghost" data-r="0">关闭</button>
+          <button class="btn" data-r="1">另存为 .pqplan</button>
+        </div>
+      </div>`;
+    mask.addEventListener('click', async (e) => {
+      const r = e.target.closest('[data-r]')?.dataset.r;
+      if (r === undefined) {
+        if (e.target === mask) { mask.remove(); resolve(false); }
+        return;
+      }
+      if (r === '0') { mask.remove(); resolve(false); return; }
+      let obj = null;
+      try { obj = JSON.parse(mask.querySelector('#pq-inq-json').value); }
+      catch (err) { toast('JSON 写坏了', err.message, true); return; }
+      if (!obj || !Array.isArray(obj.plans)) { toast('结构不对', '至少要有一个 plans 数组', true); return; }
+      try {
+        const saved = await api.planfileSaveEnvelope({ filePath: picked.filePath || null, data: obj });
+        if (saved && saved.ok) toast('已另存，本机没动', saved.path || '文件已保存 · 不扣分、不应用');
+        else if (!saved || !saved.canceled) toast('保存失败', (saved && saved.message) || '', true);
+      } catch (err) { toast('保存失败', err.message, true); }
+      mask.remove();
+      resolve(true);
+    });
+    $('#modal-root').appendChild(mask);
+  });
+}
+
+/* 启动翻旧账 + 主进程（双击 .pqplan）播报通道 */
+function initOverwrite() {
+  if (!window.api) return;
+  if (typeof api.onOverwriteSay === 'function') {
+    api.onOverwriteSay((p) => { if (p && p.text) overwriteSay(p.text, p.mood, p.toast, p.cover); });
+  }
+  if (typeof api.overwriteBoot === 'function') {
+    api.overwriteBoot().then((r) => {
+      if (!r) return;
+      applyOverwriteState(r.state);
+      if (r.line) setTimeout(() => overwriteSay(r.line, r.mood, '本刺翻旧账了'), 1500);
+    }).catch(() => {});
+  }
+}
+
+/* 导入：选文件 → 校验 → 选范围/方式 → 覆盖先审讯 → 应用；文件坏了给「按空白模版填充」的出口 */
 async function planFileImport() {
   const picked = await api.planfilePick();
   if (!picked || !picked.ok) {
@@ -5641,15 +5813,50 @@ async function planFileImport() {
   const nNormal = (picked.data.plans || []).filter((p) => !p.contract).length;
   const nContract = (picked.data.plans || []).filter((p) => p.contract).length;
   const scopeName = scope === 'normal' ? `仅普通计划（${nNormal} 个）` : scope === 'contract' ? `仅契约计划（${nContract} 个任务 · ${(picked.data.contractProjects || []).length} 个项目）` : `全部内容（${nNormal + nContract} 个计划）`;
-  const mode = await chooseDialog(
+  const pickMode = await chooseDialog(
     `导入方式 · ${scopeName}`,
-    '合并导入：与现有数据去重合入，本机已有的记录优先；覆盖导入：用文件里的这一类计划替换本机同类计划。',
-    [{ label: '合并导入（推荐）' }, { label: '覆盖导入（替换同类计划）', ghost: true }]
+    '合并导入：与现有数据去重合入，本机已有的记录优先，新增计划按新建口径扣分；\n覆盖导入：用文件里的这一类计划替换本机同类计划 —— 要过阿刺审讯，要扣刺，旧计划加密留痕；\n只打开编辑：看看 / 改改文件，不应用到本机，也不扣一分。',
+    [
+      { label: '合并导入（推荐）' },
+      { label: '覆盖导入（替换同类计划）' },
+      { label: '只打开编辑（不应用·不扣分）', ghost: true },
+    ]
   );
-  if (mode !== 0 && mode !== 1) return;
-  const r = await api.planfileApply({ data: picked.data, checksum: picked.checksum, mode: mode === 1 ? 'replace' : 'merge', scope });
+  /* 只打开编辑：不扣分、不应用、不记账、不进审讯 */
+  if (pickMode === 2) {
+    await openPlanEditor(picked);
+    const m = PO();
+    if (m) overwriteSay(m.LINES.inspect, 'sideeye', '');
+    return;
+  }
+  if (pickMode !== 0 && pickMode !== 1) return;
+  const mode = pickMode === 1 ? 'replace' : 'merge';
+
+  /* 覆盖后别静默通过：先让阿刺质问，点确认才往下走，点取消啥事没有 */
+  let confirmed = false;
+  if (mode === 'replace') {
+    const pv = overwritePreview(picked, 'replace', scope);
+    if (pv && pv.inq) confirmed = await interrogateDialog(pv.inq, pv.plan);
+    else confirmed = await confirmDialog('确认覆盖？', '你那点破计划我可都记着，删了也得挨扎。');
+    if (!confirmed) {
+      const m = PO();
+      overwriteSay(m ? m.line('cancel', {}, Math.random) : '（笑眯眯把刺收回去）算你识相。', 'sideeye', '');
+      return;
+    }
+  }
+
+  const r = await api.planfileApply({
+    data: picked.data, checksum: picked.checksum, mode, scope, confirmed,
+    source: picked.source || '',
+  });
+  if (r && r.needConfirm) {
+    toast('阿刺拦下来了', '覆盖必须先过审讯', true);
+    return;
+  }
   if (r.ok) {
-    toast(mode === 1 ? '已覆盖导入' : '已合并导入', r.message || '');
+    toast(mode === 'replace' ? '已覆盖导入 · 挨扎了' : '已合并导入', r.message || '');
+    if (r.say) overwriteSay(r.say, r.mood, r.toast, r.cover);
+    applyOverwriteState(r.state);
     state = await api.getState();
     render(true, true);
     /* 文件里带了军团元数据 → 问一下要不要恢复军团身份（换设备接着打） */
@@ -7557,7 +7764,24 @@ function bindLegionChat(L) {
   })();
 
   C.setMentionHandler((m) => {
-    toast('有人在频道里 @ 你', `${(m && m.alias) || '成员'}：${String((m && m.text) || '').slice(0, 24)}`);
+    /* @ 你 的消息走同一个弹窗体系（限流/去重/静音规则一致），而不是另外弹一个 toast */
+    if (!msgCenter) {
+      toast('有人在频道里 @ 你', `${(m && m.alias) || '成员'}：${String((m && m.text) || '').slice(0, 24)}`);
+      return;
+    }
+    let st = null;
+    try { st = C.state(); } catch (_) {}
+    msgCenter.push({
+      kind: 'channel',
+      convId: (st && st.code) || 'ch',
+      name: '军团频道',
+      avatar: '📣',
+      from: (m && m.alias) || '成员',
+      text: (m && m.text) || '',
+      id: (m && m.id) || '',
+      mention: true,
+    });
+    paintNavDots();
   });
 
   if (lgcUnsub) {
@@ -7566,6 +7790,7 @@ function bindLegionChat(L) {
     } catch (_) {}
   }
   lgcUnsub = C.onChange(() => {
+    notifyChannelMsgs(C);
     if (currentView !== 'legion') return;
     paintChat();
   });
@@ -9116,6 +9341,241 @@ function updateSideCard() {
   $('#side-lv-sub').textContent = `${p.levelCur} / ${p.levelNeed} 积分`;
 }
 
+/* ---------------- 微信式消息弹窗（去重 / 不限频合并 / 离线聚合 / 免打扰分粒度） ----------------
+ * 引擎在 msg-center.js（纯逻辑可单测），这里只做三件事：
+ *   把各路消息喂给它、点弹窗时跳对地方、以及把未读数画成导航小点。
+ */
+function initMsgCenter() {
+  if (!window.PQMsgCenter || msgCenter) return;
+  msgCenter = PQMsgCenter.init({
+    onJump: (kind, convId) => jumpToChat(kind, convId),
+    onMute: () => {
+      if (currentView === 'settings') renderSettings();
+      paintNavDots();
+    },
+  });
+  window.PQMsg = msgCenter; // 给 buddy.js 等旁路模块投递用（阿刺说话也要弹窗）
+  paintNavDots();
+  startFriendInboxPoll();
+}
+
+/* 点弹窗直接落到那个聊天界面，并顺手清掉这条会话的未读 */
+function jumpToChat(kind, convId) {
+  const id = String(convId || '');
+  if (kind === 'aci') {
+    if (window.PQBuddy && typeof PQBuddy.open === 'function') PQBuddy.open();
+    return;
+  }
+  if (kind === 'friend') {
+    friendChatUid = id;
+    if (msgCenter) msgCenter.engine.markRead('friend:' + id);
+    if (typeof api.friendSeen === 'function') {
+      try { api.friendSeen(id, Date.now()).catch(() => {}); } catch (_) {}
+    }
+    switchView('friends');
+    setTimeout(() => {
+      const box = document.querySelector('.fb-msgs') || document.querySelector('.fb-chat');
+      if (box) box.scrollIntoView({ block: 'nearest' });
+      paintNavDots();
+    }, 60);
+    return;
+  }
+  if (kind === 'room') {
+    switchView('study');
+    setTimeout(() => {
+      const l = $('#chat-list');
+      if (l) l.scrollIntoView({ block: 'nearest' });
+      paintNavDots();
+    }, 60);
+    return;
+  }
+  if (kind === 'channel') {
+    switchView('legion');
+    setTimeout(() => {
+      const l = $('#lgc-log');
+      if (l) l.scrollIntoView({ block: 'nearest' });
+      paintNavDots();
+    }, 60);
+  }
+}
+
+/* 导航小点：把未读摊到对应入口上，别让人猜哪儿有新消息 */
+function paintNavDots() {
+  if (!msgCenter) return;
+  const u = msgCenter.unreadByKind();
+  const map = { study: u.room || 0, legion: u.channel || 0, friends: u.friend || 0 };
+  $$('.nav-item').forEach((n) => {
+    const v = n.dataset.view;
+    const cnt = map[v] || 0;
+    let dot = n.querySelector('.nav-dot');
+    if (!cnt) {
+      if (dot) dot.remove();
+      return;
+    }
+    if (!dot) {
+      dot = document.createElement('span');
+      dot.className = 'nav-dot';
+      n.appendChild(dot);
+    }
+    dot.textContent = cnt > 99 ? '99+' : String(cnt);
+  });
+}
+
+/* 自习房/娱乐房：正在看这个房间时不弹（跟微信一样，屏幕就在眼前） */
+function notifyRoomMsg(msg, mine) {
+  if (!msgCenter || mine || msg.sys) return;
+  const code = (state && state.room && state.room.code) || 'room';
+  const atMe = !!window.PQLegionChat && window.PQLegionChat.mentionsMe(msg.text, (state?.profile?.name) || '我');
+  if (currentView === 'study' && !document.hidden && !atMe) {
+    msgCenter.engine.markRead('room:' + code);
+    return;
+  }
+  msgCenter.push({
+    kind: 'room',
+    convId: code,
+    name: (state && state.room && (state.room.name || state.room.title)) || '自习房',
+    avatar: '🪑',
+    from: msg.from,
+    text: msg.text,
+    id: msg.id,
+    mention: atMe,
+  });
+  paintNavDots();
+}
+
+/* 频道：onChange 时按 id 差量取新消息；第一次只建基线，不补历史弹窗 */
+function notifyChannelMsgs(C) {
+  if (!msgCenter || !C) return;
+  let st = null;
+  try {
+    st = C.state ? C.state() : null;
+  } catch (_) {
+    st = null;
+  }
+  const log = (st && st.log) || [];
+  const selfUid = (st && st.self && st.self.uid) || '';
+  const code = (st && st.code) || 'ch';
+  if (!lgcBooted) {
+    for (const m of log) if (m && m.id) lgcSeen.add(m.id);
+    lgcBooted = true;
+    return;
+  }
+  const meName = (state?.profile?.name) || '我';
+  let fresh = 0;
+  for (const m of log) {
+    if (!m || !m.id || lgcSeen.has(m.id)) continue;
+    lgcSeen.add(m.id);
+    if (m.uid && m.uid === selfUid) continue;
+    const atMe = !!window.PQLegionChat && window.PQLegionChat.mentionsMe(m.text, meName);
+    if (currentView === 'legion' && !document.hidden && !atMe) {
+      msgCenter.engine.markRead('channel:' + code);
+      continue;
+    }
+    msgCenter.push({
+      kind: 'channel',
+      convId: code,
+      name: '军团频道',
+      avatar: '📣',
+      from: m.alias,
+      text: m.text,
+      id: m.id,
+      mention: atMe,
+    });
+    fresh += 1;
+  }
+  if (lgcSeen.size > 600) lgcSeen = new Set([...lgcSeen].slice(-300));
+  if (fresh) paintNavDots();
+}
+
+/* 好友私聊：主进程按人聚合好「几条未读」，这里只管弹 */
+function startFriendInboxPoll() {
+  if (typeof api.friendInbox !== 'function') return;
+  const tick = async () => {
+    if (!msgCenter) return;
+    try {
+      const r = await api.friendInbox();
+      const th = (r && r.threads) || {};
+      const uids = Object.keys(th);
+      if (!uids.length) return;
+      for (const uid of uids) {
+        const t = th[uid];
+        if (friendChatUid === uid && currentView === 'friends' && !document.hidden) {
+          try { api.friendSeen(uid, Date.now()); } catch (_) {}
+          msgCenter.engine.markRead('friend:' + uid);
+          continue;
+        }
+        msgCenter.push({
+          kind: 'friend',
+          convId: uid,
+          name: t.alias,
+          avatar: '💬',
+          text: t.text,
+          id: t.id,
+          count: t.count,
+        });
+      }
+      paintNavDots();
+    } catch (_) {}
+  };
+  tick();
+  if (friendInboxTimer) clearInterval(friendInboxTimer);
+  friendInboxTimer = setInterval(tick, 15000);
+}
+
+/* 设置页：全局开关 + 静音名单（弹窗上的 🔕 会往这里加） */
+function msgCenterPanelHtml() {
+  if (!msgCenter) return '';
+  const on = msgCenter.getGlobal();
+  const list = msgCenter.list();
+  const rows = list.length
+    ? list
+        .map(
+          (it) => `<div class="mc-row">
+            <span class="mc-row-t">${esc(PQMsgCenter.KINDS[it.kind] ? PQMsgCenter.KINDS[it.kind].label : it.kind)} · ${esc(it.name || it.convId)}</span>
+            <button class="btn small ghost" data-msgpop="unmute" data-k="${esc(it.kind)}" data-i="${esc(it.convId)}">取消静音</button>
+          </div>`
+        )
+        .join('')
+    : '<div class="sd">还没有静音的会话。弹窗右上角 🔕 可以把「这个人 / 这个房间 / 这个频道」单独静音——静音只是不弹窗，未读照常记着。</div>';
+  return `
+    <div class="panel">
+      <h3>消息提醒</h3>
+      <div class="set-row">
+        <div class="set-info">
+          <div class="st">弹窗提醒</div>
+          <div class="sd">阿刺说话、自习房、军团频道、好友私聊来了消息，右下角弹一个小窗，点一下直接跳过去。关掉之后只是不弹窗，消息一条不少地记着。</div>
+        </div>
+        <div class="switch ${on ? 'on' : ''}" data-msgpop="global"></div>
+      </div>
+      <div class="mc-list">
+        <div class="st" style="font-size:13px;margin-bottom:6px">单独静音（${list.length}）</div>
+        ${rows}
+      </div>
+      <div class="sd" style="margin-top:8px">同一会话刷屏不会刷出十几个窗，只会合成「N 条新消息」；离线堆着的消息也一样，开机只弹一次汇总。</div>
+    </div>`;
+}
+
+function bindMsgCenterPanel() {
+  $$('[data-msgpop]').forEach((el) => {
+    el.onclick = async () => {
+      if (!msgCenter) return;
+      const act = el.dataset.msgpop;
+      if (act === 'global') {
+        const on = !el.classList.contains('on');
+        msgCenter.setGlobal(on);
+        toast(on ? '已打开弹窗提醒' : '已关闭弹窗提醒', on ? '' : '未读仍会记录，导航上照常有小点');
+        renderSettings();
+        return;
+      }
+      if (act === 'unmute') {
+        msgCenter.unmute(el.dataset.k, el.dataset.i);
+        renderSettings();
+        paintNavDots();
+      }
+    };
+  });
+}
+
 function switchView(name) {
   currentView = name;
   $$('.nav-item').forEach((n) => n.classList.toggle('active', n.dataset.view === name));
@@ -9128,6 +9588,7 @@ async function boot() {
   render();
   bindRoomEvents();
   api.onToast((t) => toast(t.msg, t.sub || '', true));
+  initMsgCenter();
   // 调试：?view=study 直接进入指定视图
   const qv = new URLSearchParams(location.search).get('view');
   if (qv && VIEWS[qv]) switchView(qv);
@@ -9163,6 +9624,7 @@ async function boot() {
 
   unsubState = api.onState((s) => {
     state = s;
+    applyOverwriteState(s && s.overwrite); // 换皮 / 养成冻结标记
     render();
   });
 
@@ -9186,6 +9648,9 @@ async function boot() {
    * bridge 给「接消息 / 排计划 / 改计划」用——模型只提议，用户点头才落到这些口子上 */
   if (window.PQBuddy) PQBuddy.start({ getState: () => state, nav: (n) => switchView(n), bridge: buddyBridge });
 
+  /* 启动翻旧账：上次「覆盖」掉的烂尾计划，阿刺会当面翻出来 */
+  initOverwrite();
+
   // 云同步：恢复登录态 → 首次合并 / 增量推送（未登录时完全不影响本机使用）
   if (window.PQCloud && typeof PQCloud.start === 'function') {
     PQCloud.start({
@@ -9205,6 +9670,11 @@ async function boot() {
         if (currentView === 'settings' && state) renderSettings();
       },
     });
+  }
+
+  // 新手引导：首次打开自动播一次（延迟，避开启动时的其他弹窗）；看完写 guideDone
+  if (window.PQOnboarding && window.PQOnboarding.shouldShow(state.settings)) {
+    setTimeout(() => { if (!Guide.isActive()) Guide.start(); }, 700);
   }
 
   // 每分钟刷新一次「今日」视图，让错过/待打卡状态自动流转
@@ -9247,6 +9717,145 @@ async function boot() {
 }
 
 boot();
+
+/* ================= 新手引导：首次打开用箭头 + 文字走一遍 =================
+ * 步骤表与状态判定在 onboarding.js（双端同源，可单测）；这里只做 DOM 演出。
+ * 看完 / 跳过写 settings.guideDone=true，以后默认不再弹；设置里可重开。 */
+const Guide = (() => {
+  let active = false, idx = 0, root = null, hl = null, card = null, arrow = null;
+  let raf = 0;
+
+  function ensureRoot() {
+    if (root && root.parentNode) return root;
+    root = document.createElement('div');
+    root.id = 'pq-guide';
+    root.className = 'pq-guide';
+    root.style.display = 'none';
+    root.innerHTML = `
+      <div class="pq-guide-hole"></div>
+      <div class="pq-guide-card">
+        <div class="pq-guide-step"></div>
+        <h4 class="pq-guide-title"></h4>
+        <p class="pq-guide-text"></p>
+        <div class="pq-guide-ops">
+          <button type="button" class="pq-guide-skip">跳过</button>
+          <span class="pq-guide-spacer"></span>
+          <button type="button" class="pq-guide-prev">上一步</button>
+          <button type="button" class="pq-guide-next">下一步</button>
+        </div>
+      </div>
+      <div class="pq-guide-arrow"></div>`;
+    document.body.appendChild(root);
+    hl = root.querySelector('.pq-guide-hole');
+    card = root.querySelector('.pq-guide-card');
+    arrow = root.querySelector('.pq-guide-arrow');
+    root.querySelector('.pq-guide-next').onclick = () => go(idx + 1);
+    root.querySelector('.pq-guide-prev').onclick = () => go(idx - 1);
+    root.querySelector('.pq-guide-skip').onclick = () => finish(true);
+    window.addEventListener('resize', () => { if (active) schedulePlace(); });
+    window.addEventListener('keydown', (e) => {
+      if (!active) return;
+      if (e.key === 'Escape') finish(true);
+      else if (e.key === 'ArrowRight' || e.key === 'Enter') go(idx + 1);
+      else if (e.key === 'ArrowLeft') go(idx - 1);
+    });
+    return root;
+  }
+
+  function schedulePlace() {
+    // 用 setTimeout 而非 rAF：窗口最小化 / 后台标签页里 rAF 会被浏览器节流甚至暂停，
+    // 引导气泡会卡在旧位置。16ms 足够等 DOM 重绘，且任何可见状态下都会触发。
+    clearTimeout(raf);
+    raf = setTimeout(place, 16);
+  }
+
+  function place() {
+    if (!active || !window.PQOnboarding) return;
+    const M = window.PQOnboarding;
+    const step = M.stepAt(idx);
+    let rect = null;
+    if (step.target) {
+      const el = document.querySelector(step.target);
+      if (el) {
+        const b = el.getBoundingClientRect();
+        rect = { left: b.left, top: b.top, width: b.width, height: b.height };
+      }
+    }
+    const cardW = Math.min(360, Math.max(260, window.innerWidth - 32));
+    const pos = M.place(rect, { w: window.innerWidth, h: window.innerHeight }, { w: cardW, h: 178 }, step.place);
+    card.style.left = pos.left + 'px';
+    card.style.top = pos.top + 'px';
+    card.style.width = cardW + 'px';
+    card.querySelector('.pq-guide-step').textContent = `第 ${idx + 1} / ${M.count} 步`;
+    card.querySelector('.pq-guide-title').textContent = step.title;
+    card.querySelector('.pq-guide-text').textContent = step.text;
+    card.querySelector('.pq-guide-prev').style.visibility = idx === 0 ? 'hidden' : 'visible';
+    card.querySelector('.pq-guide-next').textContent = idx === M.count - 1 ? '知道了' : '下一步';
+
+    if (pos.highlight) {
+      hl.style.display = 'block';
+      hl.style.left = pos.highlight.left + 'px';
+      hl.style.top = pos.highlight.top + 'px';
+      hl.style.width = pos.highlight.width + 'px';
+      hl.style.height = pos.highlight.height + 'px';
+    } else {
+      hl.style.display = 'none';
+    }
+    // 箭头：气泡边缘的小三角，指向高亮块
+    arrow.className = 'pq-guide-arrow';
+    if (pos.arrow === 'none') { arrow.style.display = 'none'; }
+    else {
+      arrow.style.display = 'block';
+      const cx = pos.left + cardW / 2, cy = pos.top + 60;
+      const cx2 = rect ? rect.left + rect.width / 2 : cx;
+      const cy2 = rect ? rect.top + rect.height / 2 : cy;
+      const dir = pos.arrow;
+      if (dir === 'left') { arrow.style.left = (pos.left - 12) + 'px'; arrow.style.top = Math.max(pos.top + 10, Math.min(cy2 - 8, pos.top + card.offsetHeight - 28)) + 'px'; }
+      else if (dir === 'right') { arrow.style.left = (pos.left + cardW) + 'px'; arrow.style.top = Math.max(pos.top + 10, Math.min(cy2 - 8, pos.top + card.offsetHeight - 28)) + 'px'; }
+      else if (dir === 'up') { arrow.style.left = Math.max(pos.left + 12, Math.min(cx2 - 8, pos.left + cardW - 28)) + 'px'; arrow.style.top = (pos.top - 12) + 'px'; }
+      else { arrow.style.left = Math.max(pos.left + 12, Math.min(cx2 - 8, pos.left + cardW - 28)) + 'px'; arrow.style.top = (pos.top + card.offsetHeight) + 'px'; }
+      arrow.dataset.dir = dir;
+    }
+  }
+
+  function showStep() {
+    const M = window.PQOnboarding;
+    const step = M.stepAt(idx);
+    if (step.view && step.view !== currentView) switchView(step.view);
+    // 等切视图重绘完成再量尺寸；无 view 变化时也留一帧给浮标渲染
+    schedulePlace();
+  }
+
+  function go(n) {
+    if (!active || !window.PQOnboarding) return;
+    const M = window.PQOnboarding;
+    if (n < 0) { finish(false); return; }
+    if (n >= M.count) { finish(false); return; }
+    idx = n;
+    showStep();
+  }
+
+  async function finish(skipped) {
+    if (!active) return;
+    active = false;
+    if (root) root.style.display = 'none';
+    try { await api.updateSettings({ guideDone: true }); } catch (_) {}
+    if (state && state.settings) state.settings.guideDone = true;
+    if (skipped) toast('已跳过引导', '想再看一遍：设置 → 新手引导 → 重新播放');
+  }
+
+  async function start() {
+    if (!window.PQOnboarding) return;
+    ensureRoot();
+    active = true;
+    idx = 0;
+    root.style.display = 'block';
+    // 让浮标等异步 UI 先就位
+    setTimeout(showStep, 120);
+  }
+
+  return { start: start, isActive: () => active };
+})();
 
 /* 双击 .pqplan（桌面版文件关联）：主进程导入/填充完成后通知这里刷新界面 */
 if (window.api && typeof api.onPlanDataChanged === 'function') {

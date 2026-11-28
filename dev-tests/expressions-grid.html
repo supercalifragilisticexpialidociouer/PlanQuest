@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8" /><title>不爽微表情对照</title>
+<style>
+  body{margin:0;background:#0e1020;color:#e9e8ff;font-family:"Microsoft YaHei",sans-serif}
+  #grid{display:flex;gap:8px;padding:14px}
+  .cell{width:200px;height:300px;border:1px solid rgba(255,255,255,.12);border-radius:12px;
+        display:flex;flex-direction:column;align-items:center;background:rgba(255,255,255,.03)}
+  .cell canvas{width:200px;height:250px;display:block}
+  .nm{font-size:13px;color:#17cda8;padding:2px 0 8px}
+</style>
+</head>
+<body>
+<div id="grid"></div>
+<script src="../web/vendor/three.min.js"></script>
+<script src="../web/aci-skin.js"></script>
+<script src="../web/buddy3d.js"></script>
+<script>
+  var MOODS = [
+    ['idle', '😐 平常'],
+    ['annoyed', '😑 半睁眼'],
+    ['sideeye', '🙄 斜眼'],
+    ['pout', '😒 撇嘴'],
+    ['eyeroll', '🙄 翻白眼'],
+    ['cold', '🫥 冷漠'],
+    ['speechless', '😶 无语'],
+    ['angry', '😠 生气（对照）']
+  ];
+  var grid = document.getElementById('grid');
+  MOODS.forEach(function (m) {
+    var d = document.createElement('div');
+    d.className = 'cell';
+    d.innerHTML = '<canvas></canvas><div class="nm">' + m[1] + '</div>';
+    grid.appendChild(d);
+  });
+  window.__insts = [];
+  setTimeout(function () {
+    document.querySelectorAll('.cell').forEach(function (c, i) {
+      var g = PQBuddy3D.create(c.querySelector('canvas'));
+      if (!g) return;
+      g.setRotY(0);
+      if (g.setMicro) g.setMicro(false);
+      g.setMood(MOODS[i][0]);
+      window.__insts.push(g);
+    });
+  }, 120);
+</script>
+</body>
+</html>

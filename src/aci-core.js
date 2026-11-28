@@ -14,6 +14,8 @@
 
 /* 皮肤表/语气/改名判定都在 aci-skin.js（同一份源码双端共用） */
 const skinCore = require('./aci-skin');
+/* 五套皮肤的利弊倍率与顶罪规则（aci-perk.js，双端 UMD 同源） */
+const perkCore = require('./aci-perk');
 
 /* ============ 规则常量 ============ */
 const RULES = {
@@ -83,7 +85,8 @@ function defaultAci() {
   return {
     level: 1,
     exp: 0,
-    energy: 0,          // 协作能量（浇水获得，消耗于强化态补给）
+    energy: 0,          // 协作能量（浇水获得，消耗于强化态补给 / 顶罪）
+    favor: 0,           // 好感度（顶罪会略降；选皮肤时按「初始好感」播种）
     waterCount: 0,      // 累计浇水次数
     waterDay: '',       // 上次浇水的日期 key
     tickets: 0,         // 挑战券 0~3
@@ -124,6 +127,7 @@ function normalizeAci(raw) {
     level: clampInt(a.level, 1, RULES.MAX_LEVEL, 1),
     exp: clampInt(a.exp, 0, 1e9, 0),
     energy: clampInt(a.energy, 0, 1e9, 0),
+    favor: clampInt(a.favor, -999, 999, 0),
     waterCount: clampInt(a.waterCount, 0, 1e9, 0),
     tickets: clampInt(a.tickets, 0, RULES.MAX_TICKETS, 0),
     supplies: (a.supplies && typeof a.supplies === 'object') ? a.supplies : {},
@@ -203,6 +207,8 @@ function chooseSkin(aci, skinId, now) {
   const next = {
     ...a,
     identity: { ...a.identity, skin: s.id, chosenAt: Number(now) || Date.now() },
+    /* 膨化萌球初始好感高；其余皮肤从 0 起步 */
+    favor: a.favor + (perkCore.modsFor(s.id, { aciLevel: a.level }).initialFavor || 0),
     mood: 'happy',
   };
   return {
@@ -267,18 +273,26 @@ function resetCompanion(aci, rng) {
 }
 
 /* ============ 浇水 / 能量 / 升级 ============ */
-/* 浇水：消耗 100 积分 → +1 能量 +10 经验；经验满则升级（可连升）。
- * 不浇水不降级（本函数不碰 mood/存活）。
- * 返回 { ok, reason, aci, effect:{ costPoints, levelUps } } */
-function water(aci, points, dayKey, now) {
+/* 浇水：消耗积分 → +1 能量 +经验；经验满则升级（可连升）。
+ * mods 来自 aci-perk.js 的皮肤利弊：
+ *   waterCostMul 耗水翻倍（原皮）/ skinUpkeep 特效维护费（幻影蓝）
+ *   expMul 经验倍率 / doubleExpChance 偶尔双倍经验（幻影蓝恩赐）
+ * 不浇水不降级（本函数不碰 mood/存活）。 */
+function water(aci, points, dayKey, now, mods) {
   const a = normalizeAci(aci);
-  const cost = RULES.POINTS_PER_ENERGY;
+  const m = (mods && typeof mods === 'object') ? mods : {};
+  const costMul = Math.max(0.1, Number(m.waterCostMul) || 1);
+  const upkeep = Math.max(0, Number(m.skinUpkeep) || 0);
+  const cost = Math.max(1, Math.round(RULES.POINTS_PER_ENERGY * costMul)) + upkeep;
   if (Number(points) < cost) {
     return { ok: false, reason: `积分不够：浇水要 ${cost} 积分，当前 ${points}`, aci: a };
   }
-  let level = a.level, exp = a.exp + RULES.EXP_PER_WATER, levelUps = 0;
-  /* 升级所需经验 = 目标等级 × 10（需求例：10级→11级需 110 经验 = 11 次浇水）。
-   * 所以从 level 升到 level+1 需要 (level+1)×10 经验。 */
+  const expMul = Math.max(0.1, Number(m.expMul) || 1);
+  const dblChance = Math.max(0, Math.min(1, Number(m.doubleExpChance) || 0));
+  const doubleExp = Math.random() < dblChance;
+  const expGain = Math.max(1, Math.round(RULES.EXP_PER_WATER * expMul * (doubleExp ? 2 : 1)));
+  let level = a.level, exp = a.exp + expGain, levelUps = 0;
+  /* 升级所需经验 = 目标等级 × 10（需求例：10级→11级需 110 经验）。 */
   while (level < RULES.MAX_LEVEL && exp >= (level + 1) * RULES.EXP_PER_LEVEL) {
     exp -= (level + 1) * RULES.EXP_PER_LEVEL;
     level++;
@@ -294,8 +308,9 @@ function water(aci, points, dayKey, now) {
   };
   return {
     ok: true, aci: next,
-    effect: { costPoints: cost, levelUps, level, exp },
-    message: `浇水成功：消耗 ${cost} 积分，协作能量 +1，经验 +${RULES.EXP_PER_WATER}` +
+    effect: { costPoints: cost, levelUps, level, exp, expGain, doubleExp, upkeep },
+    message: `浇水成功：消耗 ${cost} 积分` + (upkeep ? `（含特效维护 ${upkeep} 分）` : '') +
+      `，协作能量 +1，经验 +${expGain}` + (doubleExp ? '（本刺恩赐，双倍）' : '') +
       (levelUps ? `，阿刺升到 Lv.${level}！` : `（还差 ${(level + 1) * RULES.EXP_PER_LEVEL - exp} 经验升级）`),
   };
 }

@@ -18,6 +18,14 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('update:stage', h);
     return () => ipcRenderer.removeListener('update:stage', h);
   },
+  /* 轻量哈希检查：启动/定时查一次远端哈希，不一致弹「检测到新版本」 */
+  updateHashCheck: () => ipcRenderer.invoke('update:hashCheck'),
+  updateHashAck: (payload) => ipcRenderer.invoke('update:hashAck', payload),
+  onUpdateHashFound: (cb) => {
+    const h = (_e, p) => cb && cb(p);
+    ipcRenderer.on('update:hashFound', h);
+    return () => ipcRenderer.removeListener('update:hashFound', h);
+  },
   livekitStatus: () => ipcRenderer.invoke('livekit:status'),
   livekitConfig: (cfg) => ipcRenderer.invoke('livekit:config', cfg),
 
@@ -64,6 +72,15 @@ contextBridge.exposeInMainWorld('api', {
     const handler = () => cb && cb();
     ipcRenderer.on('plan-data-changed', handler);
     return () => ipcRenderer.removeListener('plan-data-changed', handler);
+  },
+  /* .pqplan 覆盖：只编辑不应用 / 启动翻旧账 / 加密备份 / 阿刺播报 */
+  planfileSaveEnvelope: (args) => ipcRenderer.invoke('planfile:saveEnvelope', args),
+  overwriteBoot: () => ipcRenderer.invoke('overwrite:boot'),
+  overwriteVault: (at) => ipcRenderer.invoke('overwrite:vault', at),
+  onOverwriteSay: (cb) => {
+    const handler = (_e, payload) => cb && cb(payload);
+    ipcRenderer.on('overwrite:say', handler);
+    return () => ipcRenderer.removeListener('overwrite:say', handler);
   },
 
   reminderAction: (payload) => ipcRenderer.invoke('reminder:action', payload),
@@ -124,6 +141,8 @@ contextBridge.exposeInMainWorld('api', {
   friendPeerRate: (p) => ipcRenderer.invoke('friend:peerRate', p),
   friendSend: (p) => ipcRenderer.invoke('friend:send', p),
   friendMsgs: (uid) => ipcRenderer.invoke('friend:msgs', uid),
+  friendInbox: () => ipcRenderer.invoke('friend:inbox'),
+  friendSeen: (uid, at) => ipcRenderer.invoke('friend:seen', uid, at),
   friendSettle: () => ipcRenderer.invoke('friend:settle'),
   friendRank: () => ipcRenderer.invoke('friend:rank'),
   friendPactSet: (p) => ipcRenderer.invoke('friend:pactSet', p),

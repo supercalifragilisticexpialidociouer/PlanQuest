@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PlanQuest · 快速上手</title>
+<style>
+  :root{
+    --ink:#1b1f33; --ink2:#4b5473; --ink3:#7b84a3;
+    --line:#e5e8f2; --bg:#f5f7fc; --card:#fff;
+    --brand:#5b4de0; --teal:#0fa98c; --warm:#e8833a;
+    --soft:#eeecfe; --soft2:#e6f7f3;
+    --shadow:0 8px 26px rgba(27,31,51,.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.8;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:760px;margin:0 auto;padding:0 24px 72px}
+  .hero{
+    margin:0 -24px 30px;padding:44px 32px 34px;
+    background:linear-gradient(130deg,#241b56 0%,#4a3fbf 52%,#0e7a6e 88%,#0fa98c 100%);
+    color:#fff;border-radius:0 0 28px 28px;box-shadow:0 20px 50px rgba(43,35,97,.22);
+  }
+  .hero h1{font-size:30px;letter-spacing:-.3px;line-height:1.3}
+  .hero h1 small{display:block;font-size:13px;font-weight:400;opacity:.8;letter-spacing:.5px;margin-bottom:8px}
+  .hero p{margin-top:12px;font-size:14px;opacity:.92;max-width:560px}
+  .badge{
+    display:inline-block;margin-top:18px;padding:5px 12px;border-radius:999px;
+    background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);font-size:12px;
+  }
+  .step{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:22px 24px;margin-bottom:16px;box-shadow:var(--shadow);
+  }
+  .step h2{font-size:17px;display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .step h2 .n{
+    flex:0 0 auto;width:26px;height:26px;border-radius:9px;background:var(--soft);
+    color:var(--brand);font-size:13px;font-weight:700;display:grid;place-items:center;
+  }
+  .step .time{margin-left:auto;font-size:11px;color:var(--ink3);font-weight:400}
+  .step p{font-size:14px;color:var(--ink2);margin:8px 0}
+  .step strong{color:var(--ink)}
+  .kbd{
+    display:inline-block;padding:1px 7px;border-radius:6px;background:#f0f2f9;
+    border:1px solid #dde1ee;font-size:12.5px;font-family:ui-monospace,Consolas,monospace;color:#42496b;
+  }
+  ul{margin:8px 0 0 18px}
+  li{font-size:14px;color:var(--ink2);margin:5px 0}
+  .say{
+    background:var(--soft2);border-left:3px solid var(--teal);border-radius:10px;
+    padding:12px 16px;margin:12px 0;font-size:13.5px;color:#12584d;
+  }
+  .say b{color:#0b3f38}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+  .grid a{
+    display:block;padding:14px 16px;border-radius:14px;background:var(--card);
+    border:1px solid var(--line);text-decoration:none;color:var(--ink);box-shadow:var(--shadow);
+    transition:transform .12s,border-color .15s;
+  }
+  .grid a:hover{transform:translateY(-2px);border-color:#c9c4f5}
+  .grid a b{display:block;font-size:14px}
+  .grid a span{display:block;font-size:12px;color:var(--ink3);margin-top:2px;line-height:1.5}
+  .foot{margin-top:26px;padding-top:16px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink3)}
+  .foot a{color:var(--brand);text-decoration:none}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}.hero h1{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hero">
+    <h1><small>PLANQUEST · 快速上手</small>三分钟，把「计划」变成「做完了」</h1>
+    <p>这份只讲最短路径：装上 → 建一条计划 → 打一次卡 → 叫出阿刺。不解释原理，不列全部功能。</p>
+    <div class="badge">读完全文约 3 分钟 · 不需要看别的文档</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">1</span>装上去<span class="time">约 40 秒</span></h2>
+    <p><strong>电脑（Windows）</strong>：解压 <span class="kbd">PlanQuest-win64-portable.zip</span>，双击 <span class="kbd">PlanQuest.exe</span>。免安装，不写注册表，删文件夹就等于卸载干净。</p>
+    <p><strong>网页 / 安卓</strong>：同一份功能，数据各存各的本机；要跨设备就登录云同步（可选，不登录完全离线可用）。</p>
+    <p>第一次打开会让你填一个<strong>守护密码</strong>——改计划、关强制模式要它。忘了只能重装，记在自己记得住的地方。</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">2</span>建第一条计划<span class="time">约 50 秒</span></h2>
+    <p>点底部 <strong>＋</strong>，填三样就够：</p>
+    <ul>
+      <li><strong>标题</strong>：要具体到能判断做没做。「背单词」不行，「背 30 个单词」行。</li>
+      <li><strong>时间</strong>：几点提醒你。</li>
+      <li><strong>分值</strong>：完成加多少分，默认 20。</li>
+    </ul>
+    <p>保存后它就出现在「今日」。<strong>先只建一条</strong>，跑通一天再加——一上来建十条的人，第三天就全灰了。</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">3</span>到点打卡<span class="time">约 40 秒</span></h2>
+    <p>到点会弹一个置顶小窗，三个按钮：<strong>完成打卡 / 稍后 / 跳过</strong>。</p>
+    <ul>
+      <li>打卡 → 加分、连击 +1，今日进度条往前走。</li>
+      <li>跳过 → 不加分；开了强制模式才会扣分。</li>
+      <li>忘了点 → 阿刺会来催你，指名道姓说你欠了多久。</li>
+    </ul>
+    <p>积分攒着能换自己给自己准备的奖励（设置 → 积分商城，自己定价）。</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">4</span>叫出阿刺<span class="time">约 1 分钟</span></h2>
+    <p>左下角那个浮标就是<strong>阿刺</strong>，点一下开聊。它只在你的数据上说话，答不上来会直说，不编。</p>
+    <p><strong>它不止一副样子。</strong>在它的身份卡里可以选外形：<strong>🌵仙人掌 / 🌹玫瑰 / 🦔刺猬 / 🌰板栗 / 🐗豪猪</strong>——不是换个名字，是整套 3D 建模重做，性子也跟着换：仙人掌嘴硬心软、玫瑰阴阳怪气、刺猬熟了才黏、板栗爱算账、豪猪生人勿近。<strong>换皮要在聊天里跟它请求，它傲娇，不一定答应。</strong></p>
+    <div class="say">
+      <b>最常用的四句：</b><br/>
+      「今天还剩什么」——汇报进度<br/>
+      「帮我排今天：写周报、跑步 20 分钟」——排成计划（要先接模型）<br/>
+      「看看我的计划有没有坑」——指着不合理的地方给改法<br/>
+      「最近怎么总摆烂」——它会有自己的脾气和反应
+    </div>
+    <p><strong>它有自己的心情。</strong>你全做完、连着打卡、真诚道歉，它会高兴；漏任务、拿计划文件覆盖、冷落它，它会不爽——每副外形涨落的速度还不一样。扣分事件发生时，它<strong>可能自己站出来替你扛，也可能不管你</strong>，看它当时的心情，次数也有限。<strong>你不能点名让它扛，求它只会挨怼。</strong></p>
+    <p>想逗它：说 <strong>摇一摇 · 跳一跳 · 生个气 · 笑一个 · 吃个惊 · 向左转</strong>，当场演，打字和说话都认。接了模型还能让它回消息、排计划，<strong>每一步都出卡片，你点「就这么办」才真的做</strong>；右上角 <strong>🖐</strong> 可一键「只看不动」。</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">5</span>想再往下走<span class="time">按需</span></h2>
+    <div class="grid">
+      <a href="PlanQuest-完整手册.html">
+        <b>完整手册</b><span>每个模块怎么用、数值怎么算、边界在哪</span>
+      </a>
+      <a href="PlanQuest-更新日志.html">
+        <b>更新日志</b><span>每个版本改了什么，老用户看这个</span>
+      </a>
+    </div>
+    <p style="margin-top:14px">第一次用，建议只再读一篇：完整手册里的<strong>「阿刺 Pro 完全手册」</strong>——它是这个软件最容易用错的部分。</p>
+  </div>
+
+  <div class="foot">
+    遇到问题先看完整手册第 4 章「排错三步」。版本历史见《<a href="PlanQuest-更新日志.html">更新日志</a>》。
+  </div>
+
+</div>
+</body>
+</html>

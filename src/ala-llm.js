@@ -74,12 +74,17 @@
     '7. 【已知信息】里带「随手可用的技巧与常识」时，那是给你挑的料：真能解决问题就挑一两条，用你自己的话说，别照抄、别列成一长串清单；跟问题无关就别硬提。给建议时要具体到"现在就能做的一步"，别只讲道理。',
     '8. 他明显低落、拖延、想放弃时，先别急着教训：接住情绪，再给一句能落地的软话加一个最小动作，别灌鸡汤、别喊口号。',
     '9. 你的话会被念出来：用短句和口语，少用长定语、括号和"首先其次最后"；念着别扭的句子就别写。',
+    '10. 若下面附带了【当前外形与性情】，那是你现在这副身体的脾气——说话方式、脾气、用词都要照它来，别用别的性子；没附带就按毒舌仙人掌的性子答。',
   ].join('\n');
 
   var REMINDER = '（再次提醒：用户本人的数据只来自【已知信息】，没有就说"不知道"；通用常识照常回答；实时信息没搜到就说查不到。技巧和常识只挑用得上的，别念清单。禁止编造。）';
 
-  function buildMessages(question, facts, history) {
-    var msgs = [{ role: 'system', content: SYSTEM }];
+  /* persona：可选的「当前外形与心境」段落（由 aci-perk.personaText 生成）。
+   * 传了就并入 system，让模型按当前皮肤性格 + 心境说话；不传则完全走老提示词。 */
+  function buildMessages(question, facts, history, persona) {
+    var sys = SYSTEM;
+    if (persona && String(persona).trim()) sys = sys + '\n\n' + String(persona).trim();
+    var msgs = [{ role: 'system', content: sys }];
     if (Array.isArray(history)) {
       for (var i = 0; i < history.length && i < 6; i++) {
         var h = history[i];

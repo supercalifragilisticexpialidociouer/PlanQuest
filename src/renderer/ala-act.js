@@ -34,6 +34,7 @@
     '3.【实时信息】天气、新闻、股价、赛事这些，没有【联网检索】就别当成事实说。',
     '4. 语气毒舌但不伤人：先一句点评（不超过 40 字），紧接着给动作。不要长篇大论，不要客套。',
     '5. 全中文，不用 markdown 标题。',
+    '6. 若下面附带了【当前外形与性情】，点评的语气按那副脾气来；动作协议与字段规矩不受影响，照旧输出。',
   ].join('\n');
 
   var TASK = {
@@ -80,9 +81,10 @@
 
   /* ---------------- 提示词 ---------------- */
 
-  function buildMessages(kind, question, facts, history) {
+  function buildMessages(kind, question, facts, history, persona) {
     var k = TASK[kind] ? kind : 'plan';
     var sys = [BASE, TASK[k], PROTOCOL].join('\n\n');
+    if (persona && String(persona).trim()) sys = sys + '\n\n' + String(persona).trim();
     var msgs = [{ role: 'system', content: sys }];
     if (Array.isArray(history)) {
       for (var i = 0; i < history.length && i < 6; i++) {

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>阿刺 · 五套皮肤利弊 / 数值心情 / 顶罪</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1c2530; --dim:#5d6b7c; --line:#e3e9f0;
+    --red:#d94141; --green:#1f9d6b; --amber:#c8871a; --blue:#2b6fd6; --purple:#7a53c9;
+    --chip:#eef3f9; --shadow:0 6px 22px rgba(24,40,64,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#141a22; --card:#1e2732; --ink:#eaf0f7; --dim:#9aa9bb; --line:#2d3947;
+      --red:#ff7a7a; --green:#5cd6a0; --amber:#f0b85c; --blue:#78aaff; --purple:#b79aff;
+      --chip:#263340; --shadow:0 6px 22px rgba(0,0,0,.3); }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:26px 18px 40px;background:var(--bg);color:var(--ink);
+    font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:23px;margin:0 0 4px;letter-spacing:.5px}
+  .sub{color:var(--dim);font-size:12.5px;margin-bottom:22px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 16px;box-shadow:var(--shadow)}
+  .card h2{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .tag{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:20px;background:var(--chip);color:var(--dim)}
+  .say{font-size:12.5px;color:var(--ink);background:var(--chip);border-left:3px solid var(--red);
+    padding:8px 10px;border-radius:0 6px 6px 0;margin:8px 0 10px}
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pc b{font-size:11.5px;letter-spacing:.5px}
+  .pc ul{margin:4px 0 0;padding-left:16px}
+  .pc li{font-size:11.5px;color:var(--dim);margin:3px 0}
+  .pros b{color:var(--green)} .cons b{color:var(--red)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--dim);font-weight:600;font-size:11.5px;background:var(--chip)}
+  td.v{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+  .up{color:var(--green)} .down{color:var(--red)}
+  .flow{counter-reset:s;list-style:none;padding:0;margin:0}
+  .flow li{counter-increment:s;position:relative;padding:7px 0 7px 34px;border-bottom:1px dashed var(--line);font-size:12.5px}
+  .flow li:last-child{border-bottom:0}
+  .flow li::before{content:counter(s);position:absolute;left:0;top:7px;width:22px;height:22px;border-radius:50%;
+    background:var(--blue);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .formula{background:var(--chip);border:1px dashed var(--line);border-radius:8px;padding:10px 12px;margin:10px 0;
+    font:13px/1.8 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink)}
+  .formula em{color:var(--purple);font-style:normal;font-weight:700}
+  .hard{border-left:3px solid var(--amber);padding:8px 10px;background:var(--chip);border-radius:0 6px 6px 0;font-size:12.5px;margin-top:10px}
+  .foot{margin-top:20px;color:var(--dim);font-size:11.5px;line-height:1.9}
+  .ok{color:var(--green);font-weight:600}
+  .k{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🌵 阿刺 · 皮肤利弊 / 数值心情 / 自作主张顶罪</h1>
+  <div class="sub">表情负责「娇」，文案负责「傲」 · 五套皮肤真实改建模与数值 · 顶罪不设开关、不给请求入口</div>
+
+  <div class="grid">
+    <div class="card"><h2>🌵 青刺 / 灰刺 <span class="tag">极速 · 带路型</span></h2>
+      <div class="say">「选我？你那点毅力够我扎几次的？极速带路，你拖后腿我可真动手。」</div>
+      <div class="pc"><div class="pros"><b>利</b><ul><li>经验获取 +10%</li><li>带路导航最快</li><li>日常打卡响应极速</li></ul></div>
+      <div class="cons"><b>弊</b><ul><li>耗水翻倍</li><li>协作能量容易清零</li><li>一言不合就「拔刺」</li><li>覆盖文件时扣积分翻倍</li></ul></div></div></div>
+
+    <div class="card"><h2>🦔 膨化萌球 <span class="tag">话少 · 直硬</span></h2>
+      <div class="say">「就爱我这圆脸？行，看着萌，扎你的时候可别哭。反正我跑得慢，你拖吧，我慢慢扎。」</div>
+      <div class="pc"><div class="pros"><b>利</b><ul><li>初始好感高（+12）</li><li>生气/撒娇表情收藏率高</li><li>受击（拖延）减免 20%</li></ul></div>
+      <div class="cons"><b>弊</b><ul><li>移动 / 带路慢</li><li>经验值 −15%</li><li>不能真「动手」，竞技场胜率低</li></ul></div></div></div>
+
+    <div class="card"><h2>🌹 怒刺红 <span class="tag">竞技场 · 会动手</span></h2>
+      <div class="say">「选我？你最好别摆烂，我动手可不轻。你删档一次，我记你一辈子，积分扣到负。」</div>
+      <div class="pc"><div class="pros"><b>利</b><ul><li>竞技场伤害 / 胜率 +20%</li><li>拖延提醒最狠（强制弹窗）</li><li>覆盖扣积分 +50%（护主狂魔）</li></ul></div>
+      <div class="cons"><b>弊</b><ul><li>聊天毒舌过度，容易劝退</li><li>连续三天不打卡锁死功能</li><li>耗能量极大</li></ul></div></div></div>
+
+    <div class="card"><h2>🌰 枯木 / 金贵 <span class="tag">生个气 · 傲娇</span></h2>
+      <div class="say">「气给你看了，收藏好。想养我？你那点耐心够吗？删我计划？我直接枯给你看。」</div>
+      <div class="pc"><div class="pros"><b>利</b><ul><li>满级后协作能量上限 +30%</li><li>表情「不外传」稀有度拉满</li></ul></div>
+      <div class="cons"><b>弊</b><ul><li>生长极慢（经验 −30%）</li><li>极易「生气」，好感波动大</li><li>覆盖文件直接降级</li></ul></div></div></div>
+
+    <div class="card"><h2>🐗 幻影蓝 <span class="tag">跳一跳 · 自命不凡</span></h2>
+      <div class="say">「本刺肯为你离地，你这辈子受过这恩赐吗？特效费积分，你穷的话趁早换皮。」</div>
+      <div class="pc"><div class="pros"><b>利</b><ul><li>跳跃 / 动画特效华丽</li><li>社交展示（新芽段/段位）加分</li><li>偶尔「恩赐」双倍经验</li></ul></div>
+      <div class="cons"><b>弊</b><ul><li>极度自恋，带路偏差大</li><li>耗积分维持皮肤特效（5 分/次）</li></ul></div></div></div>
+
+    <div class="card"><h2>💬 分皮肤话风 <span class="tag">每句都过语气壳</span></h2>
+      <table><tr><th>皮肤</th><th>风格</th><th>样例</th></tr>
+      <tr><td>青刺</td><td>斜眼笑 · 催命</td><td>「别拖，本刺带路不等人。」</td></tr>
+      <tr><td>萌球</td><td>话少直硬</td><td>砍括号动作，句号收尾「嗯。」</td></tr>
+      <tr><td>怒刺红</td><td>刺全竖起来</td><td>「再摆烂我真动手。」</td></tr>
+      <tr><td>枯木</td><td>慢慢抬眼</td><td>「哼，本刺金贵。」</td></tr>
+      <tr><td>幻影蓝</td><td>离地半寸</td><td>「这叫恩赐，收好。」</td></tr></table>
+      <div class="hard">幂等、不改数字与事实；长段系统说明与 <code>raw</code> 台词不调味。</div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:14px">
+    <div class="card"><h2>📈 数值心情 <span class="tag">默认 3 · 范围 −10 ~ +10</span></h2>
+      <table>
+        <tr><th>事件</th><th>Δ</th><th>说明</th></tr>
+        <tr><td>按时完成每日计划</td><td class="v up">+1</td><td>每次打卡</td></tr>
+        <tr><td>连续 3 / 7 / 14 / 30 天</td><td class="v up">+2 / +3 / +5 / +8</td><td>额外加成，每档只给一次</td></tr>
+        <tr><td>聊天 / 投喂协作能量</td><td class="v up">+0.2</td><td>微量，10 分钟节流</td></tr>
+        <tr><td>完成阿刺提出的挑战</td><td class="v up">+3</td><td>较大提升</td></tr>
+        <tr><td>连续两天未登录</td><td class="v down">−1</td><td>每天最多一次</td></tr>
+        <tr><td>删除 / 覆盖 .pqplan</td><td class="v down">−2</td><td>严重违规，先扣心情再算顶罪</td></tr>
+        <tr><td>超过 48h 不互动</td><td class="v down">−0.5/24h</td><td>缓慢衰减，单日封顶 −2</td></tr>
+        <tr><td>无视阿刺的提醒</td><td class="v down">−1</td><td>1 小时节流</td></tr>
+        <tr><td>每天凌晨自动恢复</td><td class="v up">+1</td><td>仅当前为负，补到 0 封顶；跨天补算</td></tr>
+        <tr><td>真诚道歉（聊天里说）</td><td class="v up">+2</td><td>一次性，一天只收一次</td></tr>
+      </table>
+      <div class="hard">心情档：≥6 好 · −2~5 一般 · ≤−3 差。<b>界面只显示心情数值与档位，不摆概率、不给开关。</b></div>
+    </div>
+
+    <div class="card"><h2>⚖️ 顶罪最终算法 <span class="tag">每次扣分事件触发</span></h2>
+      <div class="formula">概率 = <em>25% + 心情 × 5%</em>（钳在 10% ~ 70%）<br>
+      心情 9 → 70% ｜ 3 → 40% ｜ −3 → 10%<br>
+      R = 随机数(0~100)；R &lt; 概率×100 → 顶罪</div>
+      <ol class="flow">
+        <li>检查<b>全局冷却</b>（30 分钟）+ <b>每日上限</b>（1 次）</li>
+        <li>获取阿刺当前心情 → 计算概率修正</li>
+        <li>生成随机数 R（0~100）</li>
+        <li>R &lt; 基础 25% + 心情修正 → 顶罪</li>
+        <li>顶罪后：积分实扣 <b>0</b>，协作能量 −50、好感 −3、重置冷却</li>
+        <li>无论顶不顶，台词都按当前心情档变化（好 / 一般 / 差三套）</li>
+      </ol>
+      <div class="hard">周最多 3 次、月最多 10 次；能量不足 50 不顶；超限台词「你以为我是你爹啊？自己拉的屎自己擦。」<br>
+      <b>硬约束：不导出 forceCover / requestCover / setProbability，聊天里求他扛只会被怼回来 —— 不可以规定他是否顶罪。</b></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h2>✅ 验证与产物</h2>
+    <table>
+      <tr><th>项</th><th>结果</th></tr>
+      <tr><td>核心单测 <code>test-aci-perk.js</code></td><td class="ok">31 / 31 通过</td></tr>
+      <tr><td>桌面 IPC 冒烟 <code>test-plan-file.js</code></td><td class="ok">24 / 24 通过（含审讯拦截、顶罪实扣 0、心情 −2、道歉恢复、无 forceCover 入口）</td></tr>
+      <tr><td>关联回归（overwrite 40 / aci-core 89 / aci-skin 49 / msg-center 16 / voice 10 / guard 13 / credit 52 / flip 15 / tier 23 …）</td><td class="ok">全绿</td></tr>
+      <tr><td>身份聊天冒烟（Electron）</td><td class="ok">11 / 11</td></tr>
+      <tr><td>全端镜像 md5 校验（web / 安卓 www / assets / build / dist / 桌面运行副本）</td><td class="ok">校验通过</td></tr>
+      <tr><td>便携包 <code>dist/PlanQuest-win64-portable.zip</code></td><td class="k">241 文件 · 203,617,810 字节 · sha256 <code>c06f5433…</code> · version.json / version.hash 三者一致</td></tr>
+      <tr><td>缓存清理（回收站，可恢复）</td><td class="ok">7 目录 + 5 文件；data.json / IndexedDB 348M / Local Storage 等全部完好</td></tr>
+    </table>
+  </div>
+
+  <div class="foot">
+    核心模块 <code>src/aci-perk.js</code>（双端 UMD 同源，渲染层 <code>aci-perk.js</code> 由它生成）·
+    桌面接线 <code>src/main.js</code> / <code>src/aci-core.js</code> / <code>src/preload.js</code> ·
+    渲染层 <code>src/renderer/app.js</code> / <code>buddy.js</code> / <code>styles.css</code> / <code>index.html</code> ·
+    Web 核心 <code>web/core/pq-core.js</code> / <code>api-bridge.js</code> ·
+    同步脚本 <code>tools/sync_overwrite.py</code>、打包 <code>tools/repack_portable.py</code>、清缓存 <code>tools/clear_electron_cache.py</code>。
+    重置按钮现在常显于养成面板（红色「↺ 重置（两清）」），仍走代价确认弹窗。
+  </div>
+</div>
+</body>
+</html>

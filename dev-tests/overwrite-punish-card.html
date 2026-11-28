@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PlanQuest · .pqplan 覆盖扣刺机制</title>
+<style>
+  :root{
+    --bg:#f6f7fc; --card:#ffffff; --ink:#20213a; --ink2:#5b6079; --ink3:#8b90ab;
+    --line:#e6e8f2; --purple:#7c6cff; --orange:#ff9d5c; --pink:#ff6b81;
+    --red:#e4485f; --mint:#12a888; --blue:#3b82f6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px 20px 56px;background:var(--bg);color:var(--ink);
+    font-family:"PingFang SC","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto}
+  header{text-align:center;margin-bottom:30px}
+  .kicker{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.12em;color:var(--purple);
+    background:rgba(124,108,255,.10);padding:5px 12px;border-radius:999px}
+  h1{font-size:28px;margin:14px 0 6px;letter-spacing:-.02em}
+  .sub{color:var(--ink2);font-size:13.5px;margin:0}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;
+    box-shadow:0 8px 28px rgba(40,42,80,.06)}
+  .card h2{font-size:15px;margin:0 0 4px;display:flex;align-items:center;gap:9px}
+  .num{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-size:12px;
+    font-weight:800;color:#fff;background:var(--purple);flex-shrink:0}
+  .card .desc{font-size:12px;color:var(--ink3);margin:0 0 14px}
+  .row{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--ink2);margin:8px 0}
+  .row b{color:var(--ink);font-weight:700}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--orange);margin-top:8px;flex-shrink:0}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;background:#f2f3fa;
+    padding:1px 5px;border-radius:5px;color:#4a3fb0}
+  /* 审讯弹窗还原 */
+  .inq{margin-top:8px;border:1px solid rgba(255,157,92,.45);border-radius:14px;padding:16px;
+    background:linear-gradient(160deg,#fff 55%,#fff6f0 100%);box-shadow:0 10px 30px rgba(255,107,129,.13)}
+  .inq-head{display:flex;gap:11px;align-items:center;margin-bottom:12px}
+  .face{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:23px;
+    background:linear-gradient(135deg,rgba(124,108,255,.16),rgba(255,157,92,.22));border:1px solid var(--line)}
+  .inq-head h3{margin:0;font-size:14px}
+  .inq-head small{color:var(--ink3);font-size:10.5px}
+  .lead{font-size:13px;font-weight:700;padding:11px 13px;border-radius:11px;border-left:3px solid var(--purple);
+    background:linear-gradient(135deg,rgba(124,108,255,.09),rgba(255,107,129,.07))}
+  .buy{font-size:11.5px;color:var(--ink2);margin:9px 0 12px;padding-left:11px;border-left:2px dashed var(--orange)}
+  .list{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:5px}
+  .list li{font-size:11.5px;color:var(--ink2);background:#f7f8fc;border-radius:8px;padding:6px 10px}
+  .list li::before{content:'✦';color:var(--orange);margin-right:7px;font-size:10px}
+  .tier-tag{font-size:11px;font-weight:800;color:var(--red);background:rgba(228,72,95,.09);
+    padding:6px 10px;border-radius:8px;margin-bottom:12px;display:inline-block}
+  .btns{display:flex;gap:8px;justify-content:flex-end}
+  .btn{font-size:11.5px;font-weight:700;padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink2)}
+  .btn.hot{border-color:transparent;color:#fff;background:linear-gradient(135deg,var(--orange),var(--pink));
+    box-shadow:0 5px 14px rgba(255,107,129,.3)}
+  /* 阶梯表 */
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:10.5px;letter-spacing:.04em;color:var(--ink3);font-weight:800;text-transform:uppercase}
+  td b{color:var(--ink)}
+  .pill{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px}
+  .p1{background:rgba(124,108,255,.13);color:#6353d8}
+  .p2{background:rgba(255,157,92,.16);color:#c96a20}
+  .p3{background:rgba(228,72,95,.13);color:var(--red)}
+  /* 验证条 */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+  @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  .stat .n{font-size:21px;font-weight:800;color:var(--purple);letter-spacing:-.02em}
+  .stat .l{font-size:10.5px;color:var(--ink3);margin-top:2px}
+  footer{margin-top:24px;text-align:center;font-size:11px;color:var(--ink3);line-height:1.9}
+  .hash{font-family:ui-monospace,Consolas,monospace;font-size:10.5px;color:var(--ink2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">PLANQUEST · 2.9.11 · 覆盖合并</div>
+    <h1>举着胳膊笑眯眯，扣你积分、拔你刺</h1>
+    <p class="sub">.pqplan 覆盖不再是「无损删计划」：审讯、扣刺、留痕、阶梯赎罪、24 小时冻结，全部落地</p>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2><span class="num">0</span>需求基线：计分口径</h2>
+      <p class="desc">打开编辑不算数，只有真正「应用」才计分。</p>
+      <div class="row"><span class="dot"></span><div><b>新增计划</b> → 按普通新建口径 <code>plan:save</code>：新增非白名单普通软件扣 10 分／计划，契约任务 0 分</div></div>
+      <div class="row"><span class="dot"></span><div><b>覆盖掉的计划</b> → 按删除口径 <code>plan:delete</code>：0 分（常量对齐，规则变了自动跟随）</div></div>
+      <div class="row"><span class="dot"></span><div><b>合并导入</b> → 只算新增，不删本机计划，不升级阶梯</div></div>
+      <div class="row"><span class="dot"></span><div><b>只打开编辑（.pqplan）</b> → <code>inspect</code>：不扣分、不应用、不记账、不进审讯，可改可另存</div></div>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">4</span>覆盖后强制「阿刺审讯」</h2>
+      <p class="desc">确认才扣积分 + 记逃兵标签；点取消啥事没有。主进程也会二次校验 <code>confirmed</code>，绕过 UI 直接调 IPC 一样被拦下。</p>
+      <div class="inq">
+        <div class="inq-head">
+          <div class="face">🌵</div>
+          <div><h3>阿刺审讯 · 确认覆盖？</h3><small>笑得越甜，扎得越深</small></div>
+        </div>
+        <div class="lead">（笑眯眯举着胳膊）确认覆盖？你那点破计划我可都记着，删了也得挨扎。</div>
+        <div class="buy">想跑？行，本刺肯让你覆盖，算你有点胆。扣你50积分，当买路钱。下次再敢删，我直接拔刺扎你屏幕。</div>
+        <ul class="list">
+          <li>新增 2 个计划（按新建口径扣 0 分）</li>
+          <li>覆盖掉 3 个计划（按删除口径扣 0 分）</li>
+          <li>第 1 次覆盖：再扣 10 积分（10%）、80 经验、2 点协作能量</li>
+          <li>旧计划不会真删，加密收尸，下次启动翻旧账</li>
+        </ul>
+        <div class="tier-tag">第 1 次覆盖 · 第 1 档赎罪</div>
+        <div class="btns"><span class="btn">取消，本刺记着</span><span class="btn hot">确认覆盖，挨扎</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">1</span>扣积分太轻了，得「扣刺」</h2>
+      <p class="desc">一次性动四处：积分、协作能量、经验、等级。</p>
+      <div class="row"><span class="dot"></span><div><b>积分</b>：按当前积分扣 10% / 30% / 50%（向上取整，无分可扣时为 0）</div></div>
+      <div class="row"><span class="dot"></span><div><b>协作能量</b>：<code>aci.energy</code> −2 / −3 / −5</div></div>
+      <div class="row"><span class="dot"></span><div><b>经验</b>：<code>aci.exp</code> −80 / −160 / −300</div></div>
+      <div class="row"><span class="dot"></span><div><b>降级</b>：第 3 档起 Lv./100 直接掉回 Lv.1 新手、经验清零、心情转 angry</div></div>
+      <div class="row"><span class="dot"></span><div>每次开口：斜眼笑 / 翻白眼 / 生气脸，表情负责娇，文案负责傲</div></div>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">2</span>「无损」变「有损」，历史留痕</h2>
+      <p class="desc">旧计划不真删，加密藏个备份，下次启动当面翻旧账。</p>
+      <div class="row"><span class="dot"></span><div>桌面：<code>aes-256-gcm</code> 密文写 <code>overwrite-vault.json</code>，密钥独立存 <code>overwrite-vault.key</code></div></div>
+      <div class="row"><span class="dot"></span><div>网页 / 安卓：Web Crypto AES-GCM，密钥与密文分键存 localStorage</div></div>
+      <div class="row"><span class="dot"></span><div><code>data.json</code> 只留索引（时间／条数／标题／sha256），看不到旧计划明文；导出文件不带账本</div></div>
+      <div class="row"><span class="dot"></span><div>翻旧账：「哟，这文件看着眼生啊……逃兵行为，扣 10 积分、80 经验。本刺替你记着呢，别想装失忆。」<b>读一次即销账</b></div></div>
+      <div class="row"><span class="dot"></span><div>全量覆盖会把 data 整个换掉，账本会挂回本机状态 —— 别想拿文件抹掉逃兵记录</div></div>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">3</span>阶梯式「赎罪」，越删越狠</h2>
+      <p class="desc">按累计覆盖次数升级，第三次直接动手锁功能。</p>
+      <table>
+        <thead><tr><th>次数</th><th>扣刺</th><th>表情 / 后果</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill p1">第 1 次</span></td><td><b>−10%</b> 积分<br>−80 经验 · −2 能量</td><td>斜眼笑：「第一次原谅你，下次我扎你」</td></tr>
+          <tr><td><span class="pill p2">第 2 次</span></td><td><b>−30%</b> 积分<br>−160 经验 · −3 能量</td><td>翻白眼：「又来？动不动就拔自己根」</td></tr>
+          <tr><td><span class="pill p3">第 3 次+</span></td><td><b>−50%</b> 积分<br>−300 经验 · −5 能量</td><td>生气脸 + <b>掉回 Lv.1</b> + 换皮／养成<b>锁死 24 小时</b>：「你再删，我就在你屏幕上原地爆炸，信不信？」</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">5</span>冻结怎么真的锁住</h2>
+      <p class="desc">三层拦截，按钮拦不住也改不动。</p>
+      <div class="row"><span class="dot"></span><div><b>主进程兜底</b>：<code>aci:action</code> 对浇水／换皮／重置／补给／挑战等养成动作直接返回 <code>frozen:true</code> + 嘲讽台词</div></div>
+      <div class="row"><span class="dot"></span><div><b>状态暴露</b>：<code>aci:state.derived.frozen / frozenUntil / deserter</code> + <code>state.overwrite</code></div></div>
+      <div class="row"><span class="dot"></span><div><b>前端即时</b>：buddy.js 在身份请求、选皮肤、重置、浇水入口直接拒绝并让阿刺开口</div></div>
+      <div class="row"><span class="dot"></span><div><b>启动播报</b>：<code>overwrite:boot</code> 翻旧账，<code>overwrite:say</code> 接收双击 .pqplan 主进程审讯的台词</div></div>
+    </section>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">40 / 40</div><div class="l">覆盖惩罚纯逻辑单测</div></div>
+    <div class="stat"><div class="n">20 / 20</div><div class="l">桌面端 IPC 冒烟</div></div>
+    <div class="stat"><div class="n">267 项</div><div class="l">8 个关联回归全绿</div></div>
+    <div class="stat"><div class="n">239 文件</div><div class="l">便携包 · 五端镜像一致</div></div>
+  </div>
+
+  <footer>
+    <div>新增 <code>src/plan-overwrite.js</code>（双端 UMD 核心）· 桌面主进程 / preload / app.js / buddy.js / styles.css · Web 核心 pq-core.js / api-bridge.js · 五份渲染层镜像 + 便携版运行目录</div>
+    <div>便携包 203,586,899 字节 · sha256 <span class="hash">12587e1563dd7dc48f9dee3ab803990f331fadbe4442ead6cd7cd3e4ec5a7d89</span> · <code>dist/version.hash</code> 已同步</div>
+    <div>注：远端 GitHub Release 未推送（当前环境无凭据），本地产物与版本号 2.9.11 已就绪。</div>
+  </footer>
+</div>
+</body>
+</html>

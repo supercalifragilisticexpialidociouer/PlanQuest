@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PlanQuest · 更新日志</title>
+<style>
+  :root{
+    --ink:#1b1f33; --ink2:#4b5473; --ink3:#828aa8;
+    --line:#e6e9f3; --bg:#f6f7fc; --card:#fff;
+    --brand:#5b4de0; --teal:#0fa98c; --warm:#e8833a;
+    --shadow:0 6px 22px rgba(27,31,51,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.78;-webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:820px;margin:0 auto;padding:0 24px 80px}
+  .hero{
+    margin:0 -24px 34px;padding:42px 32px 30px;
+    background:linear-gradient(128deg,#1f1a4c 0%,#453aa8 55%,#0d6f65 100%);
+    color:#fff;border-radius:0 0 26px 26px;box-shadow:0 18px 44px rgba(40,32,90,.2);
+  }
+  .hero h1{font-size:27px;letter-spacing:-.2px}
+  .hero h1 small{display:block;font-size:12px;font-weight:400;opacity:.78;letter-spacing:1.4px;margin-bottom:6px}
+  .hero p{margin-top:10px;font-size:13.5px;opacity:.9;max-width:600px}
+  .toc{
+    display:flex;flex-wrap:wrap;gap:6px;margin-top:18px;
+  }
+  .toc a{
+    font-size:11.5px;padding:4px 10px;border-radius:999px;text-decoration:none;
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;
+  }
+  .toc a:hover{background:rgba(255,255,255,.24)}
+  .ver{
+    position:relative;padding:0 0 6px 96px;margin-bottom:8px;
+  }
+  .ver::before{
+    content:"";position:absolute;left:66px;top:22px;bottom:-8px;width:2px;
+    background:linear-gradient(180deg,#d9d5f8,#e6e9f3);border-radius:2px;
+  }
+  .ver:last-child::before{display:none}
+  .ver > .tag{
+    position:absolute;left:0;top:14px;width:66px;text-align:right;
+    font-family:ui-monospace,Consolas,monospace;font-size:12.5px;font-weight:600;color:var(--brand);
+  }
+  .ver::after{
+    content:"";position:absolute;left:61px;top:22px;width:12px;height:12px;border-radius:50%;
+    background:#fff;border:3px solid #c7c1f5;
+  }
+  .ver.latest::after{border-color:var(--teal);box-shadow:0 0 0 4px rgba(15,169,140,.14)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:16px 20px 14px;box-shadow:var(--shadow);
+  }
+  .card h2{font-size:15.5px;margin-bottom:8px;line-height:1.5}
+  .card h2 em{
+    font-style:normal;font-size:10.5px;font-weight:600;color:#fff;background:var(--teal);
+    padding:2px 7px;border-radius:999px;margin-left:8px;vertical-align:2px;letter-spacing:.3px;
+  }
+  .card ul{margin:0 0 0 17px}
+  .card li{font-size:13.5px;color:var(--ink2);margin:4px 0}
+  .card li b{color:var(--ink);font-weight:600}
+  .card .meta{margin-top:10px;font-size:11.5px;color:var(--ink3)}
+  .note{
+    background:#fff9f0;border:1px solid #f3e2c9;border-radius:12px;padding:14px 18px;
+    font-size:13px;color:#7a5730;margin-bottom:22px;
+  }
+  .foot{margin-top:30px;padding-top:16px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink3)}
+  .foot a{color:var(--brand);text-decoration:none}
+  @media(max-width:640px){
+    .ver{padding-left:0}
+    .ver::before,.ver::after{display:none}
+    .ver > .tag{position:static;width:auto;text-align:left;display:block;margin-bottom:6px}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hero">
+    <h1><small>PLANQUEST · 更新日志</small>从 v1.1 到 v2.9.11，每个版本改了什么</h1>
+    <p>给已经在用的人看：新东西是什么、旧行为有没有变、要不要重新设置。<b>第一次用请看《快速上手》</b>，这份不教怎么用。</p>
+    <div class="toc">
+      <a href="#v2911">v2.9.11</a><a href="#v2910">v2.9.10</a><a href="#v299">v2.9.9</a><a href="#v298">v2.9.8</a><a href="#v297">v2.9.7</a><a href="#v296">v2.9.6</a><a href="#v295">v2.9.5</a><a href="#v294">v2.9.4</a><a href="#v293">v2.9.3</a><a href="#v292">v2.9.2</a><a href="#v291">v2.9.1</a>
+      <a href="#v29">v2.9</a><a href="#v28">v2.8</a><a href="#v27">v2.7</a><a href="#v26">v2.6</a>
+      <a href="#v25">v2.5</a><a href="#v24">v2.4</a><a href="#v23">v2.3</a><a href="#old">v2.2 及更早</a>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>看日志的规矩：</b>每个版本只写「用户能感知到的变化」，不写内部重构。开头标 <b>A</b> 的是需要你动手的
+    （重新设置、重新登录、重新填 Key 之类），没标的基本上打开就是新的。
+  </div>
+
+  <div class="ver latest" id="v2911">
+    <span class="tag">v2.9.11</span>
+    <div class="card">
+      <h2>五源冗余更新 + 阿刺五副外形各有各的脾气：心情、顶罪、毒舌提示词全跟着外形走<em>最新</em></h2>
+      <ul>
+        <li><b>A · 要填一次源：</b>设置页「版本更新」从单一地址改成<b>多源文本框</b>（每行一个、按序自动切换）。
+          支持五类：① <b>GitHub Releases</b>（<code>https://github.com/用户名/仓库/releases/latest</code>，永不过期，推荐主源）
+          ② R2 / 任意直链 ③ pixeldrain ④ MediaFire ⑤ GoFile 分享页。
+          <b>没填时用内置示例地址，需要你换成自己的仓库/链接</b>；国外源常连不上，所以才五个都配、任一成功即用，下到的包按 sha256 校验。</li>
+        <li><b>自动切换：</b>某个源解析失败、下载失败或校验不过，自动换下一个，全部失败才报人话汇总（哪个源、什么原因）。
+          下载过程在面板上逐条显示「尝试 GitHub → 失败 → 换 pixeldrain → 成功」。</li>
+        <li><b>安装器仍是离线整包：</b>双击 setup.exe 一定装得上、不依赖国外源（国外源只用于后续更新）。
+          勾选的大模型组件改为装到<b>安装文件夹内的 components\\ 目录</b>（绿色版拷走时 AI 一起带走），
+          每个组件配主源 + 备用源，任一成功即可；不勾一个字节都不下。</li>
+        <li><b>数据不用迁移：</b>data.json 仍在 %APPDATA%\\PlanQuest\\，换版本自动沿用；新版本下到独立目录，不覆盖正在运行的 exe。</li>
+        <li><b>验证：</b>多源解析/回退单测 19 项 + 更新器 39 项全过；设置面板实机截图断言五类源、AI 默认不勾；安装器重复源编译通过。</li>
+        <li><b>B · 阿刺不再只有一副脾气：</b>五副外形（🌵仙人掌 / 🌹玫瑰 / 🦔刺猬 / 🌰板栗 / 🐗豪猪）<b>各有一套独立心情</b>——起点不同、涨跌事件不同、凌晨恢复快慢不同，等级划分也不同。全做完、连续打卡、被夸会涨；漏任务、覆盖计划文件、顶嘴会跌。<b>提示词也跟着外形和心境走</b>：性格段落 + 此刻心境一起喂给模型，表情负责娇、文案负责傲。改名和换皮依旧要在聊天里请求，它傲娇，不一定答应。</li>
+        <li><b>顶罪是它自作主张，你不能点名：</b>扣分事件发生时，它可能替你扛下——扣的是它的能量、掉的是它对你的好感。<b>冷却、每日上限、概率由它自己的脾气和当前心情决定</b>，界面没有开关，聊天里求它只会挨怼。仙人掌闷声扛、玫瑰阴阳邀功、刺猬偷偷做了、板栗要你三天打卡、豪猪一声不吭。次数有限，心情差时多半不管你。</li>
+        <li><b>平衡与神秘感：</b>本地记录每次顶罪的触发与命中用来调参数，<b>不上传、不显示、不给概率开关</b>；新手引导只含蓄暗示「脾气随外形、处久了会变」，不摊牌规则。</li>
+        <li><b>C · 契约罚金当天就能看见：</b>修掉「第一天有任务没做却显示应扣 ¥0」——过去只结算昨天以前，现在<b>有任务可做且没全做完就实时显示今日应扣</b>，补做完归零；<b>当天没排任务一分钱不扣</b>。热度图今日格也显示实时预估。</li>
+        <li><b>契约任务创建后不可修改：</b>内容和启用状态一并锁死（停用会绕过罚金），到期前仍不可删除；编辑入口收起、主进程兜底，抹掉契约字段也绕不过去。创建前会明确提示「一旦创建就不可改、不可停用」。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v2910">
+    <span class="tag">v2.9.10</span>
+    <div class="card">
+      <h2>阿刺不再冒充你说话：点开面板时那句「我不太想动」删掉了</h2>
+      <ul>
+        <li><b>问题：</b>之前浮标上亮红点、你点开面板时，代码会自动塞一句「我不太想动」<b>当成你说的</b>。
+          紧接着闲聊雷达对着这句程序自己编的话判了「摸鱼 99%」，阿刺又补一句「顺嘴一提」。
+          结果就是你明明没开口，面板里却像你自己说了句丧气话、还被它抓了包。</li>
+        <li><b>修复：</b>点开面板现在<b>只展示已有的未读提醒</b>（那些话在催你的时候早就记进聊天了），
+          不再往你嘴里塞任何话。红点提醒照常亮、照常清，只是不再附带一句伪造的发言。</li>
+        <li><b>验证：</b>新增回归测试 6 项全过 —— 源码无伪造发言、点开后 me 气泡为 0、真实提醒仍在、红点正常清除。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v299">
+    <span class="tag">v2.9.9</span>
+    <div class="card">
+      <h2>R2 直链发版：绿色安装器只解压，大模型勾了才下</h2>
+      <ul>
+        <li><b>A · 要填一次地址：</b>设置页新增「版本更新（R2 直链）」，填入对象存储自定义域名前缀
+          （形如 <code>https://dl.example.com/planquest</code>），客户端只读同目录下的 <code>version.json</code>。
+          没填就点「检查更新」会直说「还没填 R2 直链域名」，不会假装成功。清单里写死版本号、ZIP/exe 大小与 sha256、变更摘要、可选组件列表。</li>
+        <li><b>绿色安装器 <code>PlanQuest-2.9.9-setup.exe</code>（单文件约 161 MB）：</b>用 Inno Setup 6 编译，
+          <b>不请求管理员权限、只把绿色版目录解压到你选的文件夹</b>，不写卸载注册表项、不建开始菜单、不改系统。
+          实机静默安装验证：<code>exit=0</code>、绿色版目录完整释放、日志 <code>User privileges: None</code> / <code>Administrative install mode: No</code>、
+          HKCU Run 与卸载项均无新增。</li>
+        <li><b>可选大模型默认一个字节都不下：</b>安装器里两个复选框（都不勾）与设置页对应开关共用同一清单。
+          勾了才从<b>官网直链</b>下载到 <code>%APPDATA%\PlanQuest\components\</code>：
+          Ollama 用官方 <code>ollama-windows-amd64.zip</code>（绿色解压即用，模型再 <code>ollama pull qwen2.5:3b</code>）；
+          MeloTTS 官网<b>只有源码、没有 Windows 运行包</b>，勾了也只会得到源码 zip，界面如实写明「本机 Python 3.13 跑不起来」，不冒充能装好。</li>
+        <li><b>不覆盖、不迁移：</b>新版本下到独立目录，不覆盖正在运行的 exe；
+          <code>data.json</code> 在 <code>%APPDATA%\PlanQuest\</code>，与程序目录解耦，换任何绿色版自动沿用，<b>不需要数据迁移</b>。</li>
+        <li><b>开机自启先把话说清楚：</b>因为安装器不代写注册表，开启「开机自动启动」前会弹确认，
+          明确告知将写入 <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Run</code>（仅当前用户、<b>不需要管理员</b>）；
+          关掉开关会删除该条。绿色版换目录后，应用下次启动会自动把启动项指向新位置。</li>
+        <li><b>验证：</b>更新器单测 <b>39 项全过</b>；主进程实机启动无异常（boot.log 走到「界面加载完成」）；四端文件 md5 一致。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v298">
+    <span class="tag">v2.9.8</span>
+    <div class="card">
+      <h2>新手前一周翻的案不再进训练池：照常改判，只当「观察」</h2>
+      <ul>
+        <li><b>根子：</b>翻案是训练集唯一的人工入口，原来的风控只看「信用分够不够、有没有人复核」，没看「这人用了多久」。
+          头一周连「闲聊 / 正经事」的判定口径都还没摸熟，这时候错标一条，比漏标十条更伤模型。</li>
+        <li><b>现在：</b>按<b>本机首次使用时间</b>算，前 <b>7 天</b>内翻的案，<b>改判规则完全不变</b>（信用「良好」以上且行为一致，照样当场改判；
+          该走候选池的照样走候选池），但样本一律记成<b>「观察」（probation）</b>——不参与训练、不上传云端。
+          候选池里的翻案就算冷静期满、房间同学认可，转正也只是转成「观察」，不会混进训练集。</li>
+        <li><b>界面说清楚：</b>翻案确认框写「新手期还剩 X 天：这次改判只在本机生效」；改判后的提示写「新手第 N 天，这条不进训练池」；
+          「设置 → AI 自训练 → 翻案候选池」加一行 🐣 说明，样本池显示「N 条新手观察（不训练）」，候选条目挂 🐣 标记。</li>
+        <li><b>边界：</b>观察样本<b>不会自动转正</b>，过完新手期也不会补进训练集；7 天后<b>新的</b>翻案恢复原样。
+          「待上传」只统计真会上传的样本，不会因为观察样本虚高。</li>
+        <li><b>数据：</b>版本 2.9.8，网页缓存 pq-web-v49；训练与云同步都只认直接采纳 / 冷静期确认的样本。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v297">
+    <span class="tag">v2.9.7</span>
+    <div class="card">
+      <h2>设置页不再甩英文报错：可选服务没装就说「没装」，并告诉你现在靠什么顶着</h2>
+      <ul>
+        <li><b>根子：</b>朗读服务（127.0.0.1:8899）和本机模型（127.0.0.1:11434）都是<b>可选件</b>，没装的时候界面直接把 <code>connect ECONNREFUSED 127.0.0.1:8899</code> 这种给开发看的报文显示出来，端口号、errno 一大串，看着像软件坏了。</li>
+        <li><b>现在翻成人话：</b>「服务没开」「等太久没回应」「地址找不到」「密钥或权限不对」「对面服务出错了」。端口和 errno 不再出现在界面上。</li>
+        <li><b>说清兜底：</b>朗读没连上 → 「改用系统语音，不影响使用」；模型没开 → 「极速模式（服务没开，先查表兜底）」。红字改成中性说明，不制造「坏了」的错觉。</li>
+        <li><b>补上「怎么开」：</b>朗读那一栏写清 MeloTTS 要装 PyTorch（几百 MB 起）、官方只发 Python 库；模型来源写清本机 Qwen 要先装 Ollama 并 <code>ollama pull qwen2.5:3b</code>，没装就别选这项。</li>
+        <li><b>数据：</b>版本 2.9.7，网页缓存 pq-web-v48。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v296">
+    <span class="tag">v2.9.6</span>
+    <div class="card">
+      <h2>信誉分有了三档特权，军团里能看到自己第几，海报从成绩单改成邀请函</h2>
+      <ul>
+        <li><b>三档特权，能拦人的才写：</b>
+          <b>L1 基础（≥80 分）</b>翻案权重、每日翻案次数、借分额度；
+          <b>L2 社交（≥100 分）</b>自己开军团、能被推去做纪律官 / 仲裁员；
+          <b>L3 荣耀（≥120 分）</b>军团名册挂 ✦ 守约者星标。
+          清单在<b>成就页 · 信誉分</b>里，已具备 / 还差多少分都写着。</li>
+        <li><b>没做的也写「规划中」：</b>自习房优先匹配、抢先体验这两项还没实现，界面上标着「规划中」，不冒充已生效。</li>
+        <li><b>借分额度不再写死 50：</b>按等级给 —— 受限 30 / 普通 50 / 良好 80 / 可信 120。按时还清翻倍、逾期减半，封顶 200。分掉档了，额度当场跟着降。</li>
+        <li><b>能自己开军团的线画在 100 分：</b>新号默认 100，不挡新人；被扣到 100 以下的先把自己那份打卡补上。裁定别人的争议同理。</li>
+        <li><b>军团里能看到自己第几：</b>团内治理顶部新增「我在团里的信誉位置」——第 X / N 位、高于团里多少人、自己的等级。<b>别人只看得到你的等级，看不到分数</b>，名册里也不会出现别人的分。</li>
+        <li><b>两套叫法对上号：</b>分档「良好」= 特权档「L2 社交」，名册里并排显示，不用自己换算。</li>
+        <li><b>分享海报重做成邀请函：</b>只写「做了什么」——连续专注天数、本周帮过几个战友、完成几个挑战、最长一次坐了多久、今天在做的事。<b>信誉等级、具体分数、排名、可借额度一律不出现</b>，不是打码，是这些数据根本不传进绘制代码。</li>
+        <li><b>底部 CTA 换成邀请：</b>「扫码加入我的自习室」，二维码里带邀请码和过期时间，<b>24 小时有效</b>。过期后再扫会明确告诉你「邀请已过期」，不装作还能用。</li>
+        <li><b>署名可以用别名：</b>海报上的名字单独填，存在本机，跟账号昵称没关系。</li>
+        <li><b>数据：</b>版本 2.9.6，网页缓存 pq-web-v47。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v295">
+    <span class="tag">v2.9.5</span>
+    <div class="card">
+      <h2>排计划开始看现实：看天气、看剩余时间、看不撞车</h2>
+      <ul>
+        <li><b>排之前先看现实条件：</b>现在几点、今天还剩多少小时、哪些时间点已经被占。只往「现在之后」排，撞了就错开，时间不够就少排两条。</li>
+        <li><b>说一句天气它就照办：</b>「外面下雨 / 今天零下 / 太热了」→ 不排跑步、骑车、爬山、球类，换成室内等价动作并在备注说明。说「明天有雨」不影响今天。</li>
+        <li><b>本地兜底：</b>模型硬排户外也会在落地前改成室内，不会出现「下雨去跑步」的计划。</li>
+        <li><b>没说天气就不瞎猜，</b>也不会在点评里编天气。</li>
+        <li><b>数据：</b>版本 2.9.5，网页缓存 pq-web-v46。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v294">
+    <span class="tag">v2.9.4</span>
+    <div class="card">
+      <h2>阿刺从「会说」变成「会做」，还能念给你听</h2>
+      <ul>
+        <li><b>三件正事（接模型后可用）：</b>替你接消息、替你排计划、替你改计划。模型只出提议，做成卡片，你点「就这么办」才落地。</li>
+        <li><b>会念出来：</b>MeloTTS-ZH 本地朗读 → 系统中文语音兜底 → 都不行就安静，不弹错框。点哪段念哪段，每条回答底下有「朗读 / 复制 / 重答 / 评价」。</li>
+        <li><b>语音听写：</b>识别结果先落输入框，不自动发，说错能改。</li>
+        <li><b>常识库 217 条：</b>生活技巧、工作技巧、常识、通识（历史/地理/科学/法律经济）、软激励。</li>
+        <li><b>回答顺序改了：</b>先凭自己的知识答 → 答不上来翻常识库 → 还不行且联网开着才搜。不会再对一句骂人的话回「这个我查不到」。</li>
+        <li><b>3D 互动：</b>说「摇一摇 / 跳一跳 / 生个气 / 笑一个 / 吃个惊 / 向左转」它会当场演，打字和语音都认；朗读时嘴一张一合、张成圆圈。</li>
+        <li><b>只读快捷：</b>面板右上角 🖐 或右键点仙人掌，一键「只看不动」，不用翻三层设置。</li>
+        <li><b>对话可删：</b>清空全部，或悬停单条右上角 × 只删那一条（连带把它那轮从上下文摘掉）。自己说的话也能复制。</li>
+        <li><b>上下文从 4 轮扩到 30 轮：</b>聊半小时还记得开头。<b>评价不再设 1000 条上限</b>，只存本机，写满才让位。</li>
+        <li><b>数据：</b>版本 2.9.4，网页缓存 pq-web-v45。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v293">
+    <span class="tag">v2.9.3</span>
+    <div class="card">
+      <h2>阿刺引擎四选：接入 LongCat / 本机 Qwen / 自定义 / 纯查表</h2>
+      <ul>
+        <li><b>LongCat（美团长猫）：</b>美团技术团队自研并开源的大模型，官方站 <code>longcat.ai</code>，开放平台 <code>longcat.chat</code>。自己注册每天 10 万免费 token，填 Key 就能用，不用装东西。</li>
+        <li><b>四个来源：</b>LongCat（OpenAI 兼容端点，主进程直连不中转）/ 本机 Qwen3-4B（Ollama，完全离线）/ 自定义模型（任意兼容地址）/ 纯查表（最快、不联网）。</li>
+        <li><b>接不上不卡住：</b>Key 无效或额度用完会明确说「API Key 被拒」，并自动用极速应答兜底。</li>
+        <li><b>不露底层：</b>对话里不再出现「查表没接住」这类实现细节，只有设置页显示技术选项。</li>
+        <li><b>数据：</b>版本 2.9.3，网页缓存 pq-web-v44。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v292">
+    <span class="tag">v2.9.2</span>
+    <div class="card">
+      <h2>阿刺接上本地开源模型，先把「防编造」钉死</h2>
+      <ul>
+        <li><b>混合路由：</b>查表优先（进度/积分/连击秒回），表接不住的才交给本机 Qwen3-4B。</li>
+        <li><b>四条铁律写进提示词：</b>事实只能来自本机资料；资料没有就说查不到；禁止编造数字日期人名；毒舌但不伤人。</li>
+        <li><b>设置页「阿刺引擎」：</b>带状态灯（🧠 已接上 / ⚡ 极速）和「重新探测」。</li>
+        <li><b>阿刺开始补刀：</b>被禁言、被拦截、被驱逐时主动推一句提醒，同类 2 分钟内不重复。</li>
+        <li><b>数据：</b>版本 2.9.2，网页缓存 pq-web-v43。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v291">
+    <span class="tag">v2.9.1</span>
+    <div class="card">
+      <h2>好友区三档 · 闲聊档位 · 计划包安全 · 分级管理权</h2>
+      <ul>
+        <li><b>好友区 F0/F1/F2：</b>F0 不能私信陌生人；结缘只走三条正路（同房打卡 / 对赌 / 问答申请）。F1 搭子档消息 24 小时焚毁、每日 20 条、双方完成率 ≥50% 才能发；F2 战友档要双方全勤次日升级。</li>
+        <li><b>军团闲聊档位 L0~L3：</b>完成率不够只能读，够了才解锁轻聊，集体任务达成才全解锁。</li>
+        <li><b>.pqplan 安全四件套：</b>导入前预览、来源标记、24 小时沙箱、团长可拉黑计划包。</li>
+        <li><b>Lv1~Lv3 分级管理权：</b>劝导 → 副团长投票管制 → 全员投票驱逐，滥用 3 次自动解除团长。</li>
+        <li><b>数据：</b>版本 2.9.1，网页缓存 pq-web-v42。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v29">
+    <span class="tag">v2.9</span>
+    <div class="card">
+      <h2>房间聊天能 @ 和转发，团长退团自动选举</h2>
+      <ul>
+        <li>房间聊天和军团频道同一套能力：@ 补全、被 @ 高亮、标题挂未读。</li>
+        <li>房间里能转发计划 / 房间链接 / 军团链接；团长可一键「邀进房间」。</li>
+        <li><b>团长退团 → 公告 → 10 分钟选举接任</b>，全员在同一份规则上算出同一个新团长。</li>
+        <li>任命只走投票，团长也不能直接任命职务；每人同时最多一个职务。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v28">
+    <span class="tag">v2.8</span>
+    <div class="card">
+      <h2>军团有了自己的频道</h2>
+      <ul>
+        <li>不进自习房也能在军团里说话，局域网由房主中继，异地走网格直连。</li>
+        <li>规则只有团长能调：开关 / 宽松·标准·严格 / 禁言时长 / 自定义词。</li>
+        <li>支持转发计划、房间链接、军团链接。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v27">
+    <span class="tag">v2.7</span>
+    <div class="card">
+      <h2>军团有了「管事的人」和「说理的地方」</h2>
+      <ul>
+        <li>人员目录：每位成员的昵称、信誉等级、职务、在线状态。</li>
+        <li>三票定事：发言审核 / 选职务 / 其他事项，10 分钟有效，过半参与且同意率 ≥60% 才通过。</li>
+        <li>乱发投票可举报：3 人举报即作废，发起人 24 小时禁发起。</li>
+        <li>职务只给权限，不给分数，也不能改别人的分。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v26">
+    <span class="tag">v2.6</span>
+    <div class="card">
+      <h2>规则落到人身上，token 不用再手填</h2>
+      <ul>
+        <li><b>纪律引擎上线：</b>逃兵、刷分、鸽子精、外挂四类，各有判定信号与恢复路径。</li>
+        <li>信誉分下限从 0 放宽到 −30，让「−10 冻结军团资格」这条线真能触发。</li>
+        <li><b>登录改 GitHub 官方 OAuth：</b>浏览器输一次 6 位码就完成，不再粘贴 token。</li>
+        <li><b>A 需要重新登录一次</b> GitHub（如果你用 PK 布告栏）。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v25">
+    <span class="tag">v2.5</span>
+    <div class="card">
+      <h2>军团不再是「一台电脑扛全团」</h2>
+      <ul>
+        <li>军团支持异地：主电脑只管「谁跟谁连」，成员之间直连。</li>
+        <li>PK 布告栏改用私有仓库，一军团一文件，带签名防改。</li>
+        <li>军团频道秩序：先提醒，再降速，最后禁言。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v24">
+    <span class="tag">v2.4</span>
+    <div class="card">
+      <h2>翻案要有门槛，信誉分刷不出来</h2>
+      <ul>
+        <li>AI 判错可以翻案，但要够次数、够证据，不能随手点。</li>
+        <li>信誉分四类来源之外，商城与兑换没有任何入口能动它。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="v23">
+    <span class="tag">v2.3</span>
+    <div class="card">
+      <h2>从「狱警」变成「战友」</h2>
+      <ul>
+        <li><b>阿刺登场：</b>打卡成功不再只弹「+20 分」，会有一句有温度的话；失败先接住情绪，再给一条今天就能做的建议。</li>
+        <li><b>话术改造：</b>「系统检测到你摸鱼，扣 2 分」改成「咱俩逮到了」——系统和你是同一伙的。</li>
+        <li><b>负分分级（仅强制模式）：</b>−1~−10 奖励翻倍价，−11~−30 只能领救赎券，−30 以下全锁，每档都写明怎么解除。</li>
+        <li><b>借分与信用：</b>可借 50 分急用，按时还清信用 +10、额度翻倍；逾期扣信用并 30 天禁借。</li>
+        <li>微目标回升、限时挑战、铁人三项徽章同步上线。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver" id="old">
+    <span class="tag">v2.2↓</span>
+    <div class="card">
+      <h2>更早的版本（简写）</h2>
+      <ul>
+        <li><b>v2.2：</b>移除旧「红包模式」，每个契约项目独立一张热度图，APK 版本号对齐。</li>
+        <li><b>v2.1：</b>契约项目上线——建项目、定时长、按完成度扣钱；到期前不能删。</li>
+        <li><b>v2.0：</b>计划文件入口上移到标题栏；修掉自习房「自己把自己禁言」的循环；手机版开机自启变成真开关。</li>
+        <li><b>v1.9：</b>语音闲聊检测（Vosk 离线，音频不出设备）；.pqplan 计划文件带校验和；《开源许可声明》。</li>
+        <li><b>v1.7：</b>深色主题下大标题几乎看不见的问题修好；切页标题被裁切修好。</li>
+        <li><b>v1.6：</b>局域网语音打通（之前信令是空包）；房主能看到成员列表；快捷方式图标统一。</li>
+        <li><b>v1.5：</b>图标随任务变色（24 帧流转）；计划支持「开机时」触发；扣分规则收敛；房间语音上线。</li>
+        <li><b>v1.3：</b>强制模式、AI 自训练。</li>
+        <li><b>v1.2：</b>AI 盯学——摄像头看你是不是在学。</li>
+        <li><b>v1.1：</b>云同步（可选，账号登录后跨设备）。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="foot">
+    想看某个功能现在怎么用，去《<a href="PlanQuest-完整手册.html">完整手册</a>》；第一次用去《<a href="PlanQuest-快速上手.html">快速上手</a>》。
+  </div>
+
+</div>
+</body>
+</html>
