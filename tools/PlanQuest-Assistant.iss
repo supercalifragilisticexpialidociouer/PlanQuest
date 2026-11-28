@@ -85,6 +85,70 @@ begin
   Result := (Lowercase(Copy(S, 1, 7)) = 'http://') or (Lowercase(Copy(S, 1, 8)) = 'https://');
 end;
 
+{ 去掉 ID / 链接末尾的 /、查询串、锚点，得到纯 ID }
+function StripTail(const S: string): string;
+var
+  P: Integer;
+begin
+  Result := Trim(S);
+  P := Pos('?', Result);
+  if P > 0 then Result := Copy(Result, 1, P - 1);
+  P := Pos('#', Result);
+  if P > 0 then Result := Copy(Result, 1, P - 1);
+  while (Length(Result) > 0) and (Result[Length(Result)] = '/') do
+    Result := Copy(Result, 1, Length(Result) - 1);
+end;
+
+{ 把用户写的源统一成内部格式：
+    pixeldrain:<id> / https://pixeldrain.com/u/<id> → API 直链
+    gofile:<code>[|密码] / https://gofile.io/d/<code> → gofile:<code>[|密码]（下载时解析）
+    mediafire:<链接> → 原链接（下载时带浏览器 UA）
+    其它 http(s) 链接原样保留 }
+function NormalizeSource(const S: string): string;
+var
+  Low, Rest, Id: string;
+  P: Integer;
+begin
+  Result := '';
+  Low := Lowercase(Trim(S));
+  if Copy(Low, 1, 11) = 'pixeldrain:' then
+  begin
+    Id := StripTail(Copy(S, 12, Length(S) - 11));
+    if Id <> '' then Result := 'https://pixeldrain.com/api/file/' + Id + '?download';
+    Exit;
+  end;
+  if Copy(Low, 1, 7) = 'gofile:' then
+  begin
+    Rest := StripTail(Copy(S, 8, Length(S) - 7));
+    if Rest <> '' then Result := 'gofile:' + Rest;
+    Exit;
+  end;
+  if Copy(Low, 1, 10) = 'mediafire:' then
+  begin
+    Rest := StripTail(Copy(S, 11, Length(S) - 10));
+    if IsHttpUrl(Rest) then
+      Result := Rest
+    else if Rest <> '' then
+      Result := 'https://www.mediafire.com/file/' + Rest;
+    Exit;
+  end;
+  if (Pos('pixeldrain.com/u/', Low) > 0) or (Pos('pixeldrain.net/u/', Low) > 0) then
+  begin
+    P := Pos('/u/', Low);
+    Id := StripTail(Copy(S, P + 3, Length(S) - P - 2));
+    if Id <> '' then Result := 'https://pixeldrain.com/api/file/' + Id + '?download';
+    Exit;
+  end;
+  if (Pos('gofile.io/d/', Low) > 0) or (Pos('gofile.net/d/', Low) > 0) then
+  begin
+    P := Pos('/d/', Low);
+    Id := StripTail(Copy(S, P + 3, Length(S) - P - 2));
+    if Id <> '' then Result := 'gofile:' + Id;
+    Exit;
+  end;
+  if IsHttpUrl(S) then Result := S;
+end;
+
 { 自己实现 split：按分隔符把 S 拆成 TStringList }
 function SplitBy(const S, Delim: string): TStringList;
 var
@@ -131,6 +195,28 @@ end;
 function DownloadTo(const Url, Target: string): Boolean;
 begin
   Result := DownloadToEx(Url, Target, '');
+end;
+
+{ GoFile 元数据里的 URL 可能写成 https:\/\/ ，还原成 https:// }
+function UnescapeJsonSlashes(const S: string): string;
+var
+  I: Integer;
+begin
+  Result := '';
+  I := 1;
+  while I <= Length(S) do
+  begin
+    if (I < Length(S)) and (S[I] = '\') and (S[I + 1] = '/') then
+    begin
+      Result := Result + '/';
+      I := I + 2;
+    end
+    else
+    begin
+      Result := Result + S[I];
+      I := I + 1;
+    end;
+  end;
 end;
 
 { 从 release JSON 里找指定资产名对应的 API 下载直链 }
@@ -203,7 +289,10 @@ begin
       for I := 0 to Lines.Count - 1 do
       begin
         S := Trim(Lines[I]);
-        if (S <> '') and (Copy(S, 1, 1) <> '#') and IsHttpUrl(S) then SrcList.Add(S);
+        if (S = '') or (Copy(S, 1, 1) = '#') or (Copy(S, 1, 1) = ';') then Continue;
+        { 统一识别 Pixeldrain / GoFile / MediaFire 简写与分享链接 }
+        S := NormalizeSource(S);
+        if S <> '' then SrcList.Add(S);
       end;
     end;
     if SrcList.Count = 0 then SrcList.Add(DEFAULT_SOURCE);
@@ -230,6 +319,40 @@ begin
   while (Q2 <= Length(S)) and (S[Q2] <> '"') do Inc(Q2);
   if Q2 > Length(S) then Exit;
   Result := Copy(S, Q1 + 1, Q2 - Q1 - 1);
+end;
+
+{ GoFile 两步下载：先用 content code 取元数据里的 link，再返回给主流程下载。
+  Spec 形如 "gofile:<code>" 或 "gofile:<code>|<密码>"。 }
+function ResolveGofile(const Spec: string): string;
+var
+  Parts: TStringList;
+  Code, Password, JsonFile, Cookie, S, Args: string;
+  L: TStringList;
+begin
+  Result := '';
+  Parts := SplitBy(Spec, '|');
+  try
+    Code := StripTail(Parts[0]);
+    if Parts.Count > 1 then Password := Parts[1] else Password := '';
+  finally
+    Parts.Free;
+  end;
+  if Code = '' then Exit;
+  JsonFile := AddBackslash(ExpandConstant('{tmp}')) + 'pq-gofile-' + Code + '.json';
+  Cookie := AddBackslash(ExpandConstant('{tmp}')) + 'pq-gofile-cookies.txt';
+  DeleteFile(JsonFile);
+  if Password <> '' then
+    Args := '-X POST -H "Content-Type: application/json" -d "{\"password\":\"' + Password + '\"}" -b "' + Cookie + '" -c "' + Cookie + '" -o "' + JsonFile + '" "https://api.gofile.io/contents/' + Code + '"'
+  else
+    Args := '-o "' + JsonFile + '" "https://api.gofile.io/contents/' + Code + '"';
+  if not CurlExec(Args) then Exit;
+  L := TStringList.Create;
+  try
+    try L.LoadFromFile(JsonFile); S := L.Text; except S := ''; end;
+  finally
+    L.Free;
+  end;
+  Result := UnescapeJsonSlashes(ExtractJsonString(S, 'link'));
 end;
 
 { 联网拉最新版本（GitHub Releases API）；成功则把列表第一项换成线上版本 }
@@ -355,7 +478,7 @@ var
   Urls, Failed: TStringList;
   I: Integer;
   OK: Boolean;
-  LogFile, ErrFile: string;
+  LogFile, ErrFile, Direct: string;
 begin
   Result := False;
   Urls := BuildDownloadUrls(Ver);
@@ -366,7 +489,15 @@ begin
       WizardForm.StatusLabel.Caption := '正在下载 ' + Ver + ' 绿色包（源 ' + IntToStr(I + 1) + '/' + IntToStr(Urls.Count) + '）…';
       WizardForm.StatusLabel.Update;
       DeleteFile(Target);
-      if Pos('/releases/assets/', Urls[I]) > 0 then
+      { GoFile 分享页需先解析元数据拿直链；MediaFire 需伪装浏览器 }
+      if Copy(Urls[I], 1, 7) = 'gofile:' then
+      begin
+        Direct := ResolveGofile(Urls[I]);
+        if Direct <> '' then OK := DownloadTo(Direct, Target) else OK := False;
+      end
+      else if Pos('mediafire.com', Lowercase(Urls[I])) > 0 then
+        OK := DownloadToEx(Urls[I], Target, '-A "Mozilla/5.0" ')
+      else if Pos('/releases/assets/', Urls[I]) > 0 then
         OK := DownloadToEx(Urls[I], Target, '-H "Accept: application/octet-stream" ')
       else
         OK := DownloadTo(Urls[I], Target);
@@ -381,7 +512,7 @@ begin
         Failed.Add('  curl: ' + Trim(ReadFileText(ErrFile)));
     end;
     Failed.Add('版本: ' + Ver + '，目标: ' + Target);
-    Failed.Add('提示: 若 GitHub Releases 被拦，可把 API 资产直链写进 assistant-sources.txt。');
+    Failed.Add('提示: 可把直链或 pixeldrain:<id> / gofile:<code>[|密码] / mediafire:<链接> 写进 assistant-sources.txt。');
     LogFile := AddBackslash(ExpandConstant('{app}')) + 'pq-download.log';
     try Failed.SaveToFile(LogFile); except end;
   finally

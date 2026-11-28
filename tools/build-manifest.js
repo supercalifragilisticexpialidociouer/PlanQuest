@@ -22,7 +22,7 @@ function arg(k, d) {
 const BASE = String(arg('--base', 'https://dl.example.com/planquest')).replace(/\/+$/, '');
 const VER = String(arg('--ver', pkg.version));
 const CHANNEL = String(arg('--channel', 'stable'));
-const NOTES = String(arg('--notes', '安装助手全中文向导；修复版本号拼进下载 URL 导致所有源失败；GitHub API 资产源优先；每个源同时提供主包与备份 ZIP；ZIP 原样完整解压、快捷方式指向真实 exe 与软件图标；ZIP 无用户数据（初始状态）'));
+const NOTES = String(arg('--notes', '安装助手全中文向导；GitHub API 资产源优先 + 主包/备份 ZIP 双源；支持 Pixeldrain / GoFile / MediaFire 链接解析（含 GoFile 密码）；ZIP 原样完整解压、快捷方式指向真实 exe 与软件图标；ZIP 无用户数据（初始状态）'));
 /* base 已经是 releases/download/<tag> 时不要再拼一层版本号 */
 const BASE_HAS_TAG = /\/releases\/download\/[^/]+$/.test(BASE);
 function assetUrl(file) {

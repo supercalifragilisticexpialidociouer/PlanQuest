@@ -1,0 +1,21 @@
+# PlanQuest 安装助手下载源配置
+# 放在「PlanQuest-安装助手.exe」同目录，每行一个源；# 或 ; 开头为注释。
+# 留空（只有注释）时自动使用内置 GitHub 源。
+#
+# 支持的写法：
+#   1) 任意直链（最好指向完整的 PlanQuest-win64-portable.zip）
+#      https://r2.example.com/planquest/2.9.11/PlanQuest-win64-portable.zip
+#   2) Pixeldrain 分享页或简写（助手自动转成 API 直链）
+#      https://pixeldrain.com/u/xxxxxxxx
+#      pixeldrain:xxxxxxxx
+#   3) GoFile 分享页或简写（助手自动读元数据取直链）
+#      https://gofile.io/d/xxxxxxxx
+#      gofile:xxxxxxxx
+#      带密码：gofile:xxxxxxxx|123456
+#   4) MediaFire 分享页或简写（助手自动带浏览器标识）
+#      mediafire:https://www.mediafire.com/file/xxxxxxxx/PlanQuest-win64-portable.zip
+#
+# 建议每个源同时准备两份字节一致的 ZIP：
+#   PlanQuest-win64-portable.zip
+#   PlanQuest-win64-portable-backup.zip
+# 下载失败的具体原因会写到安装目录下的 pq-download.log。

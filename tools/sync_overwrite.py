@@ -221,6 +221,7 @@ SHARED_FILES = [
     'dist/PlanQuest-win64-portable.zip',
     'dist/releases/PlanQuest-win64-portable-backup.zip',
     'dist/releases/PlanQuest-安装助手.exe',
+    'dist/releases/assistant-sources.txt',
     'tools/replace-release-assets.js',
 ]
 

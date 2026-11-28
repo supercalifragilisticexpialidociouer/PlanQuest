@@ -156,12 +156,19 @@ PlanQuest 使用说明（v2.9.7）
        专属版本直链形如 https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-win64-portable.zip
        备份直链形如 https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-win64-portable-backup.zip
     ② R2 / 任意直链：https://your-domain.com/planquest/2.9.11/PlanQuest-win64-portable.zip
-    ③ pixeldrain：https://pixeldrain.com/u/xxxxx
-    ④ MediaFire 分享页　⑤ GoFile 分享页
+    ③ pixeldrain：安装助手会把分享链接自动转成 API 直链
+       https://pixeldrain.com/u/xxxxx 或简写 pixeldrain:xxxxx
+    ④ MediaFire 分享页：直接贴 https://www.mediafire.com/file/xxx/... ，
+       或简写 mediafire:https://... ；下载时自动带浏览器标识。
+       若页面要求人工验证码，需要你先在浏览器完成验证后再装。
+    ⑤ GoFile 分享页：https://gofile.io/d/xxxxx 或简写 gofile:xxxxx；
+       安装助手会先读元数据拿直链；带密码的写法 gofile:xxxxx|密码。
 · 给「安装助手」换源：在 安装助手.exe 同目录新建一个纯文本 assistant-sources.txt，
-  每行一个源（# 开头是注释），例如：
+  每行一个源（# / ; 开头是注释），例如：
       https://r2.example.com/planquest/releases/latest
       https://pixeldrain.com/u/xxxxxxxx
+      gofile:xxxxxxxx
+      mediafire:https://www.mediafire.com/file/xxxxxxxx/PlanQuest-win64-portable.zip
   没有这个文件就用内置的 GitHub 主源。想给某个版本指定专属直链，
   在该版本目录约定文件名 PlanQuest-win64-portable.zip，助手按版本自动拼路径。
 · 给「应用内更新」换源：五源已编译进程序，一般用不到；确需自建，

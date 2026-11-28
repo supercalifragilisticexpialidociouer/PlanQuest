@@ -3,7 +3,7 @@
   "version": "2.9.11",
   "channel": "stable",
   "releasedAt": "2026-11-28",
-  "notes": "安装助手全中文向导；修复版本号拼进下载 URL 导致所有源失败；GitHub API 资产源优先；每个源同时提供主包与备份 ZIP；ZIP 原样完整解压、快捷方式指向真实 exe 与软件图标；ZIP 无用户数据（初始状态）",
+  "notes": "安装助手全中文向导；GitHub API 资产源优先 + 主包/备份 ZIP 双源；支持 Pixeldrain / GoFile / MediaFire 链接解析（含 GoFile 密码）；ZIP 原样完整解压、快捷方式指向真实 exe 与软件图标；ZIP 无用户数据（初始状态）",
   "base": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11",
   "installer": {
     "admin": false,
@@ -19,8 +19,8 @@
     "action": "bootstrap",
     "file": "releases/PlanQuest-安装助手.exe",
     "url": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-install-assistant.exe",
-    "size": 2123753,
-    "sha256": "eb6ff73b583c130f058f62c84fe7b9c8f27703eeb8f700a1c3db88bd54c75c87",
+    "size": 2124763,
+    "sha256": "9ca9a2e002ad065f92c746ebadd4f0bca9935d392089804650e12965e5174e2c",
     "built": true
   },
   "portable": {
