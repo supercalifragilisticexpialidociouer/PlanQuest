@@ -393,42 +393,94 @@ end;
 { 在解压目录里找到真正的主程序；兼容 zip 顶层目录名变化 }
 function FindExtractedExe(const Root: string): string;
 var
-  P: string;
+  P, Sub: string;
+  I: Integer;
 begin
   Result := '';
   { 官方绿色包解压后主程序在 PlanQuest-win64\ 下；兼容早期直接放根目录的包 }
   P := AddBackslash(Root) + 'PlanQuest-win64\PlanQuest.exe';
   if FileExists(P) then begin Result := P; Exit; end;
   P := AddBackslash(Root) + 'PlanQuest.exe';
-  if FileExists(P) then Result := P;
+  if FileExists(P) then begin Result := P; Exit; end;
+  { 兼容常见顶层目录名变化（不用 FindFirst，避免 Inno 编译器类型差异） }
+  for I := 1 to 3 do
+  begin
+    case I of
+      1: Sub := 'PlanQuest-win64-portable';
+      2: Sub := 'PlanQuest';
+      3: Sub := 'PlanQuest-win64-release';
+    end;
+    P := AddBackslash(Root) + Sub + '\PlanQuest.exe';
+    if FileExists(P) then begin Result := P; Exit; end;
+  end;
+end;
+
+{ 下载物存在性检查；内容是否为有效 ZIP 由 tar / PowerShell 解压结果判定 }
+function IsZipFile(const Path: string): Boolean;
+begin
+  Result := FileExists(Path);
+end;
+
+procedure SaveExtractLog(const Log: TStringList);
+var
+  Path: string;
+begin
+  Path := AddBackslash(ExpandConstant('{app}')) + 'pq-extract.log';
+  try Log.SaveToFile(Path); except end;
 end;
 
 { ZIP 原封不动完整解压：保留包内目录结构，不 strip。
-  优先系统 tar.exe（Win10+ 自带），失败再退回 PowerShell Expand-Archive。
-  两种都做「解压后必须能找到 PlanQuest.exe」的校验，空文件夹不再算成功。 }
+  tar 优先，失败退回 PowerShell Expand-Archive；每步 RC 与找到的 exe 都写日志。 }
 function UnzipTo(const ZipFile, DestDir: string): Boolean;
 var
-  Tar, PsExe, Args: string;
+  Tar, PsExe, Args, Found, IsZip: string;
   RC: Integer;
+  Log: TStringList;
 begin
   Result := False;
-  ForceDirectories(DestDir);
-  Tar := ExpandConstant('{sys}\tar.exe');
-  if FileExists(Tar) then
-  begin
-    Args := '-xf "' + ZipFile + '" -C "' + DestDir + '"';
-    if Exec(Tar, Args, '', SW_HIDE, ewWaitUntilTerminated, RC) and (RC = 0) and
-       (FindExtractedExe(DestDir) <> '') then
+  Log := TStringList.Create;
+  try
+    ForceDirectories(DestDir);
+    if IsZipFile(ZipFile) then IsZip := 'true' else IsZip := 'false';
+    Log.Add('目标目录: ' + DestDir);
+    Log.Add('ZIP: ' + ZipFile + '  是ZIP=' + IsZip);
+    if IsZip <> 'true' then
     begin
-      Result := True;
+      Log.Add('错误: 下载物不是 ZIP，可能拿到了错误页');
+      SaveExtractLog(Log);
       Exit;
     end;
+
+    Tar := ExpandConstant('{sys}\tar.exe');
+    if FileExists(Tar) then
+    begin
+      Args := '-xf "' + ZipFile + '" -C "' + DestDir + '"';
+      RC := -1;
+      Exec(Tar, Args, '', SW_HIDE, ewWaitUntilTerminated, RC);
+      Found := FindExtractedExe(DestDir);
+      Log.Add('tar.exe RC=' + IntToStr(RC) + '  找到exe=' + Found);
+      if (RC = 0) and (Found <> '') then
+      begin
+        Result := True;
+        SaveExtractLog(Log);
+        Exit;
+      end;
+    end
+    else
+      Log.Add('tar.exe 不存在，跳过');
+
+    PsExe := ExpandConstant('{sys}\windowspowershell\v1.0\powershell.exe');
+    Args := '-NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath ''{0}'' -DestinationPath ''{1}'' -Force"';
+    Args := Format(Args, [ZipFile, DestDir]);
+    RC := -1;
+    Exec(PsExe, Args, '', SW_HIDE, ewWaitUntilTerminated, RC);
+    Found := FindExtractedExe(DestDir);
+    Log.Add('PowerShell RC=' + IntToStr(RC) + '  找到exe=' + Found);
+    Result := (RC = 0) and (Found <> '');
+  finally
+    SaveExtractLog(Log);
+    Log.Free;
   end;
-  PsExe := ExpandConstant('{sys}\windowspowershell\v1.0\powershell.exe');
-  Args := '-NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath ''{0}'' -DestinationPath ''{1}'' -Force"';
-  Args := Format(Args, [ZipFile, DestDir]);
-  Result := Exec(PsExe, Args, '', SW_HIDE, ewWaitUntilTerminated, RC) and (RC = 0) and
-            (FindExtractedExe(DestDir) <> '');
 end;
 
 { 解压成功后才建桌面快捷方式：目标 = 真实 exe，图标 = 软件自带的 PlanQuest.ico }
@@ -530,14 +582,34 @@ begin
   MeloTsCheck.Checked := False;
 end;
 
+{ 已有 exe 先改名，避免应用运行时覆盖失败；改名失败说明被占用 }
+function PrepareTarget(const DestDir: string; var OldExe: string): Boolean;
+var
+  Exe: string;
+begin
+  Result := True;
+  OldExe := '';
+  Exe := FindExtractedExe(DestDir);
+  if Exe = '' then Exit;
+  if FileExists(Exe + '.old') then DeleteFile(Exe + '.old');
+  if RenameFile(Exe, Exe + '.old') then
+    OldExe := Exe
+  else
+  begin
+    Result := False;
+    MsgBox('目标目录里的 PlanQuest.exe 无法替换（通常是因为应用正在运行）。' + #13#10 +
+           '请先完全退出 PlanQuest（托盘图标也要退出），再重新运行安装助手。', mbError, MB_OK);
+  end;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  Ver, Tmp, ZipFile, CompDir, ExePath: string;
+  Ver, Tmp, ZipFile, CompDir, ExePath, OldExe: string;
 begin
   if CurStep <> ssPostInstall then Exit;
 
   InstalledExe := '';
-  DeleteFile(ExpandConstant('{autodesktop}\PlanQuest.lnk'));
+  { 不预先删快捷方式：失败时保留原来可用的快捷方式 }
   Ver := CurrentVersion;
   if Ver = '' then Ver := '2.9.11';
   Tmp := ExpandConstant('{tmp}');
@@ -552,14 +624,20 @@ begin
     Exit;
   end;
 
+  if not PrepareTarget(ExpandConstant('{app}'), OldExe) then Exit;
+
   WizardForm.StatusLabel.Caption := '正在原样完整解压 ' + Ver + ' 到 ' + ExpandConstant('{app}') + ' …';
   WizardForm.StatusLabel.Update;
   if not UnzipTo(ZipFile, ExpandConstant('{app}')) then
   begin
+    if OldExe <> '' then RenameFile(OldExe + '.old', OldExe);
+    DeleteFile(ExpandConstant('{autodesktop}\PlanQuest.lnk'));
     MsgBox('解压 ' + Ver + ' 失败：目标目录里没有找到 PlanQuest.exe。' + #13#10 +
-           '请检查下载的文件是否完整，或换一个下载源后重试。', mbError, MB_OK);
+           '详情见所选安装目录的 pq-extract.log。' + #13#10 +
+           '若应用正在运行，请先完全退出再重试；也可换一个空目录安装。', mbError, MB_OK);
     Exit;
   end;
+  if OldExe <> '' then DeleteFile(OldExe + '.old');
 
   ExePath := FindExtractedExe(ExpandConstant('{app}'));
   InstalledExe := ExePath;

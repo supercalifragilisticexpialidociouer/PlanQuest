@@ -19,8 +19,8 @@
     "action": "bootstrap",
     "file": "releases/PlanQuest-安装助手.exe",
     "url": "https://github.com/supercalifragilisticexpialidociouer/PlanQuest/releases/download/v2.9.11/PlanQuest-install-assistant.exe",
-    "size": 2123161,
-    "sha256": "a17c0cef6b36efea311e1dc2dbfddf6ccd0fae397ade262b2217f4b7748974e1",
+    "size": 2123753,
+    "sha256": "eb6ff73b583c130f058f62c84fe7b9c8f27703eeb8f700a1c3db88bd54c75c87",
     "built": true
   },
   "portable": {
